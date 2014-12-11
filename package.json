@@ -1,0 +1,27 @@
+{
+	"author": {
+		"name": "Mikael 'Lilleman' Göransson",
+		"email": "lilleman@larvit.se",
+		"url": "http://github.com/larvit/larvituser"
+	},
+	"private": true,
+	"contributors": [],
+	"dependencies": {
+	},
+	"description": "User module for node.js",
+	"devDependencies": {
+		"mocha": "x"
+	},
+	"keywords": [
+		"auth",
+		"user"
+	],
+	"main": "larvituser.js",
+	"name": "larvituser",
+	"repository": {
+		"url": "https://github.com/larvit/larvituser",
+		"type": "git"
+	},
+	"version": "0.0.1beta",
+	"readmeFilename": "README.md"
+}
