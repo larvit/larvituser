@@ -125,7 +125,50 @@ describe('User', function() {
 
 	});
 
-	// should try to create the user again, this should fail
+	describe('fields on logged in user', function() {
+		it('should remove a field from a logged in user', function(done) {
+			userLib.fromUsername('lilleman', function(err, user) {
+				assert.deepEqual(user.fields.firstname, ['migal']);
+				user.rmField('firstname', function(err) {
+					assert.deepEqual(user.fields.firstname, undefined);
+					assert.deepEqual(user.fields.lastname[0], 'Arvidsson');
+
+					// Trying to load the user again to be sure
+					userLib.fromUsername('lilleman', function(err, user) {
+						assert.deepEqual(user.fields.firstname, undefined);
+
+						done();
+					});
+				});
+			});
+		});
+
+		it('should set a field on a logged in user', function(done) {
+			userLib.fromUsername('lilleman', function(err, user) {
+				user.addField('cell', 46709771337, function(err) {
+					assert.deepEqual(user.fields.cell[0], 46709771337);
+					assert.deepEqual(user.fields.lastname[0], 'Arvidsson');
+					done();
+				});
+			});
+		});
+
+		it('should replace fields with new data', function(done) {
+			userLib.fromUsername('lilleman', function(err, user) {
+				var newFields = {
+					'foo': 'bar',
+					'income': [670, 'more than you']
+				};
+
+				user.replaceFields(newFields, function(err) {
+					assert.deepEqual(user.fields.foo, ['bar']);
+					assert.deepEqual(user.fields.firstname, undefined);
+					assert.deepEqual(user.fields.income[1], 'more than you');
+					done();
+				});
+			});
+		});
+	});
 
 	after(function(done) {
 		db.query('DROP TABLE user_users_data', function(err, rows) {

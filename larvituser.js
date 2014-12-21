@@ -398,6 +398,87 @@ exports.usernameAvailable = function usernameAvailable(username, callback) {
 function userBase() {
 	var returnObj = {};
 
+	/**
+	 * Add a field with value
+	 *
+	 * @param str name
+	 * @param str value
+	 * @param func callback(err)
+	 */
+	returnObj.addField = function(name, value, callback) {
+		if (returnObj.id === undefined) {
+			var err = new Error('Cannot add field; no user loaded');
+			callback(err);
+			return;
+		}
+
+		setUserField(returnObj.id, name, value, function(err) {
+			if (err) {
+				callback(err);
+			} else {
+				if (returnObj.fields[name] === undefined)
+					returnObj.fields[name] = [];
+
+				returnObj.fields[name].push(value);
+				callback();
+			}
+		});
+	}
+
+	/**
+	 * Replace all fields
+	 * IMPORTANT!!! Will clear all data not given in the fields parameter
+	 *
+	 * @param obj fields - field name as key, field values as array to that key - ex: {'role': ['admin','user']}
+	 * @param func callback(err)
+	 */
+	returnObj.replaceFields = function(fields, callback) {
+		if (returnObj.id === undefined) {
+			var err = new Error('Cannot replace fields; no user loaded');
+			callback(err);
+			return;
+		}
+
+		replaceUserFields(returnObj.id, fields, function(err) {
+			if (err) {
+				callback(err);
+			} else {
+				// Reload everything
+				exports.fromId(returnObj.id, function(err, user) {
+					if (err) {
+						callback(err);
+					} else {
+						returnObj.fields = user.fields;
+						callback();
+					}
+				});
+			}
+		});
+	}
+
+	/**
+	 * Remove a field from this user
+	 *
+	 * @param str name
+	 * @param func callback(err)
+	 */
+	returnObj.rmField = function(name, callback) {
+		if (returnObj.id === undefined) {
+			var err = new Error('Cannot remove field; no user loaded');
+			callback(err);
+			return;
+		}
+
+		rmUserField(returnObj.id, name, function(err) {
+			if (err) {
+				callback(err);
+			} else {
+				delete returnObj.fields[name];
+				callback();
+			}
+		});
+	}
+
 	return returnObj;
 }
 
@@ -470,6 +551,33 @@ function replaceUserFields(userId, fields, callback) {
 			}
 		});
 	}
+}
+
+/**
+ * Remove a user field
+ *
+ * @param int userId
+ * @param str fieldName
+ * @param func callback(err)
+ */
+function rmUserField(userId, fieldName, callback) {
+	exports.getFieldId(fieldName, function(err, fieldId) {
+		if (err) {
+			callback(err);
+			return;
+		}
+
+		var sql      = 'DELETE FROM user_users_data WHERE user_id = ? AND field_id = ?',
+		    dbFields = [userId, fieldId];
+
+		log.debug('Removing field from user', {'sql': sql, 'dbFields': dbFields});
+		db.query(sql, dbFields, function(err) {
+			if (err)
+				callback(err);
+			else
+				callback();
+		});
+	});
 }
 
 /**
