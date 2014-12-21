@@ -4,9 +4,11 @@
 		"email": "lilleman@larvit.se",
 		"url": "http://github.com/larvit/larvituser"
 	},
-	"private": true,
 	"contributors": [],
 	"dependencies": {
+		"larvitdb": "x",
+		"bcrypt": "x",
+		"winston": "x"
 	},
 	"description": "User module for node.js",
 	"devDependencies": {
@@ -22,6 +24,10 @@
 		"url": "https://github.com/larvit/larvituser",
 		"type": "git"
 	},
+	"scripts": {
+		"test": "mocha"
+	},
 	"version": "0.0.1beta",
-	"readmeFilename": "README.md"
+	"readmeFilename": "README.md",
+	"license": "MIT"
 }
