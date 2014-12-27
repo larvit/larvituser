@@ -39,7 +39,6 @@ exports.checkPassword = function checkPassword(password, hash, callback) {
  * @param func callback(err, user) - user being an instance of the new user
  */
 exports.create = function create(username, password, fields, callback) {
-	log.verbose('yyyyeahh');
 	checkDbStructure(function() {
 		log.verbose('Trying to create user', {'username': username, 'fields': fields});
 
@@ -268,6 +267,42 @@ exports.fromUsername = function fromUsername(username, callback) {
 
 			// Use fromId() to get the user instance
 			exports.fromId(rows[0].id, callback);
+		});
+	});
+}
+
+/**
+ * Get field data for a user
+ *
+ * @param int userId
+ * @param str fieldName
+ * @param func callback(err, data) - data is always an array of data (or empty array)
+ */
+exports.getFieldData = function getFieldData(userId, fieldName, callback) {
+	exports.getFieldId(fieldName, function(err, fieldId) {
+		if (err) {
+			callback(err);
+			return;
+		}
+
+		var sql      = 'SELECT data FROM user_users_data WHERE user_id = ? AND field_id = ?',
+		    dbFields = [userId, fieldId];
+
+		db.query(sql, dbFields, function(err, rows) {
+			if (err) {
+				callback(err);
+				return;
+			}
+
+			var data  = [],
+			    rowNr = 0;
+
+			while (rows[rowNr] !== undefined) {
+				data.push(rows[rowNr].data);
+				rowNr++;
+			}
+
+			callback(null, data);
 		});
 	});
 }

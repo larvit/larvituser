@@ -168,6 +168,16 @@ describe('User', function() {
 				});
 			});
 		});
+
+		it('should get field data from any user', function(done) {
+			userLib.fromUsername('lilleman', function(err, user) {
+				userLib.getFieldData(user.id, 'foo', function(err, data) {
+					assert.deepEqual(data, ['bar']);
+					done();
+				});
+			});
+		});
+
 	});
 
 	after(function(done) {
