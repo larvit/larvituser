@@ -1,3 +1,5 @@
+/*jslint node: true */
+/*jslint mocha: true */
 'use strict';
 
 // Simulate local runtime - assume to run in closest node_modules or the tests will fail
@@ -129,7 +131,7 @@ describe('User', function() {
 		it('should remove a field from a logged in user', function(done) {
 			userLib.fromUsername('lilleman', function(err, user) {
 				assert.deepEqual(user.fields.firstname, ['migal']);
-				user.rmField('firstname', function(err) {
+				user.rmField('firstname', function() {
 					assert.deepEqual(user.fields.firstname, undefined);
 					assert.deepEqual(user.fields.lastname[0], 'Arvidsson');
 
@@ -145,7 +147,7 @@ describe('User', function() {
 
 		it('should set a field on a logged in user', function(done) {
 			userLib.fromUsername('lilleman', function(err, user) {
-				user.addField('cell', 46709771337, function(err) {
+				user.addField('cell', 46709771337, function() {
 					assert.deepEqual(user.fields.cell[0], 46709771337);
 					assert.deepEqual(user.fields.lastname[0], 'Arvidsson');
 					done();
@@ -160,7 +162,7 @@ describe('User', function() {
 					'income': [670, 'more than you']
 				};
 
-				user.replaceFields(newFields, function(err) {
+				user.replaceFields(newFields, function() {
 					assert.deepEqual(user.fields.foo, ['bar']);
 					assert.deepEqual(user.fields.firstname, undefined);
 					assert.deepEqual(user.fields.income[1], 'more than you');
@@ -181,25 +183,25 @@ describe('User', function() {
 	});
 
 	after(function(done) {
-		db.query('DROP TABLE user_users_data', function(err, rows) {
+		db.query('DROP TABLE user_users_data', function(err) {
 			if (err) {
 				console.error(err);
 				process.exit(1);
 			}
 
-			db.query('DROP TABLE user_roles_rights', function(err, rows) {
+			db.query('DROP TABLE user_roles_rights', function(err) {
 				if (err) {
 					console.error(err);
 					process.exit(1);
 				}
 
-				db.query('DROP TABLE user_data_fields', function(err, rows) {
+				db.query('DROP TABLE user_data_fields', function(err) {
 					if (err) {
 						console.error(err);
 						process.exit(1);
 					}
 
-					db.query('DROP TABLE user_users', function(err, rows) {
+					db.query('DROP TABLE user_users', function(err) {
 						if (err) {
 							console.error(err);
 							process.exit(1);

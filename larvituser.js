@@ -1,3 +1,4 @@
+/*jslint node: true */
 'use strict';
 
 var db             = require('larvitdb'),
@@ -28,7 +29,7 @@ exports.checkPassword = function checkPassword(password, hash, callback) {
 		else
 			callback(null, false);
 	});
-}
+};
 
 /**
  * Creates a new user (and adds to it to db)
@@ -60,9 +61,9 @@ exports.create = function create(username, password, fields, callback) {
 			if (err) {
 				callback(err);
 			} else if ( ! res) {
-				var err = new Error('Trying to create user with taken username: "' + username + '"');
-				log.info(err);
-				callback(err);
+				var customErr = new Error('Trying to create user with taken username: "' + username + '"');
+				log.info(customErr);
+				callback(customErr);
 			} else {
 				log.debug('Username available, moving on to hashing password', {'username': username});
 				hashPassword();
@@ -124,7 +125,7 @@ exports.create = function create(username, password, fields, callback) {
 			});
 		}
 	});
-}
+};
 
 /**
  * Instanciate user object from user id
@@ -156,10 +157,10 @@ exports.fromId = function fromId(userId, callback) {
 			}
 
 			if (rows.length === 0) {
-				var err = new Error('No user found for user ID: "' + userId + '"');
-				err.sql = sql;
-				log.debug(err);
-				callback(err);
+				var customErr = new Error('No user found for user ID: "' + userId + '"');
+				customErr.sql = sql;
+				log.debug(customErr);
+				callback(customErr);
 				return;
 			}
 
@@ -186,7 +187,7 @@ exports.fromId = function fromId(userId, callback) {
 			callback(null, returnObj);
 		});
 	});
-}
+};
 
 /**
  * Create a user object from username and password
@@ -210,10 +211,10 @@ exports.fromUserAndPass = function fromUserAndPass(username, password, callback)
 			}
 
 			if (rows.length === 0) {
-				var err = new Error('No user found for username: "' + username + '"');
-				err.sql = sql;
-				log.verbose(err);
-				callback(err);
+				var customErr = new Error('No user found for username: "' + username + '"');
+				customErr.sql = sql;
+				log.verbose(customErr);
+				callback(customErr);
 				return;
 			}
 
@@ -229,14 +230,14 @@ exports.fromUserAndPass = function fromUserAndPass(username, password, callback)
 					// Password check is ok, use fromId() to get the user instance
 					exports.fromId(rows[0].id, callback);
 				} else {
-					var err = new Error('Login failed, wrong password. Username: "' + username + '"');
-					log.info(err);
-					callback(err);
+					var customErr = new Error('Login failed, wrong password. Username: "' + username + '"');
+					log.info(customErr);
+					callback(customErr);
 				}
 			});
 		});
 	});
-}
+};
 
 /**
  * Create a user object from username
@@ -258,10 +259,10 @@ exports.fromUsername = function fromUsername(username, callback) {
 			}
 
 			if (rows.length === 0) {
-				var err = new Error('No user found for username: "' + username + '"');
-				err.sql = sql;
-				log.debug(err);
-				callback(err);
+				var customErr = new Error('No user found for username: "' + username + '"');
+				customErr.sql = sql;
+				log.debug(customErr);
+				callback(customErr);
 				return;
 			}
 
@@ -269,7 +270,7 @@ exports.fromUsername = function fromUsername(username, callback) {
 			exports.fromId(rows[0].id, callback);
 		});
 	});
-}
+};
 
 /**
  * Get field data for a user
@@ -305,7 +306,7 @@ exports.getFieldData = function getFieldData(userId, fieldName, callback) {
 			callback(null, data);
 		});
 	});
-}
+};
 
 /**
  * Get data field id by field name
@@ -332,7 +333,7 @@ exports.getFieldId = function getFieldId(fieldName, callback) {
 				// Use INSERT IGNORE to avoid race conditions
 				var sql = 'INSERT IGNORE INTO user_data_fields (name) VALUES(?)';
 
-				db.query(sql, dbFields, function(err, rows) {
+				db.query(sql, dbFields, function(err) {
 					if (err) {
 						callback(err);
 						return;
@@ -346,7 +347,7 @@ exports.getFieldId = function getFieldId(fieldName, callback) {
 			}
 		});
 	});
-}
+};
 
 /**
  * Get data field name by field id
@@ -368,12 +369,12 @@ exports.getFieldName = function getFieldName(fieldId, callback) {
 			if (rows.length) {
 				callback(null, rows[0].name);
 			} else {
-				var err = new Error('Field name not found for id: "' + fieldId + '"');
-				callback(err);
+				var customErr = new Error('Field name not found for id: "' + fieldId + '"');
+				callback(customErr);
 			}
 		});
 	});
-}
+};
 
 /**
  * Hashes a new password
@@ -401,7 +402,7 @@ exports.hashPassword = function hashPassword(password, callback) {
 			callback(null, hash);
 		});
 	});
-}
+};
 
 /**
  * Checks if a unsername is available
@@ -428,7 +429,7 @@ exports.usernameAvailable = function usernameAvailable(username, callback) {
 				callback(null, true);
 		});
 	});
-}
+};
 
 function userBase() {
 	var returnObj = {};
@@ -458,7 +459,7 @@ function userBase() {
 				callback();
 			}
 		});
-	}
+	};
 
 	/**
 	 * Replace all fields
@@ -489,7 +490,7 @@ function userBase() {
 				});
 			}
 		});
-	}
+	};
 
 	/**
 	 * Remove a field from this user
@@ -512,7 +513,7 @@ function userBase() {
 				callback();
 			}
 		});
-	}
+	};
 
 	return returnObj;
 }
@@ -664,7 +665,7 @@ function checkDbStructure(callback) {
 
 		// We need to run the checks for user_users first
 		// If this succeeds, run all the others from it
-		db.query('DESCRIBE `user_users`', function(err, rows) {
+		db.query('DESCRIBE `user_users`', function(err) {
 			if (err) {
 				// Table does not exist, create it
 				if (err.code === 'ER_NO_SUCH_TABLE') {
@@ -695,7 +696,7 @@ function checkDbStructure(callback) {
 		});
 
 		localFuncs.checkFields = function() {
-			db.query('DESCRIBE `user_data_fields`', function(err, rows) {
+			db.query('DESCRIBE `user_data_fields`', function(err) {
 				if (err) {
 					// Table does not exist, create it
 					if (err.code === 'ER_NO_SUCH_TABLE') {
@@ -723,10 +724,10 @@ function checkDbStructure(callback) {
 					localFuncs.rolesRights();
 				}
 			});
-		}
+		};
 
 		localFuncs.rolesRights = function() {
-			db.query('DESCRIBE `user_roles_rights`', function(err, rows) {
+			db.query('DESCRIBE `user_roles_rights`', function(err) {
 				if (err) {
 					// Table does not exist, create it
 					if (err.code === 'ER_NO_SUCH_TABLE') {
@@ -753,10 +754,10 @@ function checkDbStructure(callback) {
 					localFuncs.usersData();
 				}
 			});
-		}
+		};
 
 		localFuncs.usersData = function() {
-			db.query('DESCRIBE `user_users_data`', function(err, rows) {
+			db.query('DESCRIBE `user_users_data`', function(err) {
 				if (err) {
 					// Table does not exist, create it
 					if (err.code === 'ER_NO_SUCH_TABLE') {
@@ -791,7 +792,7 @@ function checkDbStructure(callback) {
 					callback();
 				}
 			});
-		}
+		};
 	}
 
 }
