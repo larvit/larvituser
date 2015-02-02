@@ -1,5 +1,3 @@
-/*jslint node: true */
-/*jslint mocha: true */
 'use strict';
 
 // Simulate local runtime - assume to run in closest node_modules or the tests will fail
@@ -28,7 +26,7 @@ describe('User', function() {
 			log.add(log.transports.File, {
 				'filename': appPath + '/logs/mocha.log',
 				'timestamp': true,
-				'handleExceptions': true, // THis makes winston handle exceptions instead of node native
+				'handleExceptions': true, // This makes winston handle exceptions instead of node native
 				'level': 'debug'
 			});
 		}

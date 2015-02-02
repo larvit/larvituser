@@ -1,6 +1,7 @@
 {
 	"env": {
-		"node": true
+		"node": true,
+		"mocha": true
 	},
 	"rules": {
 		"global-strict": [2, "always"],
@@ -15,6 +16,7 @@
 		"key-spacing": false,
 		"no-mixed-spaces-and-tabs": [2, "smart-tabs"],
 		"space-unary-ops": [1, { "words": true, "nonwords": true }],
-		"no-underscore-dangle": false
+		"no-underscore-dangle": false,
+		"no-process-exit": false
 	}
 }
