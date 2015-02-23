@@ -123,6 +123,13 @@ describe('User', function() {
 			});
 		});
 
+		it('should fail to log the created user in by username and password', function(done) {
+			userLib.fromUserAndPass('lilleman', 'nisse', function(err, user) {
+				assert(err);
+				assert.deepEqual(user, undefined);
+				done();
+			});
+		});
 	});
 
 	describe('fields on logged in user', function() {
