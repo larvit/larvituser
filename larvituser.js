@@ -1,26 +1,27 @@
 'use strict';
 
-var db             = require('larvitdb'),
-    log            = require('winston'),
-    bcrypt         = require('bcrypt'),
-    dbChecked      = false,
-    dbCheckStarted = false;
+var db     = require('larvitdb'),
+    log    = require('winston'),
+    bcrypt = require('bcrypt');
+
+exports.dbChecked      = false;
+exports.dbCheckStarted = false;
 
 /**
  * Control the database structure and create if it not exists
  */
-function checkDbStructure(callback) {
+exports.checkDbStructure = function checkDbStructure(callback) {
 	var localFuncs = {};
 
-	if (dbChecked) {
+	if (exports.dbChecked) {
 		callback();
-	} else if (dbCheckStarted) {
+	} else if (exports.dbCheckStarted) {
 		// If it have started, but not finnished, run it again next tick until it is done
 		setImmediate(function() {
-			checkDbStructure(callback);
+			exports.checkDbStructure(callback);
 		});
 	} else {
-		dbCheckStarted = true;
+		exports.dbCheckStarted = true;
 
 		// We need to run the checks for user_users first
 		// If this succeeds, run all the others from it
@@ -140,30 +141,30 @@ function checkDbStructure(callback) {
 								process.exit(1);
 							}
 
-							dbChecked = true;
+							exports.dbChecked = true;
 							callback();
 						});
 					} else {
 						process.exit(1);
 					}
 				} else {
-					dbChecked = true;
+					exports.dbChecked = true;
 					callback();
 				}
 			});
 		};
 	}
-}
+};
 
 /**
- * Set a single user field to database
+ * Add a single user field to database
  *
  * @param int userId
  * @param str fieldName
  * @param str fieldValue
  * @param func callback(err)
  */
-function setUserField(userId, fieldName, fieldValue, callback) {
+exports.addUserField = function addUserField(userId, fieldName, fieldValue, callback) {
 	fieldValue = String(fieldValue).trim();
 
 	exports.getFieldId(fieldName, function(err, fieldId) {
@@ -171,7 +172,7 @@ function setUserField(userId, fieldName, fieldValue, callback) {
 		    dbFields = [userId, fieldId, fieldValue];
 
 		if (err) {
-			log.error('larvituser: setUserField() - ' + err.message, err);
+			log.error('larvituser: addUserField() - ' + err.message, err);
 			return;
 		}
 
@@ -184,7 +185,7 @@ function setUserField(userId, fieldName, fieldValue, callback) {
 			callback();
 		});
 	});
-}
+};
 
 /**
  * Replace user fields
@@ -194,13 +195,13 @@ function setUserField(userId, fieldName, fieldValue, callback) {
  * @param obj fields - field name as key, field values as array to that key - ex: {'role': ['admin','user']}
  * @param func callback(err)
  */
-function replaceUserFields(userId, fields, callback) {
+exports.replaceUserFields = function replaceUserFields(userId, fields, callback) {
 	var sql      = 'DELETE FROM user_users_data WHERE user_id = ?',
 	    dbFields = [userId];
 
 	// We need to do this to make sure they all happend before we call the final callback
 	function callSetUserField(userId, fieldName, fieldValue, nextParams, callback) {
-		setUserField(userId, fieldName, fieldValue, function(err) {
+		exports.addUserField(userId, fieldName, fieldValue, function(err) {
 			var entries;
 
 			if (err) {
@@ -263,7 +264,7 @@ function replaceUserFields(userId, fields, callback) {
 			}
 		});
 	});
-}
+};
 
 /**
  * Remove a user field
@@ -272,7 +273,7 @@ function replaceUserFields(userId, fields, callback) {
  * @param str fieldName
  * @param func callback(err)
  */
-function rmUserField(userId, fieldName, callback) {
+exports.rmUserField = function rmUserField(userId, fieldName, callback) {
 	exports.getFieldId(fieldName, function(err, fieldId) {
 		var sql      = 'DELETE FROM user_users_data WHERE user_id = ? AND field_id = ?',
 		    dbFields = [userId, fieldId];
@@ -291,7 +292,7 @@ function rmUserField(userId, fieldName, callback) {
 			}
 		});
 	});
-}
+};
 
 function userBase() {
 	var returnObj = {'fields': {}};
@@ -312,7 +313,7 @@ function userBase() {
 			return;
 		}
 
-		setUserField(returnObj.id, name, value, function(err) {
+		exports.addUserField(returnObj.id, name, value, function(err) {
 			if (err) {
 				callback(err);
 			} else {
@@ -342,7 +343,7 @@ function userBase() {
 			return;
 		}
 
-		replaceUserFields(returnObj.id, fields, function(err) {
+		exports.replaceUserFields(returnObj.id, fields, function(err) {
 			if (err) {
 				callback(err);
 			} else {
@@ -374,7 +375,7 @@ function userBase() {
 			return;
 		}
 
-		rmUserField(returnObj.id, name, function(err) {
+		exports.rmUserField(returnObj.id, name, function(err) {
 			if (err) {
 				callback(err);
 			} else {
@@ -427,7 +428,7 @@ exports.create = function create(username, password, fields, callback) {
 
 	// Write the fields to the db
 	function writeFieldsToDb() {
-		replaceUserFields(userId, fields, function(err) {
+		exports.replaceUserFields(userId, fields, function(err) {
 			if (err) {
 				log.error('larvituser: create() - ' + err.message, err);
 				callback(err);
@@ -480,7 +481,7 @@ exports.create = function create(username, password, fields, callback) {
 		});
 	}
 
-	checkDbStructure(function() {
+	exports.checkDbStructure(function() {
 		log.verbose('larvituser: create() - Trying to create user', {'username': username, 'fields': fields});
 
 		username = username.trim();
@@ -516,7 +517,7 @@ exports.create = function create(username, password, fields, callback) {
  * @param func callback(err, userObj)
  */
 exports.fromId = function fromId(userId, callback) {
-	checkDbStructure(function() {
+	exports.checkDbStructure(function() {
 		var returnObj = userBase(),
 		    rowNr     = 0,
 		    fields    = returnObj.fields,
@@ -581,7 +582,7 @@ exports.fromId = function fromId(userId, callback) {
  * @param func callback(err, user) - "user" being a new user object
  */
 exports.fromUserAndPass = function fromUserAndPass(username, password, callback) {
-	checkDbStructure(function() {
+	exports.checkDbStructure(function() {
 		var sql = 'SELECT id, password FROM user_users WHERE username = ?',
 		    dbFields;
 
@@ -631,7 +632,7 @@ exports.fromUserAndPass = function fromUserAndPass(username, password, callback)
  * @param func callback(err, user) - "user" being a new user object
  */
 exports.fromUsername = function fromUsername(username, callback) {
-	checkDbStructure(function() {
+	exports.checkDbStructure(function() {
 		var sql,
 		    dbFields;
 
@@ -702,7 +703,7 @@ exports.getFieldData = function getFieldData(userId, fieldName, callback) {
  * @param func callback(err, id)
  */
 exports.getFieldId = function getFieldId(fieldName, callback) {
-	checkDbStructure(function() {
+	exports.checkDbStructure(function() {
 		var sql = 'SELECT id FROM user_data_fields WHERE name = ?',
 		    dbFields;
 
@@ -744,7 +745,7 @@ exports.getFieldId = function getFieldId(fieldName, callback) {
  * @param func callback(err, str)
  */
 exports.getFieldName = function getFieldName(fieldId, callback) {
-	checkDbStructure(function() {
+	exports.checkDbStructure(function() {
 		var sql      = 'SELECT name FROM user_data_fields WHERE id = ?',
 		    dbFields = [fieldId];
 
@@ -799,7 +800,7 @@ exports.hashPassword = function hashPassword(password, callback) {
  * @param func callback(err, res) - res is a bolean
  */
 exports.usernameAvailable = function usernameAvailable(username, callback) {
-	checkDbStructure(function() {
+	exports.checkDbStructure(function() {
 		var sql = 'SELECT id FROM user_users WHERE username = ?',
 		    dbFields;
 
