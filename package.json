@@ -6,13 +6,13 @@
 	},
 	"contributors": [],
 	"dependencies": {
-		"larvitdb": "x",
-		"bcrypt": "x",
-		"winston": "x"
+		"larvitdb": "latest",
+		"bcrypt": "latest",
+		"winston": "latest"
 	},
 	"description": "User module for node.js",
 	"devDependencies": {
-		"mocha": "x"
+		"mocha": "latest"
 	},
 	"keywords": [
 		"auth",
@@ -27,7 +27,7 @@
 	"scripts": {
 		"test": "mocha"
 	},
-	"version": "0.0.6beta",
+	"version": "0.1.0",
 	"readmeFilename": "README.md",
 	"license": "MIT"
 }
