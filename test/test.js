@@ -1,17 +1,38 @@
 'use strict';
 
-// Simulate local runtime - assume to run in closest node_modules or the tests will fail
-require.main.filename = __dirname + '/../../../server.js';
-
 var assert  = require('assert'),
     log     = require('winston'),
     db      = require('larvitdb'),
-    fs      = require('fs'),
-    path    = require('path'),
-    appPath = path.dirname(require.main.filename),
-    userLib = require('larvituser');
+    userLib = require('larvituser'),
+    fs      = require('fs');
+
+describe('Setup database', function() {
+	it('should setup the database', function(done) {
+		assert(process.argv[3] !== undefined, 'Database config parameter missing - mocha should be used like: mocha test/test.js /path/to/config/dbsettings.json');
+
+		if (process.argv[3] !== undefined) {
+			fs.stat(process.argv[3], function(err) {
+				assert( ! err, 'err should be negative');
+
+				if ( ! err) {
+					db.setup(require(process.argv[3]));
+					done();
+
+					return;
+				}
+
+				done();
+			});
+
+			return;
+		}
+
+		done();
+	});
+});
 
 describe('User', function() {
+	var createdUuid;
 
 	before(function(done) {
 		// Set up winston
@@ -21,15 +42,6 @@ describe('User', function() {
 			'colorize': true,
 			'timestamp': true
 		});
-
-		if (fs.existsSync(appPath + '/logs')) {
-			log.add(log.transports.File, {
-				'filename': appPath + '/logs/mocha.log',
-				'timestamp': true,
-				'handleExceptions': true, // This makes winston handle exceptions instead of node native
-				'level': 'debug'
-			});
-		}
 
 		// Check for empty db
 		db.query('SHOW TABLES', function(err, rows) {
@@ -49,6 +61,7 @@ describe('User', function() {
 
 	it('should check if a username is available', function(done) {
 		userLib.usernameAvailable('testuser', function(err, res) {
+			assert( ! err, 'err should be negative');
 			assert.deepEqual(res, true);
 			done();
 		});
@@ -58,6 +71,7 @@ describe('User', function() {
 
 		it('should return an ID for the field we are asking for', function(done) {
 			userLib.getFieldId('firstname', function(err, fieldId) {
+				assert( ! err, 'err should be negative');
 				assert.deepEqual(fieldId, 1);
 				done();
 			});
@@ -65,6 +79,7 @@ describe('User', function() {
 
 		it('shold return field name "firstname" for ID 1 we created above', function(done) {
 			userLib.getFieldName(1, function(err, fieldName) {
+				assert( ! err, 'err should be negative');
 				assert.deepEqual(fieldName, 'firstname');
 				done();
 			});
@@ -76,6 +91,7 @@ describe('User', function() {
 
 		it('should create a hashed password', function(done) {
 			userLib.hashPassword('foobar', function(err, hash) {
+				assert( ! err, 'err should be negative');
 				hashedPassword = hash;
 				done();
 			});
@@ -83,6 +99,7 @@ describe('User', function() {
 
 		it('should check the hashed password back against the plain text password', function(done) {
 			userLib.checkPassword('foobar', hashedPassword, function(err, res) {
+				assert( ! err, 'err should be negative');
 				assert.deepEqual(res, true);
 				done();
 			});
@@ -91,9 +108,15 @@ describe('User', function() {
 
 	describe('create', function() {
 
-		it('should create a new user', function(done) {
+		it('should create a new user with random uuid', function(done) {
 			userLib.create('lilleman', 'foobar', {'firstname': 'migal', 'lastname': ['Arvidsson', 'Göransson']}, function(err, user) {
+				assert( ! err, 'err should be negative');
+
+				createdUuid = user.uuid;
+
 				assert.deepEqual(user.fields.lastname[1], 'Göransson');
+				assert(typeof user.uuid === 'string', 'uuid should be a string');
+				assert(user.uuid.length === 36, 'uuid should be exactly 36 characters long');
 				done();
 			});
 		});
@@ -111,21 +134,24 @@ describe('User', function() {
 
 		it('should log the created user in by username', function(done) {
 			userLib.fromUsername('lilleman', function(err, user) {
-				assert.deepEqual(user.id, 1);
+				assert( ! err, 'err should be negative');
+				assert(user.uuid !== undefined, 'uuid should be set');
+				assert(user.uuid === createdUuid, 'uuid should match the earlier created uuid');
 				done();
 			});
 		});
 
 		it('should log the created user in by username and password', function(done) {
 			userLib.fromUserAndPass('lilleman', 'foobar', function(err, user) {
-				assert.deepEqual(user.id, 1);
+				assert( ! err, 'err should be negative');
+				assert(user.uuid === createdUuid, 'uuid should match the earlier created uuid');
 				done();
 			});
 		});
 
 		it('should fail to log the created user in by username and password', function(done) {
 			userLib.fromUserAndPass('lilleman', 'nisse', function(err, user) {
-				assert(err);
+				assert(err, 'err should be positive');
 				assert.deepEqual(user, undefined);
 				done();
 			});
@@ -135,6 +161,7 @@ describe('User', function() {
 	describe('fields on logged in user', function() {
 		it('should remove a field from a logged in user', function(done) {
 			userLib.fromUsername('lilleman', function(err, user) {
+				assert( ! err, 'err should be negative');
 				assert.deepEqual(user.fields.firstname, ['migal']);
 				user.rmField('firstname', function() {
 					assert.deepEqual(user.fields.firstname, undefined);
@@ -142,6 +169,7 @@ describe('User', function() {
 
 					// Trying to load the user again to be sure
 					userLib.fromUsername('lilleman', function(err, user) {
+						assert( ! err, 'err should be negative');
 						assert.deepEqual(user.fields.firstname, undefined);
 
 						done();
@@ -152,6 +180,7 @@ describe('User', function() {
 
 		it('should set a field on a logged in user', function(done) {
 			userLib.fromUsername('lilleman', function(err, user) {
+				assert( ! err, 'err should be negative');
 				user.addField('cell', 46709771337, function() {
 					assert.deepEqual(user.fields.cell[0], 46709771337);
 					assert.deepEqual(user.fields.lastname[0], 'Arvidsson');
@@ -167,6 +196,8 @@ describe('User', function() {
 					'income': [670, 'more than you']
 				};
 
+				assert( ! err, 'err should be negative');
+
 				user.replaceFields(newFields, function() {
 					assert.deepEqual(user.fields.foo, ['bar']);
 					assert.deepEqual(user.fields.firstname, undefined);
@@ -178,7 +209,9 @@ describe('User', function() {
 
 		it('should get field data from any user', function(done) {
 			userLib.fromUsername('lilleman', function(err, user) {
-				userLib.getFieldData(user.id, 'foo', function(err, data) {
+				assert( ! err, 'err should be negative');
+				userLib.getFieldData(user.uuid, 'foo', function(err, data) {
+					assert( ! err, 'err should be negative');
 					assert.deepEqual(data, ['bar']);
 					done();
 				});

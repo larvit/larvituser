@@ -1,18 +1,147 @@
 'use strict';
 
-var db     = require('larvitdb'),
-    log    = require('winston'),
-    bcrypt = require('bcrypt');
+var db      = require('larvitdb'),
+    log     = require('winston'),
+    bcrypt  = require('bcrypt'),
+    uuidLib = require('node-uuid');
 
 exports.dbChecked      = false;
 exports.dbCheckStarted = false;
+
+exports.createUserUsers = function(callback) {
+	// We need to run the checks for user_users first
+	db.query('SHOW TABLES LIKE \'user_users\'', function(err, rows) {
+		var sql;
+
+		if (err) {
+			throw err;
+		}
+
+		if ( ! rows.length) {
+			// Table does not exist, create it
+			log.info('larvituser: createUserUsers() - Table user_users did not exist, creating.');
+
+			sql = 'CREATE TABLE `user_users` (' +
+				'	`uuid` char(36) CHARACTER SET ascii NOT NULL,' +
+				'	`username` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,' +
+				'	`password` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,' +
+				'	PRIMARY KEY (`uuid`),' +
+				'	UNIQUE KEY `username` (`username`)' +
+				') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;';
+			db.query(sql, function(err) {
+				if (err) {
+					throw err;
+				}
+
+				callback(err);
+			});
+		} else {
+			callback(err);
+		}
+	});
+};
+
+exports.createUserDataFields = function(callback) {
+	db.query('SHOW TABLES LIKE \'user_data_fields\'', function(err, rows) {
+		var sql;
+
+		if (err) {
+			throw err;
+		}
+
+		if ( ! rows.length) {
+			// Table does not exist, create it
+			log.info('larvituser: createUserDataFields() - Table user_data_fields did not exist, creating.');
+
+			sql = 'CREATE TABLE `user_data_fields` (' +
+				'	`id` int(11) unsigned NOT NULL AUTO_INCREMENT,' +
+				'	`name` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,' +
+				'	PRIMARY KEY (`id`),' +
+				'	UNIQUE KEY `name` (`name`)' +
+				') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci';
+			db.query(sql, function(err) {
+				if (err) {
+					throw err;
+				}
+
+				callback();
+			});
+		} else {
+			callback();
+		}
+	});
+};
+
+exports.createUserRolesRights = function(callback) {
+	db.query('SHOW TABLES LIKE \'user_roles_rights\'', function(err, rows) {
+		var sql;
+
+		if (err) {
+			throw err;
+		}
+
+		if ( ! rows.length) {
+			// Table does not exist, create it
+			log.info('larvituser: createUserRolesRights() - Table user_roles_rights did not exist, creating.');
+
+			sql = 'CREATE TABLE `user_roles_rights` (' +
+				'	`role` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,' +
+				'	`uri` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,' +
+				'	PRIMARY KEY (`role`,`uri`)' +
+				') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;';
+			db.query(sql, function(err) {
+				if (err) {
+					throw err;
+				}
+
+				callback();
+			});
+		} else {
+			callback();
+		}
+	});
+};
+
+exports.createUserUsersData = function(callback) {
+	db.query('SHOW TABLES LIKE \'user_users_data\'', function(err, rows) {
+		var sql;
+
+		if (err) {
+			throw err;
+		}
+
+		if ( ! rows.length) {
+			// Table does not exist, create it
+			log.info('larvituser: createUserUsersData() - Table user_users_data did not exist, creating.');
+
+			sql = 'CREATE TABLE `user_users_data` (' +
+				'	`id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,' +
+				'	`userUuid` char(36) CHARACTER SET ascii NOT NULL,' +
+				'	`fieldId` int(11) unsigned NOT NULL,' +
+				'	`data` text COLLATE utf8mb4_unicode_ci NOT NULL,' +
+				'	PRIMARY KEY (`id`),' +
+				'	KEY `userUuid` (`userUuid`),' +
+				'	KEY `fieldId` (`fieldId`),' +
+				'	CONSTRAINT `user_users_data_ibfk_1` FOREIGN KEY (`userUuid`) REFERENCES `user_users` (`uuid`),' +
+				'	CONSTRAINT `user_users_data_ibfk_2` FOREIGN KEY (`fieldId`) REFERENCES `user_data_fields` (`id`)' +
+				') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;';
+			db.query(sql, function(err) {
+				if (err) {
+					throw err;
+				}
+
+				callback();
+			});
+		} else {
+			callback();
+		}
+	});
+};
 
 /**
  * Control the database structure and create if it not exists
  */
 exports.checkDbStructure = function checkDbStructure(callback) {
-	var localFuncs = {};
-
 	if (exports.dbChecked) {
 		callback();
 	} else if (exports.dbCheckStarted) {
@@ -23,153 +152,33 @@ exports.checkDbStructure = function checkDbStructure(callback) {
 	} else {
 		exports.dbCheckStarted = true;
 
-		// We need to run the checks for user_users first
-		// If this succeeds, run all the others from it
-		db.query('DESCRIBE `user_users`', function(err) {
-			var sql;
-
-			if (err) {
-				// Table does not exist, create it
-				if (err.code === 'ER_NO_SUCH_TABLE') {
-					log.info('larvituser: checkDbStructure() - Table user_users did not exist, creating.');
-
-					sql = 'CREATE TABLE `user_users` (' +
-						'	`id` bigint(20) NOT NULL AUTO_INCREMENT,' +
-						'	`username` varchar(255) COLLATE utf8_unicode_ci NOT NULL,' +
-						'	`password` varchar(100) COLLATE utf8_unicode_ci NOT NULL,' +
-						'	PRIMARY KEY (`id`),' +
-						'	UNIQUE KEY `username` (`username`)' +
-						') ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;';
-					db.query(sql, function(err) {
-						if (err) {
-							process.exit(1);
-						}
-
-						localFuncs.checkFields();
+		exports.createUserUsers(function() {
+			exports.createUserDataFields(function() {
+				exports.createUserRolesRights(function() {
+					exports.createUserUsersData(function() {
+						exports.dbChecked = true;
+						callback();
 					});
-				} else {
-					process.exit(1);
-				}
-			} else {
-				localFuncs.checkFields();
-			}
+				});
+			});
 		});
-
-		localFuncs.checkFields = function() {
-			db.query('DESCRIBE `user_data_fields`', function(err) {
-				var sql;
-
-				if (err) {
-					// Table does not exist, create it
-					if (err.code === 'ER_NO_SUCH_TABLE') {
-						log.info('larvituser: checkDbStructure() - Table user_data_fields did not exist, creating.');
-
-						sql = 'CREATE TABLE `user_data_fields` (' +
-							'	`id` int(11) NOT NULL AUTO_INCREMENT,' +
-							'	`name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,' +
-							'	PRIMARY KEY (`id`),' +
-							'	UNIQUE KEY `name` (`name`)' +
-							') ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;';
-						db.query(sql, function(err) {
-							if (err) {
-								process.exit(1);
-							}
-
-							localFuncs.rolesRights();
-						});
-					} else {
-						process.exit(1);
-					}
-				} else {
-					localFuncs.rolesRights();
-				}
-			});
-		};
-
-		localFuncs.rolesRights = function() {
-			db.query('DESCRIBE `user_roles_rights`', function(err) {
-				var sql;
-
-				if (err) {
-					// Table does not exist, create it
-					if (err.code === 'ER_NO_SUCH_TABLE') {
-						log.info('larvituser: checkDbStructure() - Table user_roles_rights did not exist, creating.');
-
-						sql = 'CREATE TABLE `user_roles_rights` (' +
-							'	`role` varchar(128) NOT NULL,' +
-							'	`uri` varchar(128) NOT NULL,' +
-							'	PRIMARY KEY (`role`,`uri`)' +
-							') ENGINE=InnoDB DEFAULT CHARSET=utf8;';
-						db.query(sql, function(err) {
-							if (err) {
-								process.exit(1);
-							}
-
-							localFuncs.usersData();
-						});
-					} else {
-						process.exit(1);
-					}
-				} else {
-					localFuncs.usersData();
-				}
-			});
-		};
-
-		localFuncs.usersData = function() {
-			db.query('DESCRIBE `user_users_data`', function(err) {
-				var sql;
-
-				if (err) {
-					// Table does not exist, create it
-					if (err.code === 'ER_NO_SUCH_TABLE') {
-						log.info('larvituser: checkDbStructure() - Table user_users_data did not exist, creating.');
-
-						sql = 'CREATE TABLE `user_users_data` (' +
-							'	`id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,' +
-							'	`user_id` bigint(20) DEFAULT NULL,' +
-							'	`field_id` int(11) DEFAULT NULL,' +
-							'	`data` text COLLATE utf8_unicode_ci NOT NULL,' +
-							'	PRIMARY KEY (`id`),' +
-							'	KEY `users_fields` (`user_id`,`field_id`),' +
-							'	KEY `field_id` (`field_id`),' +
-							'	CONSTRAINT `user_users_data_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user_users` (`id`),' +
-							'	CONSTRAINT `user_users_data_ibfk_2` FOREIGN KEY (`field_id`) REFERENCES `user_data_fields` (`id`)' +
-							') ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;';
-						db.query(sql, function(err) {
-							if (err) {
-								process.exit(1);
-							}
-
-							exports.dbChecked = true;
-							callback();
-						});
-					} else {
-						process.exit(1);
-					}
-				} else {
-					exports.dbChecked = true;
-					callback();
-				}
-			});
-		};
 	}
 };
 
 /**
  * Add a single user field to database
  *
- * @param int userId
+ * @param uuid userUuid
  * @param str fieldName
  * @param str fieldValue
  * @param func callback(err)
  */
-exports.addUserField = function addUserField(userId, fieldName, fieldValue, callback) {
+exports.addUserField = function addUserField(userUuid, fieldName, fieldValue, callback) {
 	fieldValue = String(fieldValue).trim();
 
 	exports.getFieldId(fieldName, function(err, fieldId) {
-		var sql      = 'INSERT INTO user_users_data (user_id, field_id, data) VALUES(?,?,?)',
-		    dbFields = [userId, fieldId, fieldValue];
+		var sql      = 'INSERT INTO user_users_data (userUuid, fieldId, data) VALUES(?,?,?)',
+		    dbFields = [userUuid, fieldId, fieldValue];
 
 		if (err) {
 			log.error('larvituser: addUserField() - ' + err.message, err);
@@ -191,17 +200,17 @@ exports.addUserField = function addUserField(userId, fieldName, fieldValue, call
  * Replace user fields
  * IMPORTANT!!! Will clear all data not given in the fields parameter
  *
- * @param int userId
+ * @param uuid userUuid
  * @param obj fields - field name as key, field values as array to that key - ex: {'role': ['admin','user']}
  * @param func callback(err)
  */
-exports.replaceUserFields = function replaceUserFields(userId, fields, callback) {
-	var sql      = 'DELETE FROM user_users_data WHERE user_id = ?',
-	    dbFields = [userId];
+exports.replaceUserFields = function replaceUserFields(userUuid, fields, callback) {
+	var sql      = 'DELETE FROM user_users_data WHERE userUuid = ?',
+	    dbFields = [userUuid];
 
 	// We need to do this to make sure they all happend before we call the final callback
-	function callSetUserField(userId, fieldName, fieldValue, nextParams, callback) {
-		exports.addUserField(userId, fieldName, fieldValue, function(err) {
+	function callSetUserField(userUuid, fieldName, fieldValue, nextParams, callback) {
+		exports.addUserField(userUuid, fieldName, fieldValue, function(err) {
 			var entries;
 
 			if (err) {
@@ -209,7 +218,7 @@ exports.replaceUserFields = function replaceUserFields(userId, fields, callback)
 			} else {
 				if (nextParams.length) {
 					entries = nextParams.shift();
-					callSetUserField(entries.userId, entries.fieldName, entries.fieldValue, nextParams, callback);
+					callSetUserField(entries.userUuid, entries.fieldName, entries.fieldValue, nextParams, callback);
 				} else {
 					callback();
 				}
@@ -217,7 +226,7 @@ exports.replaceUserFields = function replaceUserFields(userId, fields, callback)
 		});
 	}
 
-	log.verbose('larvituser: replaceUserFields() - Removing previous user fields', {'userId': userId, 'sql': sql, 'dbFields': dbFields});
+	log.verbose('larvituser: replaceUserFields() - Removing previous user fields', {'userUuid': userUuid, 'sql': sql, 'dbFields': dbFields});
 
 	db.query(sql, dbFields, function(err) {
 		var userFieldParams = [],
@@ -231,7 +240,7 @@ exports.replaceUserFields = function replaceUserFields(userId, fields, callback)
 			return;
 		}
 
-		log.debug('larvituser: replaceUserFields() - User fields removed', {'userId': userId});
+		log.debug('larvituser: replaceUserFields() - User fields removed', {'userUuid': userUuid});
 
 		for (fieldName in fields) {
 			field = fields[fieldName];
@@ -243,10 +252,10 @@ exports.replaceUserFields = function replaceUserFields(userId, fields, callback)
 
 			i = 0;
 			while (field[i] !== undefined) {
-				log.silly('larvituser: replaceUserFields() - Adding userFieldParam to array', {'userId': userId, 'fieldName': fieldName, 'fieldValue': field[i]});
+				log.silly('larvituser: replaceUserFields() - Adding userFieldParam to array', {'userUuid': userUuid, 'fieldName': fieldName, 'fieldValue': field[i]});
 
 				userFieldParams.push({
-					'userId':     userId,
+					'userUuid':   userUuid,
 					'fieldName':  fieldName,
 					'fieldValue': field[i]
 				});
@@ -256,7 +265,7 @@ exports.replaceUserFields = function replaceUserFields(userId, fields, callback)
 		}
 
 		firstEntries = userFieldParams.shift();
-		callSetUserField(firstEntries.userId, firstEntries.fieldName, firstEntries.fieldValue, userFieldParams, function(err) {
+		callSetUserField(firstEntries.userUuid, firstEntries.fieldName, firstEntries.fieldValue, userFieldParams, function(err) {
 			if (err) {
 				callback(err);
 			} else {
@@ -269,14 +278,14 @@ exports.replaceUserFields = function replaceUserFields(userId, fields, callback)
 /**
  * Remove a user field
  *
- * @param int userId
+ * @param uuid userUuid
  * @param str fieldName
  * @param func callback(err)
  */
-exports.rmUserField = function rmUserField(userId, fieldName, callback) {
+exports.rmUserField = function rmUserField(userUuid, fieldName, callback) {
 	exports.getFieldId(fieldName, function(err, fieldId) {
-		var sql      = 'DELETE FROM user_users_data WHERE user_id = ? AND field_id = ?',
-		    dbFields = [userId, fieldId];
+		var sql      = 'DELETE FROM user_users_data WHERE userUuid = ? AND fieldId = ?',
+		    dbFields = [userUuid, fieldId];
 
 		if (err) {
 			callback(err);
@@ -307,13 +316,13 @@ function userBase() {
 	returnObj.addField = function(name, value, callback) {
 		var err;
 
-		if (returnObj.id === undefined) {
+		if (returnObj.uuid === undefined) {
 			err = new Error('Cannot add field; no user loaded');
 			callback(err);
 			return;
 		}
 
-		exports.addUserField(returnObj.id, name, value, function(err) {
+		exports.addUserField(returnObj.uuid, name, value, function(err) {
 			if (err) {
 				callback(err);
 			} else {
@@ -337,18 +346,18 @@ function userBase() {
 	returnObj.replaceFields = function(fields, callback) {
 		var err;
 
-		if (returnObj.id === undefined) {
+		if (returnObj.uuid === undefined) {
 			err = new Error('Cannot replace fields; no user loaded');
 			callback(err);
 			return;
 		}
 
-		exports.replaceUserFields(returnObj.id, fields, function(err) {
+		exports.replaceUserFields(returnObj.uuid, fields, function(err) {
 			if (err) {
 				callback(err);
 			} else {
 				// Reload everything
-				exports.fromId(returnObj.id, function(err, user) {
+				exports.fromUuid(returnObj.uuid, function(err, user) {
 					if (err) {
 						callback(err);
 					} else {
@@ -369,13 +378,13 @@ function userBase() {
 	returnObj.rmField = function(name, callback) {
 		var err;
 
-		if (returnObj.id === undefined) {
+		if (returnObj.uuid === undefined) {
 			err = new Error('Cannot remove field; no user loaded');
 			callback(err);
 			return;
 		}
 
-		exports.rmUserField(returnObj.id, name, function(err) {
+		exports.rmUserField(returnObj.uuid, name, function(err) {
 			if (err) {
 				callback(err);
 			} else {
@@ -419,25 +428,32 @@ exports.checkPassword = function checkPassword(password, hash, callback) {
  * @param str username
  * @param str password (plain text)
  * @param obj fields - key, value pairs, where value can be an array of values
+ * @param uuid custom uuid - if not supplied a random will be generated
  * @param func callback(err, user) - user being an instance of the new user
  */
-exports.create = function create(username, password, fields, callback) {
+exports.create = function create(username, password, fields, uuid, callback) {
 	var hashedPassword,
-	    userId,
 	    err;
+
+	if (uuid instanceof Function && callback === undefined) {
+		callback = uuid;
+		uuid     = uuidLib.v4();
+	} else if (uuid === undefined) {
+		uuid = uuidLib.v4();
+	}
 
 	// Write the fields to the db
 	function writeFieldsToDb() {
-		exports.replaceUserFields(userId, fields, function(err) {
+		exports.replaceUserFields(uuid, fields, function(err) {
 			if (err) {
 				log.error('larvituser: create() - ' + err.message, err);
 				callback(err);
 				return;
 			}
 
-			log.debug('larvituser: create() - Fields written successfully to database', {'username': username, 'userId': userId, 'fields': fields});
+			log.debug('larvituser: create() - Fields written successfully to database', {'username': username, 'userUuid': uuid, 'fields': fields});
 
-			exports.fromId(userId, function(err, user) {
+			exports.fromUuid(uuid, function(err, user) {
 				if (err) {
 					log.error('larvituser: create() - ' + err.message, err);
 					callback(err);
@@ -451,19 +467,18 @@ exports.create = function create(username, password, fields, callback) {
 
 	// Write to database - called from the above callback
 	function writeToDb() {
-		var sql      = 'INSERT INTO user_users (username, password) VALUES(?,?);',
-		    dbFields = [username, hashedPassword];
+		var sql      = 'INSERT INTO user_users (uuid, username, password) VALUES(?,?,?);',
+		    dbFields = [uuid, username, hashedPassword];
 
 		log.verbose('larvituser: create() - Trying to write username and password to database', {'sql': sql, 'fields': dbFields});
 
-		db.query(sql, dbFields, function(err, res) {
+		db.query(sql, dbFields, function(err) {
 			if (err) {
 				callback(err);
 				return;
 			}
 
-			userId = res.insertId;
-			log.debug('larvituser: create() - Write to db successfull! Moving on to writing fields to database', {'username': username, 'userId': userId});
+			log.debug('larvituser: create() - Write to db successfull! Moving on to writing fields to database', {'username': username, 'uuid': uuid});
 			writeFieldsToDb();
 		});
 	}
@@ -513,29 +528,29 @@ exports.create = function create(username, password, fields, callback) {
 /**
  * Instanciate user object from user id
  *
- * @param int userId
+ * @param int userUuid
  * @param func callback(err, userObj)
  */
-exports.fromId = function fromId(userId, callback) {
+exports.fromUuid = function fromUuid(userUuid, callback) {
 	exports.checkDbStructure(function() {
 		var returnObj = userBase(),
 		    rowNr     = 0,
 		    fields    = returnObj.fields,
-		    dbFields  = [userId],
+		    dbFields  = [userUuid],
 		    row,
 		    sql       = 'SELECT ' +
-		                  'u.id, ' +
+		                  'u.uuid, ' +
 		                  'u.username, ' +
-		                  'uf.id AS field_id, ' +
+		                  'uf.id AS fieldId, ' +
 		                  'uf.name AS field_name, ' +
 		                  'ud.data AS field_data ' +
 		                'FROM ' +
 		                  'user_users u ' +
-		                  'LEFT JOIN user_users_data  ud ON ud.user_id = u.id ' +
-		                  'LEFT JOIN user_data_fields uf ON uf.id      = ud.field_id ' +
-		                'WHERE u.id = ?';
+		                  'LEFT JOIN user_users_data  ud ON ud.userUuid = u.uuid ' +
+		                  'LEFT JOIN user_data_fields uf ON uf.id       = ud.fieldId ' +
+		                'WHERE u.uuid = ?';
 
-		log.silly('larvituser: fromId() - SQL query', {'sql': sql, 'dbFields': dbFields});
+		log.silly('larvituser: fromUuid() - SQL query', {'sql': sql, 'dbFields': dbFields});
 
 		db.query(sql, dbFields, function(err, rows) {
 			if (err) {
@@ -544,21 +559,21 @@ exports.fromId = function fromId(userId, callback) {
 			}
 
 			if (rows.length === 0) {
-				err = new Error('No user found for user ID: "' + userId + '"');
+				err = new Error('No user found for userUuid: "' + userUuid + '"');
 				err.sql = sql;
 				log.debug('larvituser: create() - ' + err.message, err);
 				callback(err);
 				return;
 			}
 
-			returnObj.id       = rows[0].id;
+			returnObj.uuid     = rows[0].uuid;
 			returnObj.username = rows[0].username;
 
 			rowNr = 0;
 			while (rows[rowNr] !== undefined) {
 				row = rows[rowNr];
 
-				if (row.field_id) {
+				if (row.fieldId) {
 					if (fields[row.field_name] === undefined) {
 						fields[row.field_name] = [];
 					}
@@ -583,7 +598,7 @@ exports.fromId = function fromId(userId, callback) {
  */
 exports.fromUserAndPass = function fromUserAndPass(username, password, callback) {
 	exports.checkDbStructure(function() {
-		var sql = 'SELECT id, password FROM user_users WHERE username = ?',
+		var sql = 'SELECT uuid, password FROM user_users WHERE username = ?',
 		    dbFields;
 
 		username = username.trim();
@@ -613,8 +628,8 @@ exports.fromUserAndPass = function fromUserAndPass(username, password, callback)
 
 				if (res === true) {
 
-					// Password check is ok, use fromId() to get the user instance
-					exports.fromId(rows[0].id, callback);
+					// Password check is ok, use fromUuid() to get the user instance
+					exports.fromUuid(rows[0].uuid, callback);
 				} else {
 					err = new Error('Login failed, wrong password. Username: "' + username + '"');
 					log.info('larvituser: fromUserAndPass() - ' + err.message, err);
@@ -637,7 +652,7 @@ exports.fromUsername = function fromUsername(username, callback) {
 		    dbFields;
 
 		username = username.trim();
-		sql      = 'SELECT id FROM user_users WHERE username = ?';
+		sql      = 'SELECT uuid FROM user_users WHERE username = ?';
 		dbFields = [username];
 
 		db.query(sql, dbFields, function(err, rows) {
@@ -654,8 +669,8 @@ exports.fromUsername = function fromUsername(username, callback) {
 				return;
 			}
 
-			// Use fromId() to get the user instance
-			exports.fromId(rows[0].id, callback);
+			// Use fromUuid() to get the user instance
+			exports.fromUuid(rows[0].uuid, callback);
 		});
 	});
 };
@@ -663,14 +678,14 @@ exports.fromUsername = function fromUsername(username, callback) {
 /**
  * Get field data for a user
  *
- * @param int userId
+ * @param int userUuid
  * @param str fieldName
  * @param func callback(err, data) - data is always an array of data (or empty array)
  */
-exports.getFieldData = function getFieldData(userId, fieldName, callback) {
+exports.getFieldData = function getFieldData(userUuid, fieldName, callback) {
 	exports.getFieldId(fieldName, function(err, fieldId) {
-		var sql      = 'SELECT data FROM user_users_data WHERE user_id = ? AND field_id = ?',
-		    dbFields = [userId, fieldId];
+		var sql      = 'SELECT data FROM user_users_data WHERE userUuid = ? AND fieldId = ?',
+		    dbFields = [userUuid, fieldId];
 
 		if (err) {
 			callback(err);
@@ -711,6 +726,7 @@ exports.getFieldId = function getFieldId(fieldName, callback) {
 		dbFields  = [fieldName];
 
 		db.query(sql, dbFields, function(err, rows) {
+			// Use INSERT IGNORE to avoid race conditions
 			var sql = 'INSERT IGNORE INTO user_data_fields (name) VALUES(?)';
 
 			if (err) {
@@ -721,7 +737,6 @@ exports.getFieldId = function getFieldId(fieldName, callback) {
 			if (rows.length) {
 				callback(null, rows[0].id);
 			} else {
-				// Use INSERT IGNORE to avoid race conditions
 				db.query(sql, dbFields, function(err) {
 					if (err) {
 						callback(err);
@@ -801,7 +816,7 @@ exports.hashPassword = function hashPassword(password, callback) {
  */
 exports.usernameAvailable = function usernameAvailable(username, callback) {
 	exports.checkDbStructure(function() {
-		var sql = 'SELECT id FROM user_users WHERE username = ?',
+		var sql = 'SELECT uuid FROM user_users WHERE username = ?',
 		    dbFields;
 
 		username = username.trim();
