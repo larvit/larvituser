@@ -529,7 +529,7 @@ exports.create = function create(username, password, fields, uuid, callback) {
  * Instanciate user object from user id
  *
  * @param int userUuid
- * @param func callback(err, userObj)
+ * @param func callback(err, userObj) - userObj will be false if no user is found
  */
 exports.fromUuid = function fromUuid(userUuid, callback) {
 	exports.checkDbStructure(function() {
@@ -562,7 +562,7 @@ exports.fromUuid = function fromUuid(userUuid, callback) {
 				err = new Error('No user found for userUuid: "' + userUuid + '"');
 				err.sql = sql;
 				log.debug('larvituser: create() - ' + err.message, err);
-				callback(err);
+				callback(null, false);
 				return;
 			}
 
