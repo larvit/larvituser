@@ -181,7 +181,7 @@ exports.addUserField = function addUserField(userUuid, fieldName, fieldValue, ca
 		    dbFields = [userUuid, fieldId, fieldValue];
 
 		if (err) {
-			log.error('larvituser: addUserField() - ' + err.message, err);
+			log.error('larvituser: addUserField() - ' + err.message);
 			return;
 		}
 
@@ -409,7 +409,7 @@ exports.checkPassword = function checkPassword(password, hash, callback) {
 
 	bcrypt.compare(password, hash, function(err, res) {
 		if (err) {
-			log.error('larvituser: checkPassword() - ' + err.message, err);
+			log.error('larvituser: checkPassword() - ' + err.message);
 			callback(err);
 			return;
 		}
@@ -446,7 +446,7 @@ exports.create = function create(username, password, fields, uuid, callback) {
 	function writeFieldsToDb() {
 		exports.replaceUserFields(uuid, fields, function(err) {
 			if (err) {
-				log.error('larvituser: create() - ' + err.message, err);
+				log.error('larvituser: create() - ' + err.message);
 				callback(err);
 				return;
 			}
@@ -455,7 +455,7 @@ exports.create = function create(username, password, fields, uuid, callback) {
 
 			exports.fromUuid(uuid, function(err, user) {
 				if (err) {
-					log.error('larvituser: create() - ' + err.message, err);
+					log.error('larvituser: create() - ' + err.message);
 					callback(err);
 					return;
 				}
@@ -504,7 +504,7 @@ exports.create = function create(username, password, fields, uuid, callback) {
 
 		if ( ! username.length) {
 			err = new Error('Trying to create user with empty username');
-			log.warn('larvituser: create() - ' + err.message, err);
+			log.warn('larvituser: create() - ' + err.message);
 			callback(err);
 			return;
 		}
@@ -515,7 +515,7 @@ exports.create = function create(username, password, fields, uuid, callback) {
 				callback(err);
 			} else if ( ! res) {
 				err = new Error('Trying to create user with taken username: "' + username + '"');
-				log.info('larvituser: create() - ' + err.message, err);
+				log.info('larvituser: create() - ' + err.message);
 				callback(err);
 			} else {
 				log.debug('larvituser: create() - Username available, moving on to hashing password', {'username': username});
@@ -561,7 +561,7 @@ exports.fromUuid = function fromUuid(userUuid, callback) {
 			if (rows.length === 0) {
 				err = new Error('No user found for userUuid: "' + userUuid + '"');
 				err.sql = sql;
-				log.debug('larvituser: create() - ' + err.message, err);
+				log.debug('larvituser: create() - ' + err.message);
 				callback(null, false);
 				return;
 			}
@@ -614,14 +614,14 @@ exports.fromUserAndPass = function fromUserAndPass(username, password, callback)
 			if (rows.length === 0) {
 				err = new Error('No user found for username: "' + username + '"');
 				err.sql = sql;
-				log.verbose('larvituser: fromUserAndPass() - ' + err.message, err);
+				log.verbose('larvituser: fromUserAndPass() - ' + err.message);
 				callback(err);
 				return;
 			}
 
 			exports.checkPassword(password, rows[0].password, function(err, res) {
 				if (err) {
-					log.error('larvituser: fromUserAndPass() - ' + err.message, err);
+					log.error('larvituser: fromUserAndPass() - ' + err.message);
 					callback(err);
 					return;
 				}
@@ -632,7 +632,7 @@ exports.fromUserAndPass = function fromUserAndPass(username, password, callback)
 					exports.fromUuid(rows[0].uuid, callback);
 				} else {
 					err = new Error('Login failed, wrong password. Username: "' + username + '"');
-					log.info('larvituser: fromUserAndPass() - ' + err.message, err);
+					log.info('larvituser: fromUserAndPass() - ' + err.message);
 					callback(err);
 				}
 			});
@@ -664,7 +664,7 @@ exports.fromUsername = function fromUsername(username, callback) {
 			if (rows.length === 0) {
 				err = new Error('No user found for username: "' + username + '"');
 				err.sql = sql;
-				log.debug('larvituser: fromUsername() - ' + err.message, err);
+				log.debug('larvituser: fromUsername() - ' + err.message);
 				callback(err);
 				return;
 			}
@@ -791,14 +791,14 @@ exports.hashPassword = function hashPassword(password, callback) {
 
 	bcrypt.genSalt(10, function(err, salt) {
 		if (err) {
-			log.error('larvituser: hashPassword() - ' + err.message, err);
+			log.error('larvituser: hashPassword() - ' + err.message);
 			callback(err);
 			return;
 		}
 
 		bcrypt.hash(password, salt, function(err, hash) {
 			if (err) {
-				log.error('larvituser: hashPassword() - ' + err.message, err);
+				log.error('larvituser: hashPassword() - ' + err.message);
 				callback(err);
 				return;
 			}
