@@ -17,6 +17,7 @@
 		"no-mixed-spaces-and-tabs": [2, "smart-tabs"],
 		"space-unary-ops": [1, { "words": true, "nonwords": true }],
 		"no-underscore-dangle": false,
-		"no-process-exit": false
+		"no-process-exit": false,
+		"no-use-before-define": [1, "nofunc"]
 	}
 }

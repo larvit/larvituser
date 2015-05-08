@@ -6,6 +6,14 @@ var assert  = require('assert'),
     userLib = require('larvituser'),
     fs      = require('fs');
 
+// Set up winston
+log.remove(log.transports.Console);
+log.add(log.transports.Console, {
+	'level': 'error',
+	'colorize': true,
+	'timestamp': true
+});
+
 describe('Setup database', function() {
 	it('should setup the database', function(done) {
 		assert(process.argv[3] !== undefined, 'Database config parameter missing - mocha should be used like: mocha test/test.js /path/to/config/dbsettings.json');
@@ -35,14 +43,6 @@ describe('User', function() {
 	var createdUuid;
 
 	before(function(done) {
-		// Set up winston
-		log.remove(log.transports.Console);
-		log.add(log.transports.Console, {
-			'level': 'error',
-			'colorize': true,
-			'timestamp': true
-		});
-
 		// Check for empty db
 		db.query('SHOW TABLES', function(err, rows) {
 			if (err) {
@@ -55,7 +55,11 @@ describe('User', function() {
 				process.exit(1);
 			}
 
-			done();
+			userLib.checkDbStructure(function(err) {
+				assert( ! err, 'err should be negative');
+
+				done();
+			});
 		});
 	});
 
@@ -151,8 +155,8 @@ describe('User', function() {
 
 		it('should fail to log the created user in by username and password', function(done) {
 			userLib.fromUserAndPass('lilleman', 'nisse', function(err, user) {
-				assert(err, 'err should be positive');
-				assert.deepEqual(user, undefined);
+				assert( ! err, 'err should be negative');
+				assert(user === false, 'user should be false');
 				done();
 			});
 		});
@@ -218,6 +222,34 @@ describe('User', function() {
 			});
 		});
 
+		it('should set a new password for a user', function(done) {
+			userLib.fromUsername('lilleman', function(err, user) {
+				assert( ! err, 'err should be negative');
+
+				assert(user !== false, 'The user object should not be false');
+
+				user.setPassword('biffelbaffel', function(err) {
+					assert( ! err, 'err should be negative');
+
+					userLib.fromUserAndPass('lilleman', 'biffelbaffel', function(err, user) {
+						assert( ! err, 'err should be negative');
+
+						assert(user !== false, 'The user object should not be false');
+
+						user.setPassword('BOOM', function(err) {
+							assert( ! err, 'err should be negative');
+
+							userLib.fromUserAndPass('lilleman', 'biffelbaffel', function(err, user) {
+								assert( ! err, 'err should be negative');
+
+								assert(user === false, 'The user object should be false');
+								done();
+							});
+						});
+					});
+				});
+			});
+		});
 	});
 
 	after(function(done) {
@@ -251,5 +283,4 @@ describe('User', function() {
 			});
 		});
 	});
-
 });
