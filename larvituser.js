@@ -8,7 +8,7 @@ var db      = require('larvitdb'),
 exports.dbChecked      = false;
 exports.dbCheckStarted = false;
 
-exports.createUserUsers = function(callback) {
+exports.createUserUsers = function createUserUsers(callback) {
 	// We need to run the checks for user_users first
 	db.query('SHOW TABLES LIKE \'user_users\'', function(err, rows) {
 		var sql;
@@ -41,7 +41,7 @@ exports.createUserUsers = function(callback) {
 	});
 };
 
-exports.createUserDataFields = function(callback) {
+exports.createUserDataFields = function createUserDataFields(callback) {
 	db.query('SHOW TABLES LIKE \'user_data_fields\'', function(err, rows) {
 		var sql;
 
@@ -72,7 +72,7 @@ exports.createUserDataFields = function(callback) {
 	});
 };
 
-exports.createUserRolesRights = function(callback) {
+exports.createUserRolesRights = function createUserRolesRights(callback) {
 	db.query('SHOW TABLES LIKE \'user_roles_rights\'', function(err, rows) {
 		var sql;
 
@@ -102,7 +102,7 @@ exports.createUserRolesRights = function(callback) {
 	});
 };
 
-exports.createUserUsersData = function(callback) {
+exports.createUserUsersData = function createUserUsersData(callback) {
 	db.query('SHOW TABLES LIKE \'user_users_data\'', function(err, rows) {
 		var sql;
 
@@ -313,7 +313,7 @@ function userBase() {
 	 * @param str value
 	 * @param func callback(err)
 	 */
-	returnObj.addField = function(name, value, callback) {
+	returnObj.addField = function addField(name, value, callback) {
 		var err;
 
 		if (returnObj.uuid === undefined) {
@@ -343,7 +343,7 @@ function userBase() {
 	 * @param obj fields - field name as key, field values as array to that key - ex: {'role': ['admin','user']}
 	 * @param func callback(err)
 	 */
-	returnObj.replaceFields = function(fields, callback) {
+	returnObj.replaceFields = function replaceFields(fields, callback) {
 		var err;
 
 		if (returnObj.uuid === undefined) {
@@ -375,7 +375,7 @@ function userBase() {
 	 * @param str name
 	 * @param func callback(err)
 	 */
-	returnObj.rmField = function(name, callback) {
+	returnObj.rmField = function rmField(name, callback) {
 		var err;
 
 		if (returnObj.uuid === undefined) {
