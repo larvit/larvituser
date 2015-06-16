@@ -325,6 +325,42 @@ function createUserUsersData(callback) {
 }
 
 /**
+ * Create a user object from a field
+ * IMPORTANT! Only fetches first matching user!
+ *
+ * @param str fieldName
+ * @param str fieldValue
+ * @param func callback(err, user) - "user" being a new user object or boolean false on failed login
+ */
+function fromField(fieldName, fieldValue, callback) {
+	exports.checkDbStructure(function() {
+		var sql,
+		    dbFields;
+
+		sql = 'SELECT uud.userUuid ' +
+		      'FROM user_users_data uud JOIN user_data_fields udf ON udf.id = uud.fieldId ' +
+		      'WHERE udf.name = ? AND uud.data = ? ' +
+		      'LIMIT 1';
+
+		dbFields = [fieldName, fieldValue];
+
+		db.query(sql, dbFields, function(err, rows) {
+			if (err) {
+				callback(err);
+				return;
+			}
+
+			if (rows.length === 0) {
+				callback(null, false);
+				return;
+			}
+
+			exports.fromUuid(rows[0].userUuid, callback);
+		});
+	});
+}
+
+/**
  * Create a user object from username and password
  *
  * @param str username
@@ -887,6 +923,7 @@ exports.createUserDataFields  = createUserDataFields;
 exports.createUserRolesRights = createUserRolesRights;
 exports.createUserUsers       = createUserUsers;
 exports.createUserUsersData   = createUserUsersData;
+exports.fromField             = fromField;
 exports.fromUserAndPass       = fromUserAndPass;
 exports.fromUsername          = fromUsername;
 exports.fromUuid              = fromUuid;
