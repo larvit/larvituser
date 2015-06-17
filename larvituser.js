@@ -95,7 +95,7 @@ function checkPassword(password, hash, callback) {
  * Creates a new user (and adds to it to db)
  *
  * @param str username
- * @param str password (plain text)
+ * @param str password (plain text) or false for no password (user will not be able to login at all)
  * @param obj fields - key, value pairs, where value can be an array of values
  * @param uuid custom uuid - if not supplied a random will be generated
  * @param func callback(err, user) - user being an instance of the new user
@@ -154,6 +154,13 @@ function create(username, password, fields, uuid, callback) {
 
 	// Hash password - called from the above callback
 	function hashPassword() {
+		if (password === false) {
+			log.debug('larvituser: create() - Password set to empty string for no-login, moving on to writing username and password to database', {'username': username});
+			hashedPassword = '';
+			writeToDb();
+			return;
+		}
+
 		exports.hashPassword(password, function(err, hash) {
 			if (err) {
 				callback(err);
@@ -169,7 +176,9 @@ function create(username, password, fields, uuid, callback) {
 		log.verbose('larvituser: create() - Trying to create user', {'username': username, 'fields': fields});
 
 		username = username.trim();
-		password = password.trim();
+		if (password !== false) {
+			password = password.trim();
+		}
 
 		if ( ! username.length) {
 			err = new Error('Trying to create user with empty username');
@@ -748,7 +757,7 @@ function rmUserField(userUuid, fieldName, callback) {
  * Set password for a user
  *
  * @param str userUuid
- * @param str newPassword
+ * @param str newPassword (plain text) or false for no valid password (user will not be able to login at all)
  * @param func callback(err)
  */
 function setPassword(userUuid, newPassword, callback) {
@@ -767,16 +776,18 @@ function setPassword(userUuid, newPassword, callback) {
 			return;
 		}
 
-		hashPassword(newPassword, function(err, hash) {
-			if (err) {
-				callback(err);
-				return;
-			}
+		if (newPassword === false) {
+			db.query(sql, ['', userUuid], callback);
+		} else {
+			hashPassword(newPassword, function(err, hash) {
+				if (err) {
+					callback(err);
+					return;
+				}
 
-			db.query(sql, [hash, userUuid], function(err) {
-				callback(err);
+				db.query(sql, [hash, userUuid], callback);
 			});
-		});
+		}
 	});
 }
 
