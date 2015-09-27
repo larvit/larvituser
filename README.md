@@ -20,13 +20,17 @@ Create a new user in the database, do like this:
     }
 
     userLib.create('myUsername', 'myPassword', userData, function(err, user) {
-    	console.log('New user ID: ' + user.id);
+    	console.log('New user UUID: ' + user.uuid);
     });
 
 To fetch a user from database based on username and password, do like this:
 
     userLib.fromUserAndPass('myUsername', 'myPassword', function(err, user) {
     	if (err) {
+    		throw err;
+    	}
+
+    	if ( ! user) {
     		// No match found, or other more serious error
     	} else {
     		console.log('Fetched user ID: ' + user.id);
