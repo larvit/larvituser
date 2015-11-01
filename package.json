@@ -13,7 +13,16 @@
 	},
 	"description": "User module for node.js",
 	"devDependencies": {
-		"mocha": "latest"
+		"mocha": "latest",
+		"freeport": "latest",
+		"pre-git": "latest"
+	},
+	"pre-commit": [
+		"npm test",
+		"eslint ./"
+	],
+	"scripts": {
+		"test": "mocha"
 	},
 	"keywords": [
 		"auth",

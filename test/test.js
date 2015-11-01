@@ -16,26 +16,25 @@ log.add(log.transports.Console, {
 
 describe('Setup database', function() {
 	it('should setup the database', function(done) {
-		assert(process.argv[3] !== undefined, 'Database config parameter missing - mocha should be used like: mocha test/test.js /path/to/config/dbsettings.json');
+		var confFile;
 
-		if (process.argv[3] !== undefined) {
-			fs.stat(process.argv[3], function(err) {
-				assert( ! err, 'err should be negative');
+		if (process.argv[3] === undefined)
+			confFile = __dirname + '/../../../config/db_test.json';
+		else
+			confFile = process.argv[3];
 
-				if ( ! err) {
-					db.setup(require(process.argv[3]));
+		//assert(process.argv[3] !== undefined, 'Database config parameter missing - mocha should be used like: mocha test/test.js /path/to/config/dbsettings.json');
+		fs.stat(confFile, function(err) {
+			assert( ! err, 'err should be negative');
+
+			if ( ! err) {
+				db.setup(require(confFile), function(err) {
+					assert( ! err, 'err should be negative');
+
 					done();
-
-					return;
-				}
-
-				done();
-			});
-
-			return;
-		}
-
-		done();
+				});
+			}
+		});
 	});
 });
 
@@ -72,7 +71,6 @@ describe('User', function() {
 	});
 
 	describe('fields', function() {
-
 		it('should return an ID for the field we are asking for', function(done) {
 			userLib.getFieldId('firstname', function(err, fieldId) {
 				assert( ! err, 'err should be negative');
@@ -111,7 +109,6 @@ describe('User', function() {
 	});
 
 	describe('create', function() {
-
 		it('should create a new user with random uuid', function(done) {
 			userLib.create('lilleman', 'foobar', {'firstname': 'migal', 'lastname': ['Arvidsson', 'Göransson']}, function(err, user) {
 				assert( ! err, 'err should be negative');
@@ -129,6 +126,14 @@ describe('User', function() {
 			userLib.create('lilleman', 'foobar', {'firstname': 'migal', 'lastname': ['Arvidsson', 'Göransson']}, function(err, user) {
 				assert.notEqual(err, null);
 				assert.equal(user, undefined);
+				done();
+			});
+		});
+
+		it('should try to create a user with a field that is undefined', function(done) {
+			userLib.create('trams', false, {'firstname': undefined, 'lastname': ['biff', 'baff']}, function(err, user) {
+				assert( ! err, 'err should be negative');
+				assert(user.uuid !== undefined);
 				done();
 			});
 		});
