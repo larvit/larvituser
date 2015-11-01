@@ -696,7 +696,7 @@ function replaceUserFields(userUuid, fields, callback) {
 			field = fields[fieldName];
 
 			// Make sure this fields values are always represented as array
-			if (field.constructor !== Array) {
+			if ( ! (field instanceof Array)) {
 				field = [fields[fieldName]];
 			}
 
