@@ -19,8 +19,8 @@ exports.dbCheckStarted = false;
 function addUserField(userUuid, fieldName, fieldValue, callback) {
 	fieldValue = String(fieldValue).trim();
 
-	exports.getFieldId(fieldName, function(err, fieldId) {
-		var sql      = 'INSERT INTO user_users_data (userUuid, fieldId, data) VALUES(?,?,?)',
+	getFieldId(fieldName, function(err, fieldId) {
+		var sql      = 'INSERT INTO user_users_data (userUuid, fieldId, data) VALUES(UNHEX(REPLACE(?, \'-\', \'\')),?,?)',
 		    dbFields = [userUuid, fieldId, fieldValue];
 
 		if (err) {
@@ -40,6 +40,21 @@ function addUserField(userUuid, fieldName, fieldValue, callback) {
 }
 
 /**
+ * Convert a buffer to an uuid string
+ *
+ * @param buffer buffer
+ *
+ * @return str
+ */
+function bufferToUuid(buffer) {
+	var str = buffer.toString('hex');
+
+	str = str.substring(0, 8) + '-' + str.substring(8, 12) + '-' + str.substring(12, 16) + '-' + str.substring(16, 20) + '-' + str.substring(20);
+
+	return str;
+}
+
+/**
  * Control the database structure and create if it not exists
  */
 function checkDbStructure(callback) {
@@ -48,15 +63,15 @@ function checkDbStructure(callback) {
 	} else if (exports.dbCheckStarted) {
 		// If it have started, but not finnished, run it again next tick until it is done
 		setImmediate(function() {
-			exports.checkDbStructure(callback);
+			checkDbStructure(callback);
 		});
 	} else {
 		exports.dbCheckStarted = true;
 
-		exports.createUserUsers(function() {
-			exports.createUserDataFields(function() {
-				exports.createUserRolesRights(function() {
-					exports.createUserUsersData(function() {
+		createUserUsers(function() {
+			createUserDataFields(function() {
+				createUserRolesRights(function() {
+					createUserUsersData(function() {
 						exports.dbChecked = true;
 						callback();
 					});
@@ -113,7 +128,7 @@ function create(username, password, fields, uuid, callback) {
 
 	// Write the fields to the db
 	function writeFieldsToDb() {
-		exports.replaceUserFields(uuid, fields, function(err) {
+		replaceUserFields(uuid, fields, function(err) {
 			if (err) {
 				log.error('larvituser: create() - ' + err.message);
 				callback(err);
@@ -122,7 +137,7 @@ function create(username, password, fields, uuid, callback) {
 
 			log.debug('larvituser: create() - Fields written successfully to database', {'username': username, 'userUuid': uuid, 'fields': fields});
 
-			exports.fromUuid(uuid, function(err, user) {
+			fromUuid(uuid, function(err, user) {
 				if (err) {
 					log.error('larvituser: create() - ' + err.message);
 					callback(err);
@@ -136,7 +151,7 @@ function create(username, password, fields, uuid, callback) {
 
 	// Write to database - called from the above callback
 	function writeToDb() {
-		var sql      = 'INSERT INTO user_users (uuid, username, password) VALUES(?,?,?);',
+		var sql      = 'INSERT INTO user_users (uuid, username, password) VALUES(UNHEX(REPLACE(?, \'-\', \'\')),?,?);',
 		    dbFields = [uuid, username, hashedPassword];
 
 		log.verbose('larvituser: create() - Trying to write username and password to database', {'sql': sql, 'fields': dbFields});
@@ -172,7 +187,7 @@ function create(username, password, fields, uuid, callback) {
 		});
 	}
 
-	exports.checkDbStructure(function() {
+	checkDbStructure(function() {
 		log.verbose('larvituser: create() - Trying to create user', {'username': username, 'fields': fields});
 
 		username = username.trim();
@@ -188,7 +203,7 @@ function create(username, password, fields, uuid, callback) {
 		}
 
 		// Check if username is available
-		exports.usernameAvailable(username, function(err, res) {
+		usernameAvailable(username, function(err, res) {
 			if (err) {
 				callback(err);
 			} else if ( ! res) {
@@ -278,7 +293,7 @@ function createUserUsers(callback) {
 			log.info('larvituser: createUserUsers() - Table user_users did not exist, creating.');
 
 			sql = 'CREATE TABLE `user_users` (' +
-				'	`uuid` char(36) CHARACTER SET ascii NOT NULL,' +
+				'	`uuid` binary(16) NOT NULL,' +
 				'	`username` varchar(191) COLLATE utf8mb4_unicode_ci NOT NULL,' +
 				'	`password` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,' +
 				'	PRIMARY KEY (`uuid`),' +
@@ -311,7 +326,7 @@ function createUserUsersData(callback) {
 
 			sql = 'CREATE TABLE `user_users_data` (' +
 				'	`id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,' +
-				'	`userUuid` char(36) CHARACTER SET ascii NOT NULL,' +
+				'	`userUuid` binary(16) NOT NULL,' +
 				'	`fieldId` int(11) unsigned NOT NULL,' +
 				'	`data` text COLLATE utf8mb4_unicode_ci NOT NULL,' +
 				'	PRIMARY KEY (`id`),' +
@@ -342,7 +357,7 @@ function createUserUsersData(callback) {
  * @param func callback(err, user) - "user" being a new user object or boolean false on failed login
  */
 function fromField(fieldName, fieldValue, callback) {
-	exports.checkDbStructure(function() {
+	checkDbStructure(function() {
 		var sql,
 		    dbFields;
 
@@ -364,7 +379,7 @@ function fromField(fieldName, fieldValue, callback) {
 				return;
 			}
 
-			exports.fromUuid(rows[0].userUuid, callback);
+			fromUuid(bufferToUuid(rows[0].userUuid), callback);
 		});
 	});
 }
@@ -377,7 +392,7 @@ function fromField(fieldName, fieldValue, callback) {
  * @param func callback(err, user) - "user" being a new user object or boolean false on failed login
  */
 function fromUserAndPass(username, password, callback) {
-	exports.checkDbStructure(function() {
+	checkDbStructure(function() {
 		var sql = 'SELECT uuid, password FROM user_users WHERE username = ?',
 		    dbFields;
 
@@ -396,7 +411,7 @@ function fromUserAndPass(username, password, callback) {
 				return;
 			}
 
-			exports.checkPassword(password, rows[0].password, function(err, res) {
+			checkPassword(password, rows[0].password, function(err, res) {
 				if (err) {
 					log.error('larvituser: fromUserAndPass() - ' + err.message);
 					callback(err);
@@ -405,7 +420,7 @@ function fromUserAndPass(username, password, callback) {
 
 				if (res === true) {
 					// Password check is ok, use fromUuid() to get the user instance
-					exports.fromUuid(rows[0].uuid, callback);
+					fromUuid(bufferToUuid(rows[0].uuid), callback);
 				} else {
 					callback(null, false);
 				}
@@ -421,7 +436,7 @@ function fromUserAndPass(username, password, callback) {
  * @param func callback(err, user) - "user" being a new user object
  */
 function fromUsername(username, callback) {
-	exports.checkDbStructure(function() {
+	checkDbStructure(function() {
 		var sql,
 		    dbFields;
 
@@ -444,7 +459,7 @@ function fromUsername(username, callback) {
 			}
 
 			// Use fromUuid() to get the user instance
-			exports.fromUuid(rows[0].uuid, callback);
+			fromUuid(bufferToUuid(rows[0].uuid), callback);
 		});
 	});
 }
@@ -456,7 +471,7 @@ function fromUsername(username, callback) {
  * @param func callback(err, userObj) - userObj will be false if no user is found
  */
 function fromUuid(userUuid, callback) {
-	exports.checkDbStructure(function() {
+	checkDbStructure(function() {
 		var returnObj = userBase(),
 		    rowNr     = 0,
 		    fields    = returnObj.fields,
@@ -472,7 +487,7 @@ function fromUuid(userUuid, callback) {
 		                  'user_users u ' +
 		                  'LEFT JOIN user_users_data  ud ON ud.userUuid = u.uuid ' +
 		                  'LEFT JOIN user_data_fields uf ON uf.id       = ud.fieldId ' +
-		                'WHERE u.uuid = ?';
+		                'WHERE u.uuid = UNHEX(REPLACE(?, \'-\', \'\'))';
 
 		log.silly('larvituser: fromUuid() - SQL query', {'sql': sql, 'dbFields': dbFields});
 
@@ -490,7 +505,7 @@ function fromUuid(userUuid, callback) {
 				return;
 			}
 
-			returnObj.uuid     = rows[0].uuid;
+			returnObj.uuid     = bufferToUuid(rows[0].uuid);
 			returnObj.username = rows[0].username;
 
 			rowNr = 0;
@@ -521,8 +536,8 @@ function fromUuid(userUuid, callback) {
  * @param func callback(err, data) - data is always an array of data (or empty array)
  */
 function getFieldData(userUuid, fieldName, callback) {
-	exports.getFieldId(fieldName, function(err, fieldId) {
-		var sql      = 'SELECT data FROM user_users_data WHERE userUuid = ? AND fieldId = ?',
+	getFieldId(fieldName, function(err, fieldId) {
+		var sql      = 'SELECT data FROM user_users_data WHERE userUuid = UNHEX(REPLACE(?, \'-\', \'\')) AND fieldId = ?',
 		    dbFields = [userUuid, fieldId];
 
 		if (err) {
@@ -556,7 +571,7 @@ function getFieldData(userUuid, fieldName, callback) {
  * @param func callback(err, id)
  */
 function getFieldId(fieldName, callback) {
-	exports.checkDbStructure(function() {
+	checkDbStructure(function() {
 		var sql = 'SELECT id FROM user_data_fields WHERE name = ?',
 		    dbFields;
 
@@ -582,7 +597,7 @@ function getFieldId(fieldName, callback) {
 					}
 
 					// Rerun this function, it should return correct now!
-					exports.getFieldId(fieldName, function(err, id) {
+					getFieldId(fieldName, function(err, id) {
 						callback(err, id);
 					});
 				});
@@ -598,7 +613,7 @@ function getFieldId(fieldName, callback) {
  * @param func callback(err, str)
  */
 function getFieldName(fieldId, callback) {
-	exports.checkDbStructure(function() {
+	checkDbStructure(function() {
 		var sql      = 'SELECT name FROM user_data_fields WHERE id = ?',
 		    dbFields = [fieldId];
 
@@ -655,12 +670,12 @@ function hashPassword(password, callback) {
  * @param func callback(err)
  */
 function replaceUserFields(userUuid, fields, callback) {
-	var sql      = 'DELETE FROM user_users_data WHERE userUuid = ?',
+	var sql      = 'DELETE FROM user_users_data WHERE userUuid = UNHEX(REPLACE(?, \'-\', \'\'))',
 	    dbFields = [userUuid];
 
 	// We need to do this to make sure they all happend before we call the final callback
 	function callSetUserField(userUuid, fieldName, fieldValue, nextParams, callback) {
-		exports.addUserField(userUuid, fieldName, fieldValue, function(err) {
+		addUserField(userUuid, fieldName, fieldValue, function(err) {
 			var entries;
 
 			if (err) {
@@ -733,8 +748,8 @@ function replaceUserFields(userUuid, fields, callback) {
  * @param func callback(err)
  */
 function rmUserField(userUuid, fieldName, callback) {
-	exports.getFieldId(fieldName, function(err, fieldId) {
-		var sql      = 'DELETE FROM user_users_data WHERE userUuid = ? AND fieldId = ?',
+	getFieldId(fieldName, function(err, fieldId) {
+		var sql      = 'DELETE FROM user_users_data WHERE userUuid = UNHEX(REPLACE(?, \'-\', \'\')) AND fieldId = ?',
 		    dbFields = [userUuid, fieldId];
 
 		if (err) {
@@ -761,7 +776,7 @@ function rmUserField(userUuid, fieldName, callback) {
  * @param func callback(err)
  */
 function setPassword(userUuid, newPassword, callback) {
-	var sql = 'UPDATE user_users SET password = ? WHERE uuid = ?;';
+	var sql = 'UPDATE user_users SET password = ? WHERE uuid = UNHEX(REPLACE(?, \'-\', \'\'));';
 
 	fromUuid(userUuid, function(err, user) {
 		if (err) {
@@ -810,7 +825,7 @@ function userBase() {
 			return;
 		}
 
-		exports.addUserField(returnObj.uuid, name, value, function(err) {
+		addUserField(returnObj.uuid, name, value, function(err) {
 			if (err) {
 				callback(err);
 			} else {
@@ -840,12 +855,12 @@ function userBase() {
 			return;
 		}
 
-		exports.replaceUserFields(returnObj.uuid, fields, function(err) {
+		replaceUserFields(returnObj.uuid, fields, function(err) {
 			if (err) {
 				callback(err);
 			} else {
 				// Reload everything
-				exports.fromUuid(returnObj.uuid, function(err, user) {
+				fromUuid(returnObj.uuid, function(err, user) {
 					if (err) {
 						callback(err);
 					} else {
@@ -872,7 +887,7 @@ function userBase() {
 			return;
 		}
 
-		exports.rmUserField(returnObj.uuid, name, function(err) {
+		rmUserField(returnObj.uuid, name, function(err) {
 			if (err) {
 				callback(err);
 			} else {
@@ -904,7 +919,7 @@ function userBase() {
  * @param func callback(err, res) - res is a bolean
  */
 function usernameAvailable(username, callback) {
-	exports.checkDbStructure(function() {
+	checkDbStructure(function() {
 		var sql = 'SELECT uuid FROM user_users WHERE username = ?',
 		    dbFields;
 
@@ -927,6 +942,7 @@ function usernameAvailable(username, callback) {
 }
 
 exports.addUserField          = addUserField;
+exports.bufferToUuid          = bufferToUuid;
 exports.checkDbStructure      = checkDbStructure;
 exports.checkPassword         = checkPassword;
 exports.create                = create;
