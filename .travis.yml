@@ -17,10 +17,10 @@ before_install:
 
 install:
   - if [[ $TRAVIS_OS_NAME == "linux" ]]; then export CXX=g++-4.8; fi
+  - npm i
 
 before_script:
   - mysql -e 'CREATE DATABASE test'
-  - npm i -g mocha
 
 script: mocha test/test.js -confFile=db_travis.json
 
