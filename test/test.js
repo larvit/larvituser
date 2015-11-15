@@ -3,7 +3,7 @@
 var assert  = require('assert'),
     log     = require('winston'),
     db      = require('larvitdb'),
-    userLib = require('larvituser'),
+    userLib = require('./larvituser.js'),
     fs      = require('fs');
 
 // Set up winston
