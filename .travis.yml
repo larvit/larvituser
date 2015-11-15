@@ -7,7 +7,7 @@ notifications:
   email:
     - lilleman@larvit.se
 before_script: mysql -e 'CREATE DATABASE test'
-script: mocha test/test.js config/db_travis.json
+script: mocha test/test.js ../config/db_travis.json
 services:
   - mysql
 #addons:
