@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/larvit/larvituser.svg?branch=master)](https://travis-ci.org/larvit/larvituser)
+
 # larvituser
 
 User module for node.js
