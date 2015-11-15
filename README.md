@@ -88,7 +88,7 @@ userLib.create('username', 'password', {'firstname': 'John', 'lastname': 'Smith'
 });
 ```
 
-#### Fetch a user based on a filed
+#### Fetch a user based on a field
 
 Will fetch the first occurance in the database with this field name and field value.
 
@@ -129,6 +129,7 @@ IMPORTANT!!! Will clear all data not given in the fields parameter
 ```javascript
 userLib.replaceUserFields('f9684592-b245-42fa-88c6-9f16b9236ac3', {'lastname': ['Smith', 'Johnsson']}, function(err) {
 	// The field "lastname" will now be replaced with the two values "Smith" and "Johnsson"
+	// And all other fields will be removed
 
 	userLib.getFieldData('f9684592-b245-42fa-88c6-9f16b9236ac3', 'lastname', function(err, data) {
 		console.log(data); // ['Smith', 'Johnsson']
@@ -141,7 +142,7 @@ userLib.replaceUserFields('f9684592-b245-42fa-88c6-9f16b9236ac3', {'lastname': [
 ```javascript
 userLib.rmUserField('f9684592-b245-42fa-88c6-9f16b9236ac3', 'lastname', function(err) {
 	userLib.fromUuid('f9684592-b245-42fa-88c6-9f16b9236ac3', function(err, user) {
-		console.log(user.fields); // {'firstname': ['John']} - Notice the lack of lastname that we added above
+		console.log(user.fields); // {'firstname': ['John']}
 	});
 });
 ```
