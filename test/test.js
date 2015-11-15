@@ -17,6 +17,16 @@ log.add(log.transports.Console, {
 before(function(done) {
 	var confFile;
 
+	function runDbSetup(confFile) {
+		log.verbose('DB config: ' + JSON.stringify(require(confFile)));
+
+		db.setup(require(confFile), function(err) {
+			assert( ! err, 'err should be negative');
+
+			done();
+		});
+	}
+
 	if (process.argv[3] === undefined)
 		confFile = __dirname + '/../../../config/db_test.json';
 	else
@@ -25,19 +35,23 @@ before(function(done) {
 	log.verbose('DB config file: "' + confFile + '"');
 
 	fs.stat(confFile, function(err) {
-		if (err)
-			assert( ! err, 'fs.stat failed: ' + err.message);
+		var altConfFile = __dirname + '/../config/' + confFile;
 
-		log.verbose('DB config: ' + JSON.stringify(require(confFile)));
+		if (err) {
+			log.info('Failed to find config file "' + confFile + '", retrying with "' + altConfFile + '"');
 
-		if ( ! err) {
-			db.setup(require(confFile), function(err) {
-				assert( ! err, 'err should be negative');
+			fs.stat(altConfFile, function(err) {
+				if (err)
+					assert( ! err, 'fs.stat failed: ' + err.message);
 
-				done();
+				if ( ! err)
+					runDbSetup(altConfFile);
 			});
+		} else {
+			runDbSetup(confFile);
 		}
 	});
+
 });
 
 describe('Tools', function() {
