@@ -30,7 +30,7 @@ before(function(done) {
 	if (process.argv[3] === undefined)
 		confFile = __dirname + '/../../../config/db_test.json';
 	else
-		confFile = process.argv[3];
+		confFile = process.argv[3].split('=')[1];
 
 	log.verbose('DB config file: "' + confFile + '"');
 
