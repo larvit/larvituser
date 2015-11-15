@@ -14,9 +14,9 @@ exports.dbCheckStarted = false;
  * @param uuid userUuid
  * @param str fieldName
  * @param str fieldValue
- * @param func callback(err)
+ * @param func cb(err)
  */
-function addUserField(userUuid, fieldName, fieldValue, callback) {
+function addUserField(userUuid, fieldName, fieldValue, cb) {
 	fieldValue = String(fieldValue).trim();
 
 	getFieldId(fieldName, function(err, fieldId) {
@@ -30,11 +30,11 @@ function addUserField(userUuid, fieldName, fieldValue, callback) {
 
 		db.query(sql, dbFields, function(err) {
 			if (err) {
-				callback(err);
+				cb(err);
 				return;
 			}
 
-			callback();
+			cb();
 		});
 	});
 }
@@ -57,13 +57,13 @@ function bufferToUuid(buffer) {
 /**
  * Control the database structure and create if it not exists
  */
-function checkDbStructure(callback) {
+function checkDbStructure(cb) {
 	if (exports.dbChecked) {
-		callback();
+		cb();
 	} else if (exports.dbCheckStarted) {
 		// If it have started, but not finnished, run it again next tick until it is done
 		setImmediate(function() {
-			checkDbStructure(callback);
+			checkDbStructure(cb);
 		});
 	} else {
 		exports.dbCheckStarted = true;
@@ -73,7 +73,7 @@ function checkDbStructure(callback) {
 				createUserRolesRights(function() {
 					createUserUsersData(function() {
 						exports.dbChecked = true;
-						callback();
+						cb();
 					});
 				});
 			});
@@ -86,22 +86,22 @@ function checkDbStructure(callback) {
  *
  * @param str password - plain text password
  * @param str hash - hash to check password against
- * @param func callback(err, res) res is boolean
+ * @param func cb(err, res) res is boolean
  */
-function checkPassword(password, hash, callback) {
+function checkPassword(password, hash, cb) {
 	password = password.trim();
 
 	bcrypt.compare(password, hash, function(err, res) {
 		if (err) {
 			log.error('larvituser: checkPassword() - ' + err.message);
-			callback(err);
+			cb(err);
 			return;
 		}
 
 		if (res) {
-			callback(null, true);
+			cb(null, true);
 		} else {
-			callback(null, false);
+			cb(null, false);
 		}
 	});
 }
@@ -113,14 +113,14 @@ function checkPassword(password, hash, callback) {
  * @param str password (plain text) or false for no password (user will not be able to login at all)
  * @param obj fields - key, value pairs, where value can be an array of values
  * @param uuid custom uuid - if not supplied a random will be generated
- * @param func callback(err, user) - user being an instance of the new user
+ * @param func cb(err, user) - user being an instance of the new user
  */
-function create(username, password, fields, uuid, callback) {
+function create(username, password, fields, uuid, cb) {
 	var hashedPassword,
 	    err;
 
-	if (uuid instanceof Function && callback === undefined) {
-		callback = uuid;
+	if (uuid instanceof Function && cb === undefined) {
+		cb = uuid;
 		uuid     = uuidLib.v4();
 	} else if (uuid === undefined) {
 		uuid = uuidLib.v4();
@@ -131,7 +131,7 @@ function create(username, password, fields, uuid, callback) {
 		replaceUserFields(uuid, fields, function(err) {
 			if (err) {
 				log.error('larvituser: create() - ' + err.message);
-				callback(err);
+				cb(err);
 				return;
 			}
 
@@ -140,16 +140,16 @@ function create(username, password, fields, uuid, callback) {
 			fromUuid(uuid, function(err, user) {
 				if (err) {
 					log.error('larvituser: create() - ' + err.message);
-					callback(err);
+					cb(err);
 					return;
 				}
 
-				callback(null, user);
+				cb(null, user);
 			});
 		});
 	}
 
-	// Write to database - called from the above callback
+	// Write to database - called from the above cb
 	function writeToDb() {
 		var sql      = 'INSERT INTO user_users (uuid, username, password) VALUES(UNHEX(REPLACE(?, \'-\', \'\')),?,?);',
 		    dbFields = [uuid, username, hashedPassword];
@@ -158,7 +158,7 @@ function create(username, password, fields, uuid, callback) {
 
 		db.query(sql, dbFields, function(err) {
 			if (err) {
-				callback(err);
+				cb(err);
 				return;
 			}
 
@@ -167,7 +167,7 @@ function create(username, password, fields, uuid, callback) {
 		});
 	}
 
-	// Hash password - called from the above callback
+	// Hash password - called from the above cb
 	function hashPassword() {
 		if (password === false) {
 			log.debug('larvituser: create() - Password set to empty string for no-login, moving on to writing username and password to database', {'username': username});
@@ -178,7 +178,7 @@ function create(username, password, fields, uuid, callback) {
 
 		exports.hashPassword(password, function(err, hash) {
 			if (err) {
-				callback(err);
+				cb(err);
 			} else {
 				hashedPassword = hash;
 				log.debug('larvituser: create() - Password hashed, moving on to writing username and password to database', {'username': username});
@@ -198,18 +198,18 @@ function create(username, password, fields, uuid, callback) {
 		if ( ! username.length) {
 			err = new Error('Trying to create user with empty username');
 			log.warn('larvituser: create() - ' + err.message);
-			callback(err);
+			cb(err);
 			return;
 		}
 
 		// Check if username is available
 		usernameAvailable(username, function(err, res) {
 			if (err) {
-				callback(err);
+				cb(err);
 			} else if ( ! res) {
 				err = new Error('Trying to create user with taken username: "' + username + '"');
 				log.info('larvituser: create() - ' + err.message);
-				callback(err);
+				cb(err);
 			} else {
 				log.debug('larvituser: create() - Username available, moving on to hashing password', {'username': username});
 				hashPassword();
@@ -218,7 +218,7 @@ function create(username, password, fields, uuid, callback) {
 	});
 }
 
-function createUserDataFields(callback) {
+function createUserDataFields(cb) {
 	db.query('SHOW TABLES LIKE \'user_data_fields\'', function(err, rows) {
 		var sql;
 
@@ -241,15 +241,15 @@ function createUserDataFields(callback) {
 					throw err;
 				}
 
-				callback();
+				cb();
 			});
 		} else {
-			callback();
+			cb();
 		}
 	});
 }
 
-function createUserRolesRights(callback) {
+function createUserRolesRights(cb) {
 	db.query('SHOW TABLES LIKE \'user_roles_rights\'', function(err, rows) {
 		var sql;
 
@@ -271,15 +271,15 @@ function createUserRolesRights(callback) {
 					throw err;
 				}
 
-				callback();
+				cb();
 			});
 		} else {
-			callback();
+			cb();
 		}
 	});
 }
 
-function createUserUsers(callback) {
+function createUserUsers(cb) {
 	// We need to run the checks for user_users first
 	db.query('SHOW TABLES LIKE \'user_users\'', function(err, rows) {
 		var sql;
@@ -304,15 +304,15 @@ function createUserUsers(callback) {
 					throw err;
 				}
 
-				callback(err);
+				cb(err);
 			});
 		} else {
-			callback(err);
+			cb(err);
 		}
 	});
 }
 
-function createUserUsersData(callback) {
+function createUserUsersData(cb) {
 	db.query('SHOW TABLES LIKE \'user_users_data\'', function(err, rows) {
 		var sql;
 
@@ -340,10 +340,10 @@ function createUserUsersData(callback) {
 					throw err;
 				}
 
-				callback();
+				cb();
 			});
 		} else {
-			callback();
+			cb();
 		}
 	});
 }
@@ -354,9 +354,9 @@ function createUserUsersData(callback) {
  *
  * @param str fieldName
  * @param str fieldValue
- * @param func callback(err, user) - "user" being a new user object or boolean false on failed login
+ * @param func cb(err, user) - "user" being a new user object or boolean false on failed login
  */
-function fromField(fieldName, fieldValue, callback) {
+function fromField(fieldName, fieldValue, cb) {
 	checkDbStructure(function() {
 		var sql,
 		    dbFields;
@@ -370,16 +370,16 @@ function fromField(fieldName, fieldValue, callback) {
 
 		db.query(sql, dbFields, function(err, rows) {
 			if (err) {
-				callback(err);
+				cb(err);
 				return;
 			}
 
 			if (rows.length === 0) {
-				callback(null, false);
+				cb(null, false);
 				return;
 			}
 
-			fromUuid(bufferToUuid(rows[0].userUuid), callback);
+			fromUuid(bufferToUuid(rows[0].userUuid), cb);
 		});
 	});
 }
@@ -389,9 +389,9 @@ function fromField(fieldName, fieldValue, callback) {
  *
  * @param str username
  * @param str password
- * @param func callback(err, user) - "user" being a new user object or boolean false on failed login
+ * @param func cb(err, user) - "user" being a new user object or boolean false on failed login
  */
-function fromUserAndPass(username, password, callback) {
+function fromUserAndPass(username, password, cb) {
 	checkDbStructure(function() {
 		var sql = 'SELECT uuid, password FROM user_users WHERE username = ?',
 		    dbFields;
@@ -402,27 +402,27 @@ function fromUserAndPass(username, password, callback) {
 
 		db.query(sql, dbFields, function(err, rows) {
 			if (err) {
-				callback(err);
+				cb(err);
 				return;
 			}
 
 			if (rows.length === 0) {
-				callback(null, false);
+				cb(null, false);
 				return;
 			}
 
 			checkPassword(password, rows[0].password, function(err, res) {
 				if (err) {
 					log.error('larvituser: fromUserAndPass() - ' + err.message);
-					callback(err);
+					cb(err);
 					return;
 				}
 
 				if (res === true) {
 					// Password check is ok, use fromUuid() to get the user instance
-					fromUuid(bufferToUuid(rows[0].uuid), callback);
+					fromUuid(bufferToUuid(rows[0].uuid), cb);
 				} else {
-					callback(null, false);
+					cb(null, false);
 				}
 			});
 		});
@@ -433,9 +433,9 @@ function fromUserAndPass(username, password, callback) {
  * Create a user object from username
  *
  * @param str username
- * @param func callback(err, user) - "user" being a new user object
+ * @param func cb(err, user) - "user" being a new user object
  */
-function fromUsername(username, callback) {
+function fromUsername(username, cb) {
 	checkDbStructure(function() {
 		var sql,
 		    dbFields;
@@ -446,7 +446,7 @@ function fromUsername(username, callback) {
 
 		db.query(sql, dbFields, function(err, rows) {
 			if (err) {
-				callback(err);
+				cb(err);
 				return;
 			}
 
@@ -454,12 +454,12 @@ function fromUsername(username, callback) {
 				err = new Error('No user found for username: "' + username + '"');
 				err.sql = sql;
 				log.debug('larvituser: fromUsername() - ' + err.message);
-				callback(err);
+				cb(err);
 				return;
 			}
 
 			// Use fromUuid() to get the user instance
-			fromUuid(bufferToUuid(rows[0].uuid), callback);
+			fromUuid(bufferToUuid(rows[0].uuid), cb);
 		});
 	});
 }
@@ -468,9 +468,9 @@ function fromUsername(username, callback) {
  * Instanciate user object from user id
  *
  * @param int userUuid
- * @param func callback(err, userObj) - userObj will be false if no user is found
+ * @param func cb(err, userObj) - userObj will be false if no user is found
  */
-function fromUuid(userUuid, callback) {
+function fromUuid(userUuid, cb) {
 	checkDbStructure(function() {
 		var returnObj = userBase(),
 		    rowNr     = 0,
@@ -493,7 +493,7 @@ function fromUuid(userUuid, callback) {
 
 		db.query(sql, dbFields, function(err, rows) {
 			if (err) {
-				callback(err);
+				cb(err);
 				return;
 			}
 
@@ -501,7 +501,7 @@ function fromUuid(userUuid, callback) {
 				err = new Error('No user found for userUuid: "' + userUuid + '"');
 				err.sql = sql;
 				log.debug('larvituser: create() - ' + err.message);
-				callback(null, false);
+				cb(null, false);
 				return;
 			}
 
@@ -523,7 +523,7 @@ function fromUuid(userUuid, callback) {
 				rowNr ++;
 			}
 
-			callback(null, returnObj);
+			cb(null, returnObj);
 		});
 	});
 }
@@ -533,15 +533,15 @@ function fromUuid(userUuid, callback) {
  *
  * @param int userUuid
  * @param str fieldName
- * @param func callback(err, data) - data is always an array of data (or empty array)
+ * @param func cb(err, data) - data is always an array of data (or empty array)
  */
-function getFieldData(userUuid, fieldName, callback) {
+function getFieldData(userUuid, fieldName, cb) {
 	getFieldId(fieldName, function(err, fieldId) {
 		var sql      = 'SELECT data FROM user_users_data WHERE userUuid = UNHEX(REPLACE(?, \'-\', \'\')) AND fieldId = ?',
 		    dbFields = [userUuid, fieldId];
 
 		if (err) {
-			callback(err);
+			cb(err);
 			return;
 		}
 
@@ -550,7 +550,7 @@ function getFieldData(userUuid, fieldName, callback) {
 			    rowNr = 0;
 
 			if (err) {
-				callback(err);
+				cb(err);
 				return;
 			}
 
@@ -559,7 +559,7 @@ function getFieldData(userUuid, fieldName, callback) {
 				rowNr ++;
 			}
 
-			callback(null, data);
+			cb(null, data);
 		});
 	});
 }
@@ -568,9 +568,9 @@ function getFieldData(userUuid, fieldName, callback) {
  * Get data field id by field name
  *
  * @param str fieldName
- * @param func callback(err, id)
+ * @param func cb(err, id)
  */
-function getFieldId(fieldName, callback) {
+function getFieldId(fieldName, cb) {
 	checkDbStructure(function() {
 		var sql = 'SELECT id FROM user_data_fields WHERE name = ?',
 		    dbFields;
@@ -583,22 +583,22 @@ function getFieldId(fieldName, callback) {
 			var sql = 'INSERT IGNORE INTO user_data_fields (name) VALUES(?)';
 
 			if (err) {
-				callback(err);
+				cb(err);
 				return;
 			}
 
 			if (rows.length) {
-				callback(null, rows[0].id);
+				cb(null, rows[0].id);
 			} else {
 				db.query(sql, dbFields, function(err) {
 					if (err) {
-						callback(err);
+						cb(err);
 						return;
 					}
 
 					// Rerun this function, it should return correct now!
 					getFieldId(fieldName, function(err, id) {
-						callback(err, id);
+						cb(err, id);
 					});
 				});
 			}
@@ -610,24 +610,24 @@ function getFieldId(fieldName, callback) {
  * Get data field name by field id
  *
  * @param int fieldId
- * @param func callback(err, str)
+ * @param func cb(err, str)
  */
-function getFieldName(fieldId, callback) {
+function getFieldName(fieldId, cb) {
 	checkDbStructure(function() {
 		var sql      = 'SELECT name FROM user_data_fields WHERE id = ?',
 		    dbFields = [fieldId];
 
 		db.query(sql, dbFields, function(err, rows) {
 			if (err) {
-				callback(err);
+				cb(err);
 				return;
 			}
 
 			if (rows.length) {
-				callback(null, rows[0].name);
+				cb(null, rows[0].name);
 			} else {
 				err = new Error('Field name not found for id: "' + fieldId + '"');
-				callback(err);
+				cb(err);
 			}
 		});
 	});
@@ -637,26 +637,26 @@ function getFieldName(fieldId, callback) {
  * Hashes a new password
  *
  * @param str password
- * @param func callback(err, hash)
+ * @param func cb(err, hash)
  */
-function hashPassword(password, callback) {
+function hashPassword(password, cb) {
 	password = password.trim();
 
 	bcrypt.genSalt(10, function(err, salt) {
 		if (err) {
 			log.error('larvituser: hashPassword() - ' + err.message);
-			callback(err);
+			cb(err);
 			return;
 		}
 
 		bcrypt.hash(password, salt, function(err, hash) {
 			if (err) {
 				log.error('larvituser: hashPassword() - ' + err.message);
-				callback(err);
+				cb(err);
 				return;
 			}
 
-			callback(null, hash);
+			cb(null, hash);
 		});
 	});
 }
@@ -667,25 +667,25 @@ function hashPassword(password, callback) {
  *
  * @param uuid userUuid
  * @param obj fields - field name as key, field values as array to that key - ex: {'role': ['admin','user']}
- * @param func callback(err)
+ * @param func cb(err)
  */
-function replaceUserFields(userUuid, fields, callback) {
+function replaceUserFields(userUuid, fields, cb) {
 	var sql      = 'DELETE FROM user_users_data WHERE userUuid = UNHEX(REPLACE(?, \'-\', \'\'))',
 	    dbFields = [userUuid];
 
-	// We need to do this to make sure they all happend before we call the final callback
-	function callSetUserField(userUuid, fieldName, fieldValue, nextParams, callback) {
+	// We need to do this to make sure they all happend before we call the final cb
+	function callSetUserField(userUuid, fieldName, fieldValue, nextParams, cb) {
 		addUserField(userUuid, fieldName, fieldValue, function(err) {
 			var entries;
 
 			if (err) {
-				callback(err);
+				cb(err);
 			} else {
 				if (nextParams.length) {
 					entries = nextParams.shift();
-					callSetUserField(entries.userUuid, entries.fieldName, entries.fieldValue, nextParams, callback);
+					callSetUserField(entries.userUuid, entries.fieldName, entries.fieldValue, nextParams, cb);
 				} else {
-					callback();
+					cb();
 				}
 			}
 		});
@@ -701,7 +701,7 @@ function replaceUserFields(userUuid, fields, callback) {
 		    firstEntries;
 
 		if (err) {
-			callback(err);
+			cb(err);
 			return;
 		}
 
@@ -732,9 +732,9 @@ function replaceUserFields(userUuid, fields, callback) {
 		firstEntries = userFieldParams.shift();
 		callSetUserField(firstEntries.userUuid, firstEntries.fieldName, firstEntries.fieldValue, userFieldParams, function(err) {
 			if (err) {
-				callback(err);
+				cb(err);
 			} else {
-				callback();
+				cb();
 			}
 		});
 	});
@@ -745,24 +745,24 @@ function replaceUserFields(userUuid, fields, callback) {
  *
  * @param uuid userUuid
  * @param str fieldName
- * @param func callback(err)
+ * @param func cb(err)
  */
-function rmUserField(userUuid, fieldName, callback) {
+function rmUserField(userUuid, fieldName, cb) {
 	getFieldId(fieldName, function(err, fieldId) {
 		var sql      = 'DELETE FROM user_users_data WHERE userUuid = UNHEX(REPLACE(?, \'-\', \'\')) AND fieldId = ?',
 		    dbFields = [userUuid, fieldId];
 
 		if (err) {
-			callback(err);
+			cb(err);
 			return;
 		}
 
 		log.debug('larvituser: rmUserField() - Removing field from user', {'sql': sql, 'dbFields': dbFields});
 		db.query(sql, dbFields, function(err) {
 			if (err) {
-				callback(err);
+				cb(err);
 			} else {
-				callback();
+				cb();
 			}
 		});
 	});
@@ -773,34 +773,34 @@ function rmUserField(userUuid, fieldName, callback) {
  *
  * @param str userUuid
  * @param str newPassword (plain text) or false for no valid password (user will not be able to login at all)
- * @param func callback(err)
+ * @param func cb(err)
  */
-function setPassword(userUuid, newPassword, callback) {
+function setPassword(userUuid, newPassword, cb) {
 	var sql = 'UPDATE user_users SET password = ? WHERE uuid = UNHEX(REPLACE(?, \'-\', \'\'));';
 
 	fromUuid(userUuid, function(err, user) {
 		if (err) {
-			callback(err);
+			cb(err);
 			return;
 		}
 
 		if (user === false) {
 			err = new Error('Invalid userUuid: "' + userUuid + '"');
 			log.warn('larvituser: setPassword() - ' + err.message);
-			callback(err);
+			cb(err);
 			return;
 		}
 
 		if (newPassword === false) {
-			db.query(sql, ['', userUuid], callback);
+			db.query(sql, ['', userUuid], cb);
 		} else {
 			hashPassword(newPassword, function(err, hash) {
 				if (err) {
-					callback(err);
+					cb(err);
 					return;
 				}
 
-				db.query(sql, [hash, userUuid], callback);
+				db.query(sql, [hash, userUuid], cb);
 			});
 		}
 	});
@@ -814,27 +814,27 @@ function userBase() {
 	 *
 	 * @param str name
 	 * @param str value
-	 * @param func callback(err)
+	 * @param func cb(err)
 	 */
-	returnObj.addField = function addField(name, value, callback) {
+	returnObj.addField = function addField(name, value, cb) {
 		var err;
 
 		if (returnObj.uuid === undefined) {
 			err = new Error('Cannot add field; no user loaded');
-			callback(err);
+			cb(err);
 			return;
 		}
 
 		addUserField(returnObj.uuid, name, value, function(err) {
 			if (err) {
-				callback(err);
+				cb(err);
 			} else {
 				if (returnObj.fields[name] === undefined) {
 					returnObj.fields[name] = [];
 				}
 
 				returnObj.fields[name].push(value);
-				callback();
+				cb();
 			}
 		});
 	};
@@ -844,28 +844,28 @@ function userBase() {
 	 * IMPORTANT!!! Will clear all data not given in the fields parameter
 	 *
 	 * @param obj fields - field name as key, field values as array to that key - ex: {'role': ['admin','user']}
-	 * @param func callback(err)
+	 * @param func cb(err)
 	 */
-	returnObj.replaceFields = function replaceFields(fields, callback) {
+	returnObj.replaceFields = function replaceFields(fields, cb) {
 		var err;
 
 		if (returnObj.uuid === undefined) {
 			err = new Error('Cannot replace fields; no user loaded');
-			callback(err);
+			cb(err);
 			return;
 		}
 
 		replaceUserFields(returnObj.uuid, fields, function(err) {
 			if (err) {
-				callback(err);
+				cb(err);
 			} else {
 				// Reload everything
 				fromUuid(returnObj.uuid, function(err, user) {
 					if (err) {
-						callback(err);
+						cb(err);
 					} else {
 						returnObj.fields = user.fields;
-						callback();
+						cb();
 					}
 				});
 			}
@@ -876,37 +876,37 @@ function userBase() {
 	 * Remove a field from this user
 	 *
 	 * @param str name
-	 * @param func callback(err)
+	 * @param func cb(err)
 	 */
-	returnObj.rmField = function rmField(name, callback) {
+	returnObj.rmField = function rmField(name, cb) {
 		var err;
 
 		if (returnObj.uuid === undefined) {
 			err = new Error('Cannot remove field; no user loaded');
-			callback(err);
+			cb(err);
 			return;
 		}
 
 		rmUserField(returnObj.uuid, name, function(err) {
 			if (err) {
-				callback(err);
+				cb(err);
 			} else {
 				delete returnObj.fields[name];
-				callback();
+				cb();
 			}
 		});
 	};
 
-	returnObj.setPassword = function(newPassword, callback) {
+	returnObj.setPassword = function(newPassword, cb) {
 		var err;
 
 		if (returnObj.uuid === undefined) {
 			err = new Error('Cannot add field; no user loaded');
-			callback(err);
+			cb(err);
 			return;
 		}
 
-		setPassword(returnObj.uuid, newPassword, callback);
+		setPassword(returnObj.uuid, newPassword, cb);
 	};
 
 	return returnObj;
@@ -916,9 +916,9 @@ function userBase() {
  * Checks if a unsername is available
  *
  * @param str username
- * @param func callback(err, res) - res is a bolean
+ * @param func cb(err, res) - res is a bolean
  */
-function usernameAvailable(username, callback) {
+function usernameAvailable(username, cb) {
 	checkDbStructure(function() {
 		var sql = 'SELECT uuid FROM user_users WHERE username = ?',
 		    dbFields;
@@ -928,14 +928,14 @@ function usernameAvailable(username, callback) {
 
 		db.query(sql, dbFields, function(err, rows) {
 			if (err) {
-				callback(err);
+				cb(err);
 				return;
 			}
 
 			if (rows.length) {
-				callback(null, false);
+				cb(null, false);
 			} else {
-				callback(null, true);
+				cb(null, true);
 			}
 		});
 	});
