@@ -6,6 +6,9 @@ node_js:
 notifications:
   email:
     - lilleman@larvit.se
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install -y build-essential
 before_script: mysql -e 'CREATE DATABASE test'
 script: mocha test/test.js -confFile=db_travis.json
 services:
