@@ -6,14 +6,19 @@ node_js:
 notifications:
   email:
     - lilleman@larvit.se
-before_install:
-  - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
-  - sudo apt-get update -q
-  - sudo apt-get install gcc-4.8 -y
+install:
+  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8" CC="gcc-4.8"; fi
 before_script: mysql -e 'CREATE DATABASE test'
 script: mocha test/test.js -confFile=db_travis.json
 services:
   - mysql
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - gcc-4.8
+    - g++-4.8
 #addons:
 #  mariadb:
 #    - 5.5
