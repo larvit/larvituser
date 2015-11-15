@@ -634,6 +634,51 @@ function getFieldName(fieldId, cb) {
 }
 
 /**
+ * Get users from the database
+ *
+ * @param obj options - {
+ *                        'searchStr': 'foobar',              // String to search all fields + username for
+ *                        'searchFieldsAnd': {                // Specific fields to search in, ALL must match
+ *                          'firstname': 'John',
+ *                          'lastname': ['Smith', 'Johnsson']
+ *                        },
+ *                        'searchFieldsOr': {                 // Specific fields to search in, ANY or more must match
+ *                          'firstname': 'John',
+ *                          'lastname': ['Smith', 'Johnsson']
+ *                        },
+ *                        'returnFields': [                   // What fields to return in the answer
+ *                          'firstname',
+ *                          'lastname'
+ *                        ]
+ *                      }
+ * @param func cb(err, users) - users is an array of objects
+ * /
+function getUsers(options, cb) {
+	var dbFields = [],
+	    searchStr,
+	    fieldName,
+	    sql;
+
+	options = options || {};
+
+	sql = 'SELECT uuid, username FROM user_users u\n';
+
+	sql += 'WHERE 1 = 1\n';
+
+	if (options.searchStr !== undefined) {
+		sql += '	AND uuid IN (SELECT userUuid FROM user_users_data WHERE value LIKE ?)\n';
+		dbFields.push(options.searchStr);
+	}
+
+	if (options.searchFieldsAnd !== undefined) {
+		for (fieldName in options.searchFieldsAnd) {
+			if (options.searchFieldsAnd[fieldName])
+		}
+	}
+
+}*/
+
+/**
  * Hashes a new password
  *
  * @param str password
