@@ -9,32 +9,34 @@ var assert  = require('assert'),
 // Set up winston
 log.remove(log.transports.Console);
 log.add(log.transports.Console, {
-	'level': 'error',
+	'level': 'verbose',
 	'colorize': true,
 	'timestamp': true
 });
 
-describe('Setup database', function() {
-	it('should setup the database', function(done) {
-		var confFile;
+before(function(done) {
+	var confFile;
 
-		if (process.argv[3] === undefined)
-			confFile = __dirname + '/../../../config/db_test.json';
-		else
-			confFile = process.argv[3];
+	if (process.argv[3] === undefined)
+		confFile = __dirname + '/../../../config/db_test.json';
+	else
+		confFile = process.argv[3];
 
-		//assert(process.argv[3] !== undefined, 'Database config parameter missing - mocha should be used like: mocha test/test.js /path/to/config/dbsettings.json');
-		fs.stat(confFile, function(err) {
-			assert( ! err, 'err should be negative');
+	log.verbose('DB config file: "' + confFile + '"');
 
-			if ( ! err) {
-				db.setup(require(confFile), function(err) {
-					assert( ! err, 'err should be negative');
+	fs.stat(confFile, function(err) {
+		if (err)
+			assert( ! err, 'fs.stat failed: ' + err.message);
 
-					done();
-				});
-			}
-		});
+		log.verbose('DB config: ' + JSON.stringify(require(confFile)));
+
+		if ( ! err) {
+			db.setup(require(confFile), function(err) {
+				assert( ! err, 'err should be negative');
+
+				done();
+			});
+		}
 	});
 });
 
