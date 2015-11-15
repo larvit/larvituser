@@ -163,6 +163,14 @@ userLib.setPassword('f9684592-b245-42fa-88c6-9f16b9236ac3', false, function(err)
 });
 ```
 
+#### Set username for a user
+
+```javascript
+userLib.setUsername('f9684592-b245-42fa-88c6-9f16b9236ac3', 'theNewUsername', function(err) {
+	// Now the users password is updated to "theNewUsername"
+});
+```
+
 ## Tests
 
 Run tests with mocha, make sure to have an empty database configured for tests to pass correctly!

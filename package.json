@@ -9,7 +9,8 @@
 		"larvitdb": "latest",
 		"bcrypt": "latest",
 		"winston": "latest",
-		"node-uuid": "latest"
+		"node-uuid": "latest",
+		"lodash": "latest"
 	},
 	"description": "User module for node.js",
 	"devDependencies": {
@@ -37,7 +38,7 @@
 	"scripts": {
 		"test": "mocha"
 	},
-	"version": "0.4.2",
+	"version": "0.4.3",
 	"readmeFilename": "README.md",
 	"license": "MIT"
 }

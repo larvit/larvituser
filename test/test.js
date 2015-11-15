@@ -8,11 +8,6 @@ var assert  = require('assert'),
 
 // Set up winston
 log.remove(log.transports.Console);
-log.add(log.transports.Console, {
-	'level': 'verbose',
-	'colorize': true,
-	'timestamp': true
-});
 
 before(function(done) {
 	var confFile;
@@ -279,6 +274,32 @@ describe('User', function() {
 								done();
 							});
 						});
+					});
+				});
+			});
+		});
+	});
+
+	describe('set new username', function() {
+		it('should set a new username', function(done) {
+			var userUuid;
+
+			userLib.create('habblabang', false, {}, function(err, user) {
+				if (err)
+					assert( ! err, 'Err should be negative, but is: ' + err.message);
+
+				userUuid = user.uuid;
+
+				userLib.setUsername(userUuid, 'blambadam', function(err) {
+					if (err)
+						assert( ! err, 'Err should be negative, but is: ' + err.message);
+
+					userLib.fromUsername('blambadam', function(err, user) {
+						if (err)
+							assert( ! err, 'Err should be negative, but is: ' + err.message);
+
+						assert(user.uuid === userUuid, 'User Uuids missmatch! Is "' + user.uuid + '" but should be "' + userUuid + '"');
+						done();
 					});
 				});
 			});

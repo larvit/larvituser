@@ -1,6 +1,7 @@
 'use strict';
 
-var db      = require('larvitdb'),
+var _       = require('lodash'),
+    db      = require('larvitdb'),
     log     = require('winston'),
     bcrypt  = require('bcrypt'),
     uuidLib = require('node-uuid');
@@ -119,9 +120,14 @@ function create(username, password, fields, uuid, cb) {
 	var hashedPassword,
 	    err;
 
+	username = _.trim(username);
+
+	if (password)
+		password = _.trim(password);
+
 	if (uuid instanceof Function && cb === undefined) {
-		cb = uuid;
-		uuid     = uuidLib.v4();
+		cb   = uuid;
+		uuid = uuidLib.v4();
 	} else if (uuid === undefined) {
 		uuid = uuidLib.v4();
 	}
@@ -366,7 +372,7 @@ function fromField(fieldName, fieldValue, cb) {
 		      'WHERE udf.name = ? AND uud.data = ? ' +
 		      'LIMIT 1';
 
-		dbFields = [fieldName, fieldValue];
+		dbFields = [_.trim(fieldName), _.trim(fieldValue)];
 
 		db.query(sql, dbFields, function(err, rows) {
 			if (err) {
@@ -396,8 +402,8 @@ function fromUserAndPass(username, password, cb) {
 		var sql = 'SELECT uuid, password FROM user_users WHERE username = ?',
 		    dbFields;
 
-		username = username.trim();
-		password = password.trim();
+		username = _.trim(username);
+		password = _.trim(password);
 		dbFields = [username];
 
 		db.query(sql, dbFields, function(err, rows) {
@@ -440,7 +446,7 @@ function fromUsername(username, cb) {
 		var sql,
 		    dbFields;
 
-		username = username.trim();
+		username = _.trim(username);
 		sql      = 'SELECT uuid FROM user_users WHERE username = ?';
 		dbFields = [username];
 
@@ -575,7 +581,7 @@ function getFieldId(fieldName, cb) {
 		var sql = 'SELECT id FROM user_data_fields WHERE name = ?',
 		    dbFields;
 
-		fieldName = fieldName.trim();
+		fieldName = _.trim(fieldName);
 		dbFields  = [fieldName];
 
 		db.query(sql, dbFields, function(err, rows) {
@@ -685,7 +691,7 @@ function getUsers(options, cb) {
  * @param func cb(err, hash)
  */
 function hashPassword(password, cb) {
-	password = password.trim();
+	password = _.trim(password);
 
 	bcrypt.genSalt(10, function(err, salt) {
 		if (err) {
@@ -720,7 +726,7 @@ function replaceUserFields(userUuid, fields, cb) {
 
 	// We need to do this to make sure they all happend before we call the final cb
 	function callSetUserField(userUuid, fieldName, fieldValue, nextParams, cb) {
-		addUserField(userUuid, fieldName, fieldValue, function(err) {
+		addUserField(userUuid, _.trim(fieldName), _.trim(fieldValue), function(err) {
 			var entries;
 
 			if (err) {
@@ -774,14 +780,18 @@ function replaceUserFields(userUuid, fields, cb) {
 			}
 		}
 
-		firstEntries = userFieldParams.shift();
-		callSetUserField(firstEntries.userUuid, firstEntries.fieldName, firstEntries.fieldValue, userFieldParams, function(err) {
-			if (err) {
-				cb(err);
-			} else {
-				cb();
-			}
-		});
+		if (userFieldParams.length) {
+			firstEntries = userFieldParams.shift();
+			callSetUserField(firstEntries.userUuid, firstEntries.fieldName, firstEntries.fieldValue, userFieldParams, function(err) {
+				if (err) {
+					cb(err);
+				} else {
+					cb();
+				}
+			});
+		} else {
+			cb();
+		}
 	});
 }
 
@@ -839,7 +849,7 @@ function setPassword(userUuid, newPassword, cb) {
 		if (newPassword === false) {
 			db.query(sql, ['', userUuid], cb);
 		} else {
-			hashPassword(newPassword, function(err, hash) {
+			hashPassword(_.trim(newPassword), function(err, hash) {
 				if (err) {
 					cb(err);
 					return;
@@ -848,6 +858,41 @@ function setPassword(userUuid, newPassword, cb) {
 				db.query(sql, [hash, userUuid], cb);
 			});
 		}
+	});
+}
+
+/**
+ * Set the username for a user
+ *
+ * @param str userUuid
+ * @param str newusername
+ * @param fucn cb(err)
+ */
+function setUsername(userUuid, newUsername, cb) {
+	var err;
+
+	newUsername = _.trim(newUsername);
+
+	if ( ! newUsername) {
+		err = new Error('No new username supplied');
+		log.warn('larvituser: setUsername() - ' + err.message);
+		cb(err);
+		return;
+	}
+
+	db.query('SELECT uuid FROM user_users WHERE username = ?', [newUsername], function(err, rows) {
+		if (err) {
+			cb(err);
+			return;
+		}
+
+		if (rows.length && bufferToUuid(rows[0].uuid) !== userUuid) {
+			err = new Error('Username is already taken');
+			cb(err);
+			return;
+		}
+
+		db.query('UPDATE user_users SET username = ? WHERE uuid = UNHEX(REPLACE(?, \'-\', \'\'))', [newUsername, userUuid], cb);
 	});
 }
 
@@ -946,12 +991,24 @@ function userBase() {
 		var err;
 
 		if (returnObj.uuid === undefined) {
-			err = new Error('Cannot add field; no user loaded');
+			err = new Error('Cannot set password; no user loaded');
 			cb(err);
 			return;
 		}
 
 		setPassword(returnObj.uuid, newPassword, cb);
+	};
+
+	returnObj.setUsername = function(newUsername, cb) {
+		var err;
+
+		if (returnObj.uuid === undefined) {
+			err = new Error('Cannot set username; no user loaded');
+			cb(err);
+			return;
+		}
+
+		setUsername(returnObj.uuid, newUsername, cb);
 	};
 
 	return returnObj;
@@ -1006,4 +1063,5 @@ exports.hashPassword          = hashPassword;
 exports.replaceUserFields     = replaceUserFields;
 exports.rmUserField           = rmUserField;
 exports.setPassword           = setPassword;
+exports.setUsername           = setUsername;
 exports.usernameAvailable     = usernameAvailable;
