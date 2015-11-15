@@ -8,12 +8,12 @@ node_js:
 notifications:
   email:
     - lilleman@larvit.se
-before_install: echo '{"connectionLimit": 10, "host": "127.0.0.1", "user": "travis", "password": "", "charset": "utf8mb4_general_ci", "supportBigNumbers": true, "database": "test" }' > config/db_test.json
 before_script: mysql -e 'CREATE DATABASE test'
+script: mocha test/test.js config/db_travis.json
 services:
   - mysql
-addons:
-  mariadb:
-    - 5.5
-    - 10.0
-    - 10.1
+#addons:
+#  mariadb:
+#    - 5.5
+#    - 10.0
+#    - 10.1
