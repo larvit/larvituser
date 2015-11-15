@@ -1,0 +1,19 @@
+language: node_js
+node_js:
+  - 0.8
+  - 0.10
+  - 0.12
+  - 4
+  - 5
+notifications:
+  email:
+    - lilleman@larvit.se
+before_install: echo '{"connectionLimit": 10, "host": "127.0.0.1", "user": "travis", "password": "", "charset": "utf8mb4_general_ci", "supportBigNumbers": true, "database": "test" }' > config/db_test.json
+before_script: mysql -e 'CREATE DATABASE test'
+services:
+  - mysql
+addons:
+  mariadb:
+    - 5.5
+    - 10.0
+    - 10.1
