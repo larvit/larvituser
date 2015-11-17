@@ -866,7 +866,7 @@ function setUsername(userUuid, newUsername, cb) {
 		return;
 	}
 
-	db.query('SELECT uuid FROM user_users WHERE username = ?', [newUsername], function(err, rows) {
+	db.query('SELECT uuid FROM user_users WHERE username = ? AND uuid != UNHEX(REPLACE(?, \'-\', \'\'))', [newUsername, userUuid], function(err, rows) {
 		if (err) {
 			cb(err);
 			return;
