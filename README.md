@@ -55,15 +55,6 @@ userLib.addUserField(userUuid, fieldName, fieldValue, function(err) {
 });
 ```
 
-#### Convert a buffer to an Uuid
-
-```javascript
-var uuid = userLib.bufferToUuid(new Buffer('f9684592b24542fa88c69f16b9236ac3', 'hex'));
-console.log(uuid); // f9684592-b245-42fa-88c6-9f16b9236ac3
-```
-
-This is used primarily for getting the binary buffer from the Uuid column in the database.
-
 #### Check a password for validity
 
 ```javascript

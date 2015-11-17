@@ -3,6 +3,7 @@
 var _       = require('lodash'),
     db      = require('larvitdb'),
     log     = require('winston'),
+    utils   = require('larvitutils'),
     bcrypt  = require('bcrypt'),
     uuidLib = require('node-uuid');
 
@@ -38,21 +39,6 @@ function addUserField(userUuid, fieldName, fieldValue, cb) {
 			cb();
 		});
 	});
-}
-
-/**
- * Convert a buffer to an uuid string
- *
- * @param buffer buffer
- *
- * @return str
- */
-function bufferToUuid(buffer) {
-	var str = buffer.toString('hex');
-
-	str = str.substring(0, 8) + '-' + str.substring(8, 12) + '-' + str.substring(12, 16) + '-' + str.substring(16, 20) + '-' + str.substring(20);
-
-	return str;
 }
 
 /**
@@ -385,7 +371,7 @@ function fromField(fieldName, fieldValue, cb) {
 				return;
 			}
 
-			fromUuid(bufferToUuid(rows[0].userUuid), cb);
+			fromUuid(utils.bufferToUuid(rows[0].userUuid), cb);
 		});
 	});
 }
@@ -426,7 +412,7 @@ function fromUserAndPass(username, password, cb) {
 
 				if (res === true) {
 					// Password check is ok, use fromUuid() to get the user instance
-					fromUuid(bufferToUuid(rows[0].uuid), cb);
+					fromUuid(utils.bufferToUuid(rows[0].uuid), cb);
 				} else {
 					cb(null, false);
 				}
@@ -465,7 +451,7 @@ function fromUsername(username, cb) {
 			}
 
 			// Use fromUuid() to get the user instance
-			fromUuid(bufferToUuid(rows[0].uuid), cb);
+			fromUuid(utils.bufferToUuid(rows[0].uuid), cb);
 		});
 	});
 }
@@ -511,7 +497,7 @@ function fromUuid(userUuid, cb) {
 				return;
 			}
 
-			returnObj.uuid     = bufferToUuid(rows[0].uuid);
+			returnObj.uuid     = utils.bufferToUuid(rows[0].uuid);
 			returnObj.username = rows[0].username;
 
 			rowNr = 0;
@@ -886,7 +872,7 @@ function setUsername(userUuid, newUsername, cb) {
 			return;
 		}
 
-		if (rows.length && bufferToUuid(rows[0].uuid) !== userUuid) {
+		if (rows.length && utils.bufferToUuid(rows[0].uuid) !== userUuid) {
 			err = new Error('Username is already taken');
 			cb(err);
 			return;
@@ -1044,7 +1030,6 @@ function usernameAvailable(username, cb) {
 }
 
 exports.addUserField          = addUserField;
-exports.bufferToUuid          = bufferToUuid;
 exports.checkDbStructure      = checkDbStructure;
 exports.checkPassword         = checkPassword;
 exports.create                = create;
