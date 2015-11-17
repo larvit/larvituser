@@ -49,18 +49,6 @@ before(function(done) {
 
 });
 
-describe('Tools', function() {
-	it('should change buffer to uuid string', function(done) {
-		var uuidStr = 'de305d54-75b4-431b-adb2-eb6b9e546014',
-		    uuidBuf = new Buffer(uuidStr.replace(/-/g, ''), 'hex'),
-		    testStr = userLib.bufferToUuid(uuidBuf);
-
-		assert(testStr === uuidStr, 'testStr should be "' + uuidStr + '" but is "' + testStr + '"');
-
-		done();
-	});
-});
-
 describe('User', function() {
 	var createdUuid;
 
