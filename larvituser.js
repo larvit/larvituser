@@ -371,7 +371,7 @@ function fromField(fieldName, fieldValue, cb) {
 				return;
 			}
 
-			fromUuid(utils.bufferToUuid(rows[0].userUuid), cb);
+			fromUuid(utils.formatUuidStr(rows[0].userUuid), cb);
 		});
 	});
 }
@@ -412,7 +412,7 @@ function fromUserAndPass(username, password, cb) {
 
 				if (res === true) {
 					// Password check is ok, use fromUuid() to get the user instance
-					fromUuid(utils.bufferToUuid(rows[0].uuid), cb);
+					fromUuid(utils.formatUuidStr(rows[0].uuid), cb);
 				} else {
 					cb(null, false);
 				}
@@ -451,7 +451,7 @@ function fromUsername(username, cb) {
 			}
 
 			// Use fromUuid() to get the user instance
-			fromUuid(utils.bufferToUuid(rows[0].uuid), cb);
+			fromUuid(utils.formatUuidStr(rows[0].uuid), cb);
 		});
 	});
 }
@@ -497,7 +497,7 @@ function fromUuid(userUuid, cb) {
 				return;
 			}
 
-			returnObj.uuid     = utils.bufferToUuid(rows[0].uuid);
+			returnObj.uuid     = utils.formatUuidStr(rows[0].uuid);
 			returnObj.username = rows[0].username;
 
 			rowNr = 0;
@@ -872,7 +872,7 @@ function setUsername(userUuid, newUsername, cb) {
 			return;
 		}
 
-		if (rows.length && utils.bufferToUuid(rows[0].uuid) !== userUuid) {
+		if (rows.length && utils.formatUuidStr(rows[0].uuid) !== userUuid) {
 			err = new Error('Username is already taken');
 			cb(err);
 			return;
