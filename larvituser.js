@@ -317,15 +317,16 @@ function createUserUsersData(cb) {
 			log.info('larvituser: createUserUsersData() - Table user_users_data did not exist, creating.');
 
 			sql = 'CREATE TABLE `user_users_data` (' +
-				'	`id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,' +
-				'	`userUuid` binary(16) NOT NULL,' +
-				'	`fieldId` int(11) unsigned NOT NULL,' +
-				'	`data` text COLLATE utf8mb4_unicode_ci NOT NULL,' +
-				'	PRIMARY KEY (`id`),' +
-				'	KEY `userUuid` (`userUuid`),' +
-				'	KEY `fieldId` (`fieldId`),' +
-				'	CONSTRAINT `user_users_data_ibfk_1` FOREIGN KEY (`userUuid`) REFERENCES `user_users` (`uuid`),' +
-				'	CONSTRAINT `user_users_data_ibfk_2` FOREIGN KEY (`fieldId`) REFERENCES `user_data_fields` (`id`)' +
+				'  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,' +
+				'  `userUuid` binary(16) NOT NULL,' +
+				'  `fieldId` int(11) unsigned NOT NULL,' +
+				'  `data` text COLLATE utf8mb4_unicode_ci NOT NULL,' +
+				'  PRIMARY KEY (`id`),' +
+				'  KEY `userUuid` (`userUuid`),' +
+				'  KEY `fieldId` (`fieldId`),' +
+				'  KEY `userUuid_fieldId` (`userUuid`,`fieldId`),' +
+				'  CONSTRAINT `user_users_data_ibfk_1` FOREIGN KEY (`userUuid`) REFERENCES `user_users` (`uuid`),' +
+				'  CONSTRAINT `user_users_data_ibfk_2` FOREIGN KEY (`fieldId`) REFERENCES `user_data_fields` (`id`)' +
 				') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;';
 			db.query(sql, function(err) {
 				if (err) {
