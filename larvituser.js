@@ -400,7 +400,6 @@ function fromFields(fields, cb) {
 		}
 
 		sql += 'LIMIT 1';
-
 		db.query(sql, dbFields, function(err, rows) {
 			if (err) {
 				cb(err);
@@ -412,7 +411,7 @@ function fromFields(fields, cb) {
 				return;
 			}
 
-			fromUuid(utils.formatUuid(rows[0].userUuid), cb);
+			fromUuid(utils.formatUuid(rows[0].uuid), cb);
 		});
 	});
 }
