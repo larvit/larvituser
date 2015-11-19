@@ -89,6 +89,16 @@ userLib.fromField('firstname', 'John', function(err, user) {
 });
 ```
 
+#### Fetch a user based on several fields
+
+Will fetch the first occurance in the database that matches all these field names and field values
+
+```javascript
+userLib.fromFields({'firstname': 'John', 'lastname': 'Smith'}, function(err, user) {
+	console.log(user.uuid); // f9684592-b245-42fa-88c6-9f16b9236ac3
+});
+```
+
 #### Fetch a user based on just username
 
 ```javascript

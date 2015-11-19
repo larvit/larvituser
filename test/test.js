@@ -151,7 +151,6 @@ describe('User', function() {
 	});
 
 	describe('logins', function() {
-
 		it('should log the created user in by username', function(done) {
 			userLib.fromUsername('lilleman', function(err, user) {
 				assert( ! err, 'err should be negative');

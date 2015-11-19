@@ -347,7 +347,7 @@ function createUserUsersData(cb) {
  *
  * @param str fieldName
  * @param str fieldValue
- * @param func cb(err, user) - "user" being a new user object or boolean false on failed login
+ * @param func cb(err, user) - "user" being a new user object or boolean false on failed search
  */
 function fromField(fieldName, fieldValue, cb) {
 	checkDbStructure(function() {
@@ -360,6 +360,46 @@ function fromField(fieldName, fieldValue, cb) {
 		      'LIMIT 1';
 
 		dbFields = [_.trim(fieldName), _.trim(fieldValue)];
+
+		db.query(sql, dbFields, function(err, rows) {
+			if (err) {
+				cb(err);
+				return;
+			}
+
+			if (rows.length === 0) {
+				cb(null, false);
+				return;
+			}
+
+			fromUuid(utils.formatUuid(rows[0].userUuid), cb);
+		});
+	});
+}
+
+/**
+ * Create a user object from fields
+ * IMPORTANT! Only fetches first matching user that matches all fields!
+ *
+ * @param obj fields - {'fieldName': 'fieldValue', 'fieldName2': 'fieldValue2'}
+ * @param func cb(err, user) - "user" being a new user object or boolean false on failed search
+ */
+function fromFields(fields, cb) {
+	checkDbStructure(function() {
+		var dbFields = [],
+		    fieldName,
+		    sql;
+
+		sql  = 'SELECT uuid FROM user_users u\n';
+		sql += 'WHERE 1 + 1\n';
+
+		for (fieldName in fields) {
+			sql += '	AND uuid IN (SELECT userUuid FROM user_users_data WHERE data = ? fieldId = (SELECT id FROM user_data_fields WHERE name = ?))\n';
+			dbFields.push(_.trim(fields[fieldName]));
+			dbFields.push(_.trim(fieldName));
+		}
+
+		sql += 'LIMIT 1';
 
 		db.query(sql, dbFields, function(err, rows) {
 			if (err) {
@@ -1039,6 +1079,7 @@ exports.createUserRolesRights = createUserRolesRights;
 exports.createUserUsers       = createUserUsers;
 exports.createUserUsersData   = createUserUsersData;
 exports.fromField             = fromField;
+exports.fromFields            = fromFields;
 exports.fromUserAndPass       = fromUserAndPass;
 exports.fromUsername          = fromUsername;
 exports.fromUuid              = fromUuid;

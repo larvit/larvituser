@@ -39,7 +39,7 @@
 	"scripts": {
 		"test": "mocha"
 	},
-	"version": "0.4.8",
+	"version": "0.4.9",
 	"readmeFilename": "README.md",
 	"license": "MIT"
 }
