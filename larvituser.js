@@ -394,7 +394,7 @@ function fromFields(fields, cb) {
 		sql += 'WHERE 1 + 1\n';
 
 		for (fieldName in fields) {
-			sql += '	AND uuid IN (SELECT userUuid FROM user_users_data WHERE data = ? fieldId = (SELECT id FROM user_data_fields WHERE name = ?))\n';
+			sql += '	AND uuid IN (SELECT userUuid FROM user_users_data WHERE data = ? AND fieldId = (SELECT id FROM user_data_fields WHERE name = ?))\n';
 			dbFields.push(_.trim(fields[fieldName]));
 			dbFields.push(_.trim(fieldName));
 		}
