@@ -6,12 +6,12 @@
 	},
 	"contributors": [],
 	"dependencies": {
-		"bcrypt": "latest",
-		"larvitdb": "latest",
-		"larvitutils": "latest",
-		"lodash": "latest",
-		"node-uuid": "latest",
-		"winston": "latest"
+		"bcrypt": "~0.8t",
+		"larvitdb": "~0.3",
+		"larvitutils": "~0.4",
+		"lodash": "~3.10",
+		"node-uuid": "~1.4",
+		"winston": "~2.1"
 	},
 	"description": "User module for node.js",
 	"devDependencies": {
@@ -39,7 +39,7 @@
 	"scripts": {
 		"test": "mocha"
 	},
-	"version": "0.4.11",
+	"version": "0.4.12",
 	"readmeFilename": "README.md",
 	"license": "MIT"
 }
