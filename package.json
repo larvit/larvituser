@@ -6,7 +6,7 @@
 	},
 	"contributors": [],
 	"dependencies": {
-		"bcrypt": "~0.8t",
+		"bcrypt": "~0.8",
 		"larvitdb": "~0.3",
 		"larvitutils": "~0.4",
 		"lodash": "~3.10",
@@ -39,7 +39,7 @@
 	"scripts": {
 		"test": "mocha"
 	},
-	"version": "0.4.12",
+	"version": "0.4.13",
 	"readmeFilename": "README.md",
 	"license": "MIT"
 }
