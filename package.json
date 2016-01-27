@@ -1,45 +1,52 @@
 {
-	"author": {
-		"name": "Mikael 'Lilleman' Göransson",
-		"email": "lilleman@larvit.se",
-		"url": "http://github.com/larvit/larvituser"
-	},
-	"contributors": [],
-	"dependencies": {
-		"bcrypt": "~0.8",
-		"larvitdb": "~0.4",
-		"larvitutils": "~0.4",
-		"lodash": "~3.10",
-		"node-uuid": "~1.4",
-		"winston": "~2.1"
-	},
-	"description": "User module for node.js",
-	"devDependencies": {
-		"mocha": "latest",
-		"freeport": "latest",
-		"pre-git": "latest"
-	},
-	"pre-commit": [
-		"npm test",
-		"eslint ./"
-	],
-	"scripts": {
-		"test": "mocha"
-	},
-	"keywords": [
-		"auth",
-		"user"
-	],
-	"main": "larvituser.js",
-	"name": "larvituser",
-	"repository": {
-		"url": "https://github.com/larvit/larvituser",
-		"type": "git"
-	},
-	"scripts": {
-		"test": "mocha"
-	},
-	"version": "0.4.14",
-	"readmeFilename": "README.md",
-	"license": "MIT"
+  "author": {
+    "name": "Mikael 'Lilleman' Göransson",
+    "email": "lilleman@larvit.se",
+    "url": "http://github.com/larvit/larvituser"
+  },
+  "contributors": [],
+  "dependencies": {
+    "bcrypt": "^0.8.5",
+    "larvitdb": "^0.4.2",
+    "larvitutils": "^0.4.2",
+    "lodash": "^3.10.1",
+    "node-uuid": "^1.4.7",
+    "winston": "^2.1.1"
+  },
+  "description": "User module for node.js",
+  "devDependencies": {
+    "freeport": "^1.0.5",
+    "mocha": "^2.4.2",
+    "pre-git": "^3.3.0"
+  },
+  "pre-commit": [
+    "npm test",
+    "eslint ./"
+  ],
+  "scripts": {
+    "test": "mocha",
+    "commit": "commit-wizard"
+  },
+  "keywords": [
+    "auth",
+    "user"
+  ],
+  "main": "larvituser.js",
+  "name": "larvituser",
+  "repository": {
+    "url": "https://github.com/larvit/larvituser",
+    "type": "git"
+  },
+  "version": "0.4.15",
+  "readmeFilename": "README.md",
+  "license": "MIT",
+  "config": {
+    "pre-git": {
+      "commit-msg": [],
+      "pre-commit": [],
+      "pre-push": [],
+      "post-commit": [],
+      "post-merge": []
+    }
+  }
 }
