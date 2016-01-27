@@ -7,8 +7,8 @@
   "contributors": [],
   "dependencies": {
     "bcrypt": "^0.8.5",
-    "larvitdb": "^0.4.2",
-    "larvitutils": "^0.4.2",
+    "larvitdb": "^0.4.4",
+    "larvitutils": "^0.4.3",
     "lodash": "^3.10.1",
     "node-uuid": "^1.4.7",
     "winston": "^2.1.1"
@@ -37,7 +37,7 @@
     "url": "https://github.com/larvit/larvituser",
     "type": "git"
   },
-  "version": "0.4.15",
+  "version": "0.4.16",
   "readmeFilename": "README.md",
   "license": "MIT",
   "config": {
