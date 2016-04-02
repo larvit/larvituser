@@ -1,16 +1,16 @@
 'use strict';
 
-var assert  = require('assert'),
-    log     = require('winston'),
-    db      = require('larvitdb'),
-    userLib = require('../larvituser.js'),
-    fs      = require('fs');
+const userLib = require('../larvituser.js'),
+      assert  = require('assert'),
+      log     = require('winston'),
+      db      = require('larvitdb'),
+      fs      = require('fs');
 
 // Set up winston
 log.remove(log.transports.Console);
 
 before(function(done) {
-	var confFile;
+	let confFile;
 
 	function runDbSetup(confFile) {
 		log.verbose('DB config: ' + JSON.stringify(require(confFile)));
@@ -23,14 +23,14 @@ before(function(done) {
 	}
 
 	if (process.argv[3] === undefined)
-		confFile = __dirname + '/../../../config/db_test.json';
+		confFile = __dirname + '/../config/db_test.json';
 	else
 		confFile = process.argv[3].split('=')[1];
 
 	log.verbose('DB config file: "' + confFile + '"');
 
 	fs.stat(confFile, function(err) {
-		var altConfFile = __dirname + '/../config/' + confFile;
+		const altConfFile = __dirname + '/../config/' + confFile;
 
 		if (err) {
 			log.info('Failed to find config file "' + confFile + '", retrying with "' + altConfFile + '"');
@@ -46,21 +46,22 @@ before(function(done) {
 			runDbSetup(confFile);
 		}
 	});
-
 });
 
 describe('User', function() {
-	var createdUuid;
+	let createdUuid;
 
 	before(function(done) {
 		// Check for empty db
 		db.query('SHOW TABLES', function(err, rows) {
 			if (err) {
+				assert( ! err, 'err should be negative');
 				log.error(err);
 				process.exit(1);
 			}
 
 			if (rows.length) {
+				assert.deepEqual(rows.length, 0);
 				log.error('Database is not empty. To make a test, you must supply an empty database!');
 				process.exit(1);
 			}
@@ -100,7 +101,7 @@ describe('User', function() {
 	});
 
 	describe('passwordHash', function() {
-		var hashedPassword;
+		let hashedPassword;
 
 		it('should create a hashed password', function(done) {
 			userLib.hashPassword('foobar', function(err, hash) {
@@ -210,15 +211,15 @@ describe('User', function() {
 
 		it('should replace fields with new data', function(done) {
 			userLib.fromUsername('lilleman', function(err, user) {
-				var newFields = {
-					'foo': 'bar',
+				const newFields = {
+					'foo':    'bar',
 					'income': [670, 'more than you']
 				};
 
 				assert( ! err, 'err should be negative');
 
 				user.replaceFields(newFields, function() {
-					assert.deepEqual(user.fields.foo, ['bar']);
+					assert.deepEqual(user.fields.foo,       ['bar']);
 					assert.deepEqual(user.fields.firstname, undefined);
 					assert.deepEqual(user.fields.income[1], 'more than you');
 					done();
@@ -269,7 +270,7 @@ describe('User', function() {
 
 	describe('set new username', function() {
 		it('should set a new username', function(done) {
-			var userUuid;
+			let userUuid;
 
 			userLib.create('habblabang', false, {}, function(err, user) {
 				if (err)
@@ -294,34 +295,6 @@ describe('User', function() {
 	});
 
 	after(function(done) {
-		db.query('DROP TABLE user_users_data', function(err) {
-			if (err) {
-				console.error(err);
-				process.exit(1);
-			}
-
-			db.query('DROP TABLE user_roles_rights', function(err) {
-				if (err) {
-					console.error(err);
-					process.exit(1);
-				}
-
-				db.query('DROP TABLE user_data_fields', function(err) {
-					if (err) {
-						console.error(err);
-						process.exit(1);
-					}
-
-					db.query('DROP TABLE user_users', function(err) {
-						if (err) {
-							console.error(err);
-							process.exit(1);
-						}
-
-						done();
-					});
-				});
-			});
-		});
+		db.removeAllTables(done);
 	});
 });
