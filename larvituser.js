@@ -1,14 +1,14 @@
 'use strict';
 
-var _       = require('lodash'),
-    db      = require('larvitdb'),
-    log     = require('winston'),
-    utils   = require('larvitutils'),
-    bcrypt  = require('bcrypt'),
-    uuidLib = require('node-uuid');
+const	uuidLib	= require('node-uuid'),
+	bcrypt	= require('bcrypt'),
+	utils	= require('larvitutils'),
+	log	= require('winston'),
+	db	= require('larvitdb'),
+	_	= require('lodash');
 
-exports.dbChecked      = false;
-exports.dbCheckStarted = false;
+exports.dbChecked	= false;
+exports.dbCheckStarted	= false;
 
 /**
  * Add a single user field to database
@@ -103,8 +103,7 @@ function checkPassword(password, hash, cb) {
  * @param func cb(err, user) - user being an instance of the new user
  */
 function create(username, password, fields, uuid, cb) {
-	var hashedPassword,
-	    err;
+	let	hashedPassword;
 
 	username = _.trim(username);
 
@@ -112,10 +111,10 @@ function create(username, password, fields, uuid, cb) {
 		password = _.trim(password);
 
 	if (uuid instanceof Function && cb === undefined) {
-		cb   = uuid;
-		uuid = uuidLib.v4();
+		cb	= uuid;
+		uuid	= uuidLib.v4();
 	} else if (uuid === undefined) {
-		uuid = uuidLib.v4();
+		uuid	= uuidLib.v4();
 	}
 
 	// Write the fields to the db
@@ -143,16 +142,13 @@ function create(username, password, fields, uuid, cb) {
 
 	// Write to database - called from the above cb
 	function writeToDb() {
-		var sql      = 'INSERT INTO user_users (uuid, username, password) VALUES(UNHEX(REPLACE(?, \'-\', \'\')),?,?);',
-		    dbFields = [uuid, username, hashedPassword];
+		const	sql	= 'INSERT INTO user_users (uuid, username, password) VALUES(UNHEX(REPLACE(?, \'-\', \'\')),?,?);',
+			dbFields	= [uuid, username, hashedPassword];
 
 		log.verbose('larvituser: create() - Trying to write username and password to database', {'sql': sql, 'fields': dbFields});
 
 		db.query(sql, dbFields, function(err) {
-			if (err) {
-				cb(err);
-				return;
-			}
+			if (err) { cb(err); return; }
 
 			log.debug('larvituser: create() - Write to db successfull! Moving on to writing fields to database', {'username': username, 'uuid': uuid});
 			writeFieldsToDb();
@@ -163,7 +159,7 @@ function create(username, password, fields, uuid, cb) {
 	function hashPassword() {
 		if (password === false) {
 			log.debug('larvituser: create() - Password set to empty string for no-login, moving on to writing username and password to database', {'username': username});
-			hashedPassword = '';
+			hashedPassword	= '';
 			writeToDb();
 			return;
 		}
@@ -172,7 +168,7 @@ function create(username, password, fields, uuid, cb) {
 			if (err) {
 				cb(err);
 			} else {
-				hashedPassword = hash;
+				hashedPassword	= hash;
 				log.debug('larvituser: create() - Password hashed, moving on to writing username and password to database', {'username': username});
 				writeToDb();
 			}
@@ -184,11 +180,11 @@ function create(username, password, fields, uuid, cb) {
 
 		username = username.trim();
 		if (password !== false) {
-			password = password.trim();
+			password	= password.trim();
 		}
 
 		if ( ! username.length) {
-			err = new Error('Trying to create user with empty username');
+			const	err = new Error('Trying to create user with empty username');
 			log.warn('larvituser: create() - ' + err.message);
 			cb(err);
 			return;
@@ -212,7 +208,7 @@ function create(username, password, fields, uuid, cb) {
 
 function createUserDataFields(cb) {
 	db.query('SHOW TABLES LIKE \'user_data_fields\'', function(err, rows) {
-		var sql;
+		let	sql;
 
 		if (err) {
 			throw err;
@@ -243,7 +239,7 @@ function createUserDataFields(cb) {
 
 function createUserRolesRights(cb) {
 	db.query('SHOW TABLES LIKE \'user_roles_rights\'', function(err, rows) {
-		var sql;
+		let	sql;
 
 		if (err) {
 			throw err;
@@ -274,7 +270,7 @@ function createUserRolesRights(cb) {
 function createUserUsers(cb) {
 	// We need to run the checks for user_users first
 	db.query('SHOW TABLES LIKE \'user_users\'', function(err, rows) {
-		var sql;
+		let	sql;
 
 		if (err) {
 			throw err;
@@ -306,7 +302,7 @@ function createUserUsers(cb) {
 
 function createUserUsersData(cb) {
 	db.query('SHOW TABLES LIKE \'user_users_data\'', function(err, rows) {
-		var sql;
+		let	sql;
 
 		if (err) {
 			throw err;
@@ -351,8 +347,8 @@ function createUserUsersData(cb) {
  */
 function fromField(fieldName, fieldValue, cb) {
 	checkDbStructure(function() {
-		var sql,
-		    dbFields;
+		let	sql,
+			dbFields;
 
 		sql = 'SELECT uud.userUuid ' +
 		      'FROM user_users_data uud JOIN user_data_fields udf ON udf.id = uud.fieldId ' +
@@ -386,9 +382,9 @@ function fromField(fieldName, fieldValue, cb) {
  */
 function fromFields(fields, cb) {
 	checkDbStructure(function() {
-		var dbFields = [],
-		    fieldName,
-		    sql;
+		let	dbFields = [],
+			fieldName,
+			sql;
 
 		sql  = 'SELECT uuid FROM user_users u\n';
 		sql += 'WHERE 1 + 1\n';
@@ -425,12 +421,12 @@ function fromFields(fields, cb) {
  */
 function fromUserAndPass(username, password, cb) {
 	checkDbStructure(function() {
-		var sql = 'SELECT uuid, password FROM user_users WHERE username = ?',
-		    dbFields;
+		let	sql	= 'SELECT uuid, password FROM user_users WHERE username = ?',
+			dbFields;
 
-		username = _.trim(username);
-		password = _.trim(password);
-		dbFields = [username];
+		username	= _.trim(username);
+		password	= _.trim(password);
+		dbFields	= [username];
 
 		db.query(sql, dbFields, function(err, rows) {
 			if (err) {
@@ -469,12 +465,11 @@ function fromUserAndPass(username, password, cb) {
  */
 function fromUsername(username, cb) {
 	checkDbStructure(function() {
-		var sql,
-		    dbFields;
+		const	dbFields	= [],
+			sql	= 'SELECT uuid FROM user_users WHERE username = ?';
 
-		username = _.trim(username);
-		sql      = 'SELECT uuid FROM user_users WHERE username = ?';
-		dbFields = [username];
+		username	= _.trim(username);
+		dbFields.push(username);
 
 		db.query(sql, dbFields, function(err, rows) {
 			if (err) {
