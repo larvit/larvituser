@@ -8,6 +8,7 @@
   "dependencies": {
     "async": "^2.0.1",
     "bcrypt": "^0.8.5",
+    "larvitamintercom": "0.0.1",
     "larvitdb": "^1.0.0",
     "larvitutils": "^1.0.2",
     "lodash": "^4.6.1",

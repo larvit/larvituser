@@ -7,6 +7,9 @@ const	uuidLib	= require('node-uuid'),
 	db	= require('larvitdb'),
 	_	= require('lodash');
 
+// Run the data writer
+require(__dirname + '/dataWriter.js');
+
 exports.dbChecked	= false;
 exports.dbCheckStarted	= false;
 

@@ -1,2 +1,3 @@
-node_modules
+config/amqp.json
 config/db_test.json
+node_modules
