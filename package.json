@@ -8,7 +8,7 @@
   "dependencies": {
     "bcrypt": "^0.8.5",
     "larvitdb": "^1.0.0",
-    "larvitutils": "^0.4.3",
+    "larvitutils": "^1.0.2",
     "lodash": "^4.6.1",
     "node-uuid": "^1.4.7",
     "winston": "^2.1.1"
@@ -16,16 +16,11 @@
   "description": "User module for node.js",
   "devDependencies": {
     "freeport": "^1.0.5",
-    "mocha": "^2.4.2",
-    "pre-git": "^3.3.0"
+    "mocha": "^3.1.0",
+    "mocha-eslint": "^3.0.1"
   },
-  "pre-commit": [
-    "npm test",
-    "eslint ./"
-  ],
   "scripts": {
-    "test": "mocha",
-    "commit": "commit-wizard"
+    "test": "mocha"
   },
   "keywords": [
     "auth",
@@ -39,14 +34,5 @@
   },
   "version": "0.4.18",
   "readmeFilename": "README.md",
-  "license": "MIT",
-  "config": {
-    "pre-git": {
-      "commit-msg": [],
-      "pre-commit": [],
-      "pre-push": [],
-      "post-commit": [],
-      "post-merge": []
-    }
-  }
+  "license": "MIT"
 }
