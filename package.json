@@ -6,6 +6,7 @@
   },
   "contributors": [],
   "dependencies": {
+    "async": "^2.0.1",
     "bcrypt": "^0.8.5",
     "larvitdb": "^1.0.0",
     "larvitutils": "^1.0.2",
