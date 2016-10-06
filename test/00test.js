@@ -1,76 +1,75 @@
 'use strict';
 
-const userLib = require('../larvituser.js'),
-      assert  = require('assert'),
-      log     = require('winston'),
-      db      = require('larvitdb'),
-      fs      = require('fs');
+const	userLib	= require('../larvituser.js'),
+	assert	= require('assert'),
+	async	= require('async'),
+	log	= require('winston'),
+	db	= require('larvitdb'),
+	fs	= require('fs');
 
 // Set up winston
 log.remove(log.transports.Console);
 
 before(function(done) {
-	let confFile;
+	this.timeout(10000);
+	const	tasks	= [];
 
-	function runDbSetup(confFile) {
-		log.verbose('DB config: ' + JSON.stringify(require(confFile)));
+	// Run DB Setup
+	tasks.push(function(cb) {
+		let confFile;
 
-		db.setup(require(confFile), function(err) {
-			assert( ! err, 'err should be negative');
-
-			done();
-		});
-	}
-
-	if (process.argv[3] === undefined)
-		confFile = __dirname + '/../config/db_test.json';
-	else
-		confFile = process.argv[3].split('=')[1];
-
-	log.verbose('DB config file: "' + confFile + '"');
-
-	fs.stat(confFile, function(err) {
-		const altConfFile = __dirname + '/../config/' + confFile;
-
-		if (err) {
-			log.info('Failed to find config file "' + confFile + '", retrying with "' + altConfFile + '"');
-
-			fs.stat(altConfFile, function(err) {
-				if (err)
-					assert( ! err, 'fs.stat failed: ' + err.message);
-
-				if ( ! err)
-					runDbSetup(altConfFile);
-			});
+		if (process.env.CONFFILE === undefined) {
+			confFile = __dirname + '/../config/db_test.json';
 		} else {
-			runDbSetup(confFile);
+			confFile = process.env.CONFFILE;
 		}
+
+		log.verbose('DB config file: "' + confFile + '"');
+
+		// First look for absolute path
+		fs.stat(confFile, function(err) {
+			if (err) {
+
+				// Then look for this string in the config folder
+				confFile = __dirname + '/../config/' + confFile;
+				fs.stat(confFile, function(err) {
+					if (err) throw err;
+					log.verbose('DB config: ' + JSON.stringify(require(confFile)));
+					db.setup(require(confFile), cb);
+				});
+
+				return;
+			}
+
+			log.verbose('DB config: ' + JSON.stringify(require(confFile)));
+			db.setup(require(confFile), cb);
+		});
 	});
+
+	// Check for empty db
+	tasks.push(function(cb) {
+		db.query('SHOW TABLES', function(err, rows) {
+			if (err) throw err;
+
+			if (rows.length) {
+				throw new Error('Database is not empty. To make a test, you must supply an empty database!');
+			}
+
+			cb();
+		});
+	});
+
+	async.series(tasks, done);
 });
 
 describe('User', function() {
 	let createdUuid;
 
 	before(function(done) {
-		// Check for empty db
-		db.query('SHOW TABLES', function(err, rows) {
-			if (err) {
-				assert( ! err, 'err should be negative');
-				log.error(err);
-				process.exit(1);
-			}
+		userLib.checkDbStructure(function(err) {
+			assert( ! err, 'err should be negative');
 
-			if (rows.length) {
-				assert.deepEqual(rows.length, 0);
-				log.error('Database is not empty. To make a test, you must supply an empty database!');
-				process.exit(1);
-			}
-
-			userLib.checkDbStructure(function(err) {
-				assert( ! err, 'err should be negative');
-
-				done();
-			});
+			done();
 		});
 	});
 
