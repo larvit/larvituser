@@ -3,11 +3,11 @@
 const	dbmigration	= require('larvitdbmigration')({'tableName': 'users_db_version', 'migrationScriptsPath': __dirname + '/dbmigration'}),
 	EventEmitter	= require('events').EventEmitter,
 	eventEmitter	= new EventEmitter(),
-	Intercom	= require('larvitamintercom').Intercom,
-	conStr	= require(__dirname + '/config/amqp.json').default,
-	intercom	= new Intercom(conStr),
+	//Intercom	= require('larvitamintercom').Intercom,
+	//conStr	= require(__dirname + '/config/amqp.json').default,
+	//intercom	= new Intercom(conStr),
 	uuidLib	= require('node-uuid'),
-	lUtils	= require('larvitutils'),
+	//lUtils	= require('larvitutils'),
 	async	= require('async'),
 	log	= require('winston');
 
@@ -36,9 +36,9 @@ function ready(cb) {
 	});
 }
 
-userLib.create('myUsername', 'myPassword', userData, function(err, user) {
-	console.log('New user UUID: ' + user.uuid);
-});
+//userLib.create('myUsername', 'myPassword', userData, function(err, user) {
+//	console.log('New user UUID: ' + user.uuid);
+//});
 
 function create(username, password, userData, cb) {
 	const	tasks	= [];
@@ -113,7 +113,7 @@ function create(username, password, userData, cb) {
 			]
 		};
 
-		intercom.publish({'exchange': 'users'}, sendObj, cb);
+		intercom.send({'exchange': 'users'}, sendObj, cb);
 	});
 
 	async.series(tasks, cb);

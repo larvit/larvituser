@@ -5,13 +5,11 @@ CREATE TABLE IF NOT EXISTS `user_data_fields` (
   UNIQUE KEY `name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-
 CREATE TABLE IF NOT EXISTS `user_roles_rights` (
   `role` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,
   `uri` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,
   PRIMARY KEY (`role`,`uri`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 
 CREATE TABLE IF NOT EXISTS `user_users` (
   `uuid` binary(16) NOT NULL,
@@ -20,7 +18,6 @@ CREATE TABLE IF NOT EXISTS `user_users` (
   PRIMARY KEY (`uuid`),
   UNIQUE KEY `username` (`username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 
 CREATE TABLE IF NOT EXISTS `user_users_data` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,

@@ -1,6 +1,6 @@
 'use strict';
 
-const	userLib	= require('../larvituser.js'),
+const	userLib	= require('../index.js'),
 	assert	= require('assert'),
 	async	= require('async'),
 	log	= require('winston'),
@@ -9,6 +9,13 @@ const	userLib	= require('../larvituser.js'),
 
 // Set up winston
 log.remove(log.transports.Console);
+/**/log.add(log.transports.Console, {
+	'colorize':	true,
+	'timestamp':	true,
+	'level':	'debug',
+	'json':	false
+});
+/**/
 
 before(function(done) {
 	this.timeout(10000);
@@ -65,10 +72,8 @@ before(function(done) {
 describe('User', function() {
 	let createdUuid;
 
-	before(function(done) {
-		userLib.checkDbStructure(function(err) {
-			assert( ! err, 'err should be negative');
-
+	it('foo', function(done) {
+		userLib.ready(function() {
 			done();
 		});
 	});
