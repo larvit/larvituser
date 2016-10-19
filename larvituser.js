@@ -1,7 +1,7 @@
 'use strict';
 
 const	uuidLib	= require('node-uuid'),
-	bcrypt	= require('bcrypt'),
+	bcrypt	= require('bcryptjs'),
 	utils	= require('larvitutils'),
 	log	= require('winston'),
 	db	= require('larvitdb'),
@@ -69,31 +69,6 @@ function checkDbStructure(cb) {
 			});
 		});
 	}
-}
-
-/**
- * Checks a password for validity
- *
- * @param str password - plain text password
- * @param str hash - hash to check password against
- * @param func cb(err, res) res is boolean
- */
-function checkPassword(password, hash, cb) {
-	password = password.trim();
-
-	bcrypt.compare(password, hash, function(err, res) {
-		if (err) {
-			log.error('larvituser: checkPassword() - ' + err.message);
-			cb(err);
-			return;
-		}
-
-		if (res) {
-			cb(null, true);
-		} else {
-			cb(null, false);
-		}
-	});
 }
 
 /**
@@ -595,48 +570,6 @@ function getFieldData(userUuid, fieldName, cb) {
 }
 
 /**
- * Get data field id by field name
- *
- * @param str fieldName
- * @param func cb(err, id)
- */
-function getFieldId(fieldName, cb) {
-	checkDbStructure(function() {
-		var sql = 'SELECT id FROM user_data_fields WHERE name = ?',
-		    dbFields;
-
-		fieldName = _.trim(fieldName);
-		dbFields  = [fieldName];
-
-		db.query(sql, dbFields, function(err, rows) {
-			// Use INSERT IGNORE to avoid race conditions
-			var sql = 'INSERT IGNORE INTO user_data_fields (name) VALUES(?)';
-
-			if (err) {
-				cb(err);
-				return;
-			}
-
-			if (rows.length) {
-				cb(null, rows[0].id);
-			} else {
-				db.query(sql, dbFields, function(err) {
-					if (err) {
-						cb(err);
-						return;
-					}
-
-					// Rerun this function, it should return correct now!
-					getFieldId(fieldName, function(err, id) {
-						cb(err, id);
-					});
-				});
-			}
-		});
-	});
-}
-
-/**
  * Get data field name by field id
  *
  * @param int fieldId
@@ -707,34 +640,6 @@ function getUsers(options, cb) {
 	}
 
 }*/
-
-/**
- * Hashes a new password
- *
- * @param str password
- * @param func cb(err, hash)
- */
-function hashPassword(password, cb) {
-	password = _.trim(password);
-
-	bcrypt.genSalt(10, function(err, salt) {
-		if (err) {
-			log.error('larvituser: hashPassword() - ' + err.message);
-			cb(err);
-			return;
-		}
-
-		bcrypt.hash(password, salt, function(err, hash) {
-			if (err) {
-				log.error('larvituser: hashPassword() - ' + err.message);
-				cb(err);
-				return;
-			}
-
-			cb(null, hash);
-		});
-	});
-}
 
 /**
  * Replace user fields
