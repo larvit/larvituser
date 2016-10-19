@@ -1,18 +1,18 @@
 'use strict';
 
-const	dbmigration	= require('larvitdbmigration')({'tableName': 'users_db_version', 'migrationScriptsPath': __dirname + '/dbmigration'}),
-	EventEmitter	= require('events').EventEmitter,
+const	EventEmitter	= require('events').EventEmitter,
 	eventEmitter	= new EventEmitter(),
-	//Intercom	= require('larvitamintercom').Intercom,
-	//conStr	= require(__dirname + '/config/amqp.json').default,
-	//intercom	= new Intercom(conStr),
+	dbmigration	= require('larvitdbmigration')({'tableName': 'users_db_version', 'migrationScriptsPath': __dirname + '/dbmigration'}),
+	lUtils	= require('larvitutils'),
 	uuidLib	= require('node-uuid'),
-	//lUtils	= require('larvitutils'),
+	bcrypt	= require('bcryptjs'),
 	async	= require('async'),
-	log	= require('winston');
+	log	= require('winston'),
+	db	= require('larvitdb');
 
 let	readyInProgress	= false,
-	isReady	= false;
+	isReady	= false,
+	intercom;
 
 function ready(cb) {
 	if (isReady === true) { cb(); return; }
@@ -22,7 +22,15 @@ function ready(cb) {
 		return;
 	}
 
-	readyInProgress = true;
+	readyInProgress	= true;
+	intercom	= lUtils.instances.intercom; // We must do this here since it might not be instanciated on module load
+
+	// We are strictly in need of the intercom!
+	if ( ! (intercom instanceof require('larvitamintercom'))) {
+		const	err	= new Error('larvitutils.instances.intercom is not an instance of Intercom!');
+		log.error('larvituser: index.js - ' + err.message);
+		throw err;
+	}
 
 	dbmigration(function(err) {
 		if (err) {
@@ -32,13 +40,29 @@ function ready(cb) {
 
 		isReady	= true;
 		eventEmitter.emit('ready');
+
 		cb();
 	});
 }
 
-//userLib.create('myUsername', 'myPassword', userData, function(err, user) {
-//	console.log('New user UUID: ' + user.uuid);
-//});
+/**
+ * Checks a password for validity
+ *
+ * @param str password - plain text password
+ * @param str hash - hash to check password against
+ * @param func cb(err, res) res is boolean
+ */
+function checkPassword(password, hash, cb) {
+	password = password.trim();
+
+	bcrypt.compare(password, hash, function(err, result) {
+		if (err) {
+			log.error('larvituser: checkPassword() - ' + err.message);
+		}
+
+		cb(err, result);
+	});
+}
 
 function create(username, password, userData, cb) {
 	const	tasks	= [];
@@ -103,20 +127,38 @@ function create(username, password, userData, cb) {
 
 	// Send to queue
 	tasks.push(function(cb) {
-		const sendObj = {
-			'action': 'createUser',
-			'params': [
-				uuidLib.v4(),
-				username,
-				hashedPassword,
-				userData
-			]
-		};
+		const	userUuid	= uuidLib.v4(),
+			sendObj	= {};
 
-		intercom.send({'exchange': 'users'}, sendObj, cb);
+		sendObj.action	= 'createUser';
+		sendObj.params	= {};
+		sendObj.params.uuid	= userUuid;
+		sendObj.params.username	= username;
+		sendObj.params.hashedPassword	= hashedPassword;
+		sendObj.params.userData	= userData;
+
+		intercom.send(sendObj, {'exchange': 'users'}, cb);
 	});
 
 	async.series(tasks, cb);
+}
+
+/**
+ * Hashes a new password
+ *
+ * @param str password
+ * @param func cb(err, hash)
+ */
+function hashPassword(password, cb) {
+	password = _.trim(password);
+
+	bcrypt.hash(password, 10, function(err, hash) {
+		if (err) {
+			log.error('larvituser: hashPassword() - ' + err.message);
+		}
+
+		cb(err, hash);
+	});
 }
 
 /**
@@ -155,6 +197,10 @@ function usernameAvailable(username, cb) {
 	});
 }
 
+exports.checkPassword	=	checkPassword;
 exports.create	= create;
+exports.getFieldUuid	= getFieldUuid;
+exports.hashPassword	= hashPassword;
 exports.ready	= ready;
 exports.usernameAvailable	= usernameAvailable;
+Object.assign(exports, require(__dirname + '/helpers.js')); // extend this module with all helpers from the helpers file

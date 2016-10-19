@@ -1,7 +1,9 @@
 'use strict';
 
-const	userLib	= require('../index.js'),
+const	Intercom	= require('larvitamintercom'),
+	userLib	= require('../index.js'),
 	assert	= require('assert'),
+	lUtils	= require('larvitutils'),
 	async	= require('async'),
 	log	= require('winston'),
 	db	= require('larvitdb'),
@@ -9,7 +11,7 @@ const	userLib	= require('../index.js'),
 
 // Set up winston
 log.remove(log.transports.Console);
-/**/log.add(log.transports.Console, {
+/** /log.add(log.transports.Console, {
 	'colorize':	true,
 	'timestamp':	true,
 	'level':	'debug',
@@ -25,10 +27,10 @@ before(function(done) {
 	tasks.push(function(cb) {
 		let confFile;
 
-		if (process.env.CONFFILE === undefined) {
+		if (process.env.DBCONFFILE === undefined) {
 			confFile = __dirname + '/../config/db_test.json';
 		} else {
-			confFile = process.env.CONFFILE;
+			confFile = process.env.DBCONFFILE;
 		}
 
 		log.verbose('DB config file: "' + confFile + '"');
@@ -66,38 +68,71 @@ before(function(done) {
 		});
 	});
 
+	// Setup intercom
+	tasks.push(function(cb) {
+		let confFile;
+
+		if (process.env.INTCONFFILE === undefined) {
+			confFile = __dirname + '/../config/amqp_test.json';
+		} else {
+			confFile = process.env.INTCONFFILE;
+		}
+
+		log.verbose('Intercom config file: "' + confFile + '"');
+
+		// First look for absolute path
+		fs.stat(confFile, function(err) {
+			if (err) {
+
+				// Then look for this string in the config folder
+				confFile = __dirname + '/../config/' + confFile;
+				fs.stat(confFile, function(err) {
+					if (err) throw err;
+					log.verbose('Intercom config: ' + JSON.stringify(require(confFile)));
+					lUtils.instances.intercom = new Intercom(require(confFile).default);
+					lUtils.instances.intercom.on('ready', cb);
+				});
+
+				return;
+			}
+
+			log.verbose('Intercom config: ' + JSON.stringify(require(confFile)));
+			lUtils.instances.intercom = new Intercom(require(confFile).default);
+			lUtils.instances.intercom.on('ready', cb);
+		});
+	});
+
+	// Migrating user db etc
+	tasks.push(function(cb) {
+		userLib.ready(cb);
+	});
+
 	async.series(tasks, done);
 });
 
 describe('User', function() {
 	let createdUuid;
 
-	it('foo', function(done) {
-		userLib.ready(function() {
-			done();
-		});
-	});
-
 	it('should check if a username is available', function(done) {
 		userLib.usernameAvailable('testuser', function(err, res) {
-			assert( ! err, 'err should be negative');
+			if (err) throw err;
 			assert.deepEqual(res, true);
 			done();
 		});
 	});
 
 	describe('fields', function() {
-		it('should return an ID for the field we are asking for', function(done) {
-			userLib.getFieldId('firstname', function(err, fieldId) {
-				assert( ! err, 'err should be negative');
-				assert.deepEqual(fieldId, 1);
+		it('should return an UUID for the field we are asking for', function(done) {
+			userLib.getFieldUuid('firstname', function(err, fieldUuid) {
+				if (err) throw err;
+				assert.notDeepEqual(lUtils.formatUuid(fieldUuid), false);
 				done();
 			});
 		});
 
 		it('shold return field name "firstname" for ID 1 we created above', function(done) {
 			userLib.getFieldName(1, function(err, fieldName) {
-				assert( ! err, 'err should be negative');
+				if (err) throw err;
 				assert.deepEqual(fieldName, 'firstname');
 				done();
 			});
@@ -109,7 +144,7 @@ describe('User', function() {
 
 		it('should create a hashed password', function(done) {
 			userLib.hashPassword('foobar', function(err, hash) {
-				assert( ! err, 'err should be negative');
+				if (err) throw err;
 				hashedPassword = hash;
 				done();
 			});
@@ -117,7 +152,7 @@ describe('User', function() {
 
 		it('should check the hashed password back against the plain text password', function(done) {
 			userLib.checkPassword('foobar', hashedPassword, function(err, res) {
-				assert( ! err, 'err should be negative');
+				if (err) throw err;
 				assert.deepEqual(res, true);
 				done();
 			});
@@ -127,7 +162,7 @@ describe('User', function() {
 	describe('create', function() {
 		it('should create a new user with random uuid', function(done) {
 			userLib.create('lilleman', 'foobar', {'firstname': 'migal', 'lastname': ['Arvidsson', 'Göransson']}, function(err, user) {
-				assert( ! err, 'err should be negative');
+				if (err) throw err;
 
 				createdUuid = user.uuid;
 
@@ -148,7 +183,7 @@ describe('User', function() {
 
 		it('should try to create a user with a field that is undefined', function(done) {
 			userLib.create('trams', false, {'firstname': undefined, 'lastname': ['biff', 'baff']}, function(err, user) {
-				assert( ! err, 'err should be negative');
+				if (err) throw err;
 				assert(user.uuid !== undefined);
 				done();
 			});
@@ -158,7 +193,7 @@ describe('User', function() {
 	describe('logins', function() {
 		it('should log the created user in by username', function(done) {
 			userLib.fromUsername('lilleman', function(err, user) {
-				assert( ! err, 'err should be negative');
+				if (err) throw err;
 				assert(user.uuid !== undefined, 'uuid should be set');
 				assert(user.uuid === createdUuid, 'uuid should match the earlier created uuid');
 				done();
@@ -167,7 +202,7 @@ describe('User', function() {
 
 		it('should log the created user in by username and password', function(done) {
 			userLib.fromUserAndPass('lilleman', 'foobar', function(err, user) {
-				assert( ! err, 'err should be negative');
+				if (err) throw err;
 				assert(user.uuid === createdUuid, 'uuid should match the earlier created uuid');
 				done();
 			});
@@ -175,7 +210,7 @@ describe('User', function() {
 
 		it('should fail to log the created user in by username and password', function(done) {
 			userLib.fromUserAndPass('lilleman', 'nisse', function(err, user) {
-				assert( ! err, 'err should be negative');
+				if (err) throw err;
 				assert(user === false, 'user should be false');
 				done();
 			});
@@ -185,7 +220,7 @@ describe('User', function() {
 	describe('fields on logged in user', function() {
 		it('should remove a field from a logged in user', function(done) {
 			userLib.fromUsername('lilleman', function(err, user) {
-				assert( ! err, 'err should be negative');
+				if (err) throw err;
 				assert.deepEqual(user.fields.firstname, ['migal']);
 				user.rmField('firstname', function() {
 					assert.deepEqual(user.fields.firstname, undefined);
@@ -193,7 +228,7 @@ describe('User', function() {
 
 					// Trying to load the user again to be sure
 					userLib.fromUsername('lilleman', function(err, user) {
-						assert( ! err, 'err should be negative');
+						if (err) throw err;
 						assert.deepEqual(user.fields.firstname, undefined);
 
 						done();
@@ -204,7 +239,7 @@ describe('User', function() {
 
 		it('should set a field on a logged in user', function(done) {
 			userLib.fromUsername('lilleman', function(err, user) {
-				assert( ! err, 'err should be negative');
+				if (err) throw err;
 				user.addField('cell', 46709771337, function() {
 					assert.deepEqual(user.fields.cell[0], 46709771337);
 					assert.deepEqual(user.fields.lastname[0], 'Arvidsson');
@@ -220,7 +255,7 @@ describe('User', function() {
 					'income': [670, 'more than you']
 				};
 
-				assert( ! err, 'err should be negative');
+				if (err) throw err;
 
 				user.replaceFields(newFields, function() {
 					assert.deepEqual(user.fields.foo,       ['bar']);
@@ -233,9 +268,9 @@ describe('User', function() {
 
 		it('should get field data from any user', function(done) {
 			userLib.fromUsername('lilleman', function(err, user) {
-				assert( ! err, 'err should be negative');
+				if (err) throw err;
 				userLib.getFieldData(user.uuid, 'foo', function(err, data) {
-					assert( ! err, 'err should be negative');
+					if (err) throw err;
 					assert.deepEqual(data, ['bar']);
 					done();
 				});
@@ -244,23 +279,23 @@ describe('User', function() {
 
 		it('should set a new password for a user', function(done) {
 			userLib.fromUsername('lilleman', function(err, user) {
-				assert( ! err, 'err should be negative');
+				if (err) throw err;
 
 				assert(user !== false, 'The user object should not be false');
 
 				user.setPassword('biffelbaffel', function(err) {
-					assert( ! err, 'err should be negative');
+					if (err) throw err;
 
 					userLib.fromUserAndPass('lilleman', 'biffelbaffel', function(err, user) {
-						assert( ! err, 'err should be negative');
+						if (err) throw err;
 
 						assert(user !== false, 'The user object should not be false');
 
 						user.setPassword('BOOM', function(err) {
-							assert( ! err, 'err should be negative');
+							if (err) throw err;
 
 							userLib.fromUserAndPass('lilleman', 'biffelbaffel', function(err, user) {
-								assert( ! err, 'err should be negative');
+								if (err) throw err;
 
 								assert(user === false, 'The user object should be false');
 								done();

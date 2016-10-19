@@ -5,11 +5,11 @@ const	uuidLib	= require('node-uuid'),
 	db	= require('larvitdb');
 
 exports = module.exports = function(cb) {
-	const	//userUuid	= uuidLib.v4(),
-		//username	= uuidLib.v4(),
-		tasks	= [];
+	const	tasks	= [];
 
-	/* Create example stuff
+	/* Create example data to test this migration against existing data * /
+	let userUuid	= uuidLib.v4();
+	let username	= 'fomme';
 	tasks.push(function(cb) {
 		db.query('INSERT INTO user_data_fields (name) VALUES(\'foo\'),(\'bar\');', cb);
 	});
@@ -25,7 +25,7 @@ exports = module.exports = function(cb) {
 		const	sql	= 'INSERT INTO user_users_data (userUuid, fieldId, data) SELECT UNHEX(\'' + userUuid.replace(/-/g, '') + '\'), id, \'waff\' FROM user_data_fields WHERE name = \'bar\';';
 
 		db.query(sql, cb);
-	});*/
+	});/**/
 
 	// Migrate stuff
 	tasks.push(function(cb) {
