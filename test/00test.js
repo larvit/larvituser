@@ -11,10 +11,10 @@ const	Intercom	= require('larvitamintercom'),
 
 // Set up winston
 log.remove(log.transports.Console);
-/** /log.add(log.transports.Console, {
+/**/log.add(log.transports.Console, {
 	'colorize':	true,
 	'timestamp':	true,
-	'level':	'debug',
+	'level':	'verbose',
 	'json':	false
 });
 /**/
@@ -122,16 +122,19 @@ describe('User', function() {
 	});
 
 	describe('fields', function() {
+		let	fieldUuid;
+
 		it('should return an UUID for the field we are asking for', function(done) {
-			userLib.getFieldUuid('firstname', function(err, fieldUuid) {
+			userLib.getFieldUuid('firstname', function(err, result) {
 				if (err) throw err;
+				fieldUuid = result;
 				assert.notDeepEqual(lUtils.formatUuid(fieldUuid), false);
 				done();
 			});
 		});
 
-		it('shold return field name "firstname" for ID 1 we created above', function(done) {
-			userLib.getFieldName(1, function(err, fieldName) {
+		it('shold return field name "firstname" for the UUID we created above', function(done) {
+			userLib.getFieldName(fieldUuid, function(err, fieldName) {
 				if (err) throw err;
 				assert.deepEqual(fieldName, 'firstname');
 				done();

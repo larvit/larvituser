@@ -12,6 +12,7 @@ const	EventEmitter	= require('events').EventEmitter,
 
 let	readyInProgress	= false,
 	isReady	= false,
+	dataWriter,
 	intercom;
 
 function ready(cb) {
@@ -31,6 +32,8 @@ function ready(cb) {
 		log.error('larvituser: index.js - ' + err.message);
 		throw err;
 	}
+
+	dataWriter	= require(__dirname + '/dataWriter.js'); // We must do this here since it might not be instanciated on module load
 
 	dbmigration(function(err) {
 		if (err) {
@@ -64,22 +67,35 @@ function checkPassword(password, hash, cb) {
 	});
 }
 
-function create(username, password, userData, cb) {
+/**
+ * Creates a new user (and adds to it to db)
+ *
+ * @param str username
+ * @param str password (plain text) or false for no password (user will not be able to login at all)
+ * @param obj fields - key, value pairs, where value can be an array of values
+ * @param uuid custom uuid - if not supplied a random will be generated
+ * @param func cb(err, user) - user being an instance of the new user
+ */
+function create(username, password, userData, uuid, cb) {
 	const	tasks	= [];
 
 	let	hashedPassword;
 
-	if (userData instanceof Function) {
+	if (uuid instanceof Function) {
+		cb	= uuid;
+		uuid	= uuidLib.v1();
+	} else if (userData instanceof Function) {
 		cb	= userData;
 		userData	= undefined;
+		uuid	= uuidLib.v1();
 	} else if (cb === undefined) {
 		cb	= function() {};
 	}
 
-	username = _.trim(username);
+	username = username.trim();
 
 	if (password) {
-		password = _.trim(password);
+		password = password.trim();
 	}
 
 	if (username.length === 0) {
@@ -127,20 +143,36 @@ function create(username, password, userData, cb) {
 
 	// Send to queue
 	tasks.push(function(cb) {
-		const	userUuid	= uuidLib.v4(),
+		const	options	= {'exchange': dataWriter.exchangeName},
 			sendObj	= {};
 
 		sendObj.action	= 'createUser';
 		sendObj.params	= {};
-		sendObj.params.uuid	= userUuid;
+		sendObj.params.uuid	= uuid;
 		sendObj.params.username	= username;
 		sendObj.params.hashedPassword	= hashedPassword;
 		sendObj.params.userData	= userData;
 
-		intercom.send(sendObj, {'exchange': 'users'}, cb);
+		intercom.send(sendObj, options, function(err, msgUuid) {
+			if (err) { cb(err); return; }
+
+			dataWriter.emitter.once(msgUuid, cb);
+		});
 	});
 
-	async.series(tasks, cb);
+	async.series(tasks, function(err) {
+		if (err) { cb(err); return; }
+
+		fromUuid(uuid, function(err, user) {
+			if (err) {
+				log.error('larvituser: create() - ' + err.message);
+				cb(err);
+				return;
+			}
+
+			cb(null, user);
+		});
+	});
 }
 
 /**
@@ -150,7 +182,7 @@ function create(username, password, userData, cb) {
  * @param func cb(err, hash)
  */
 function hashPassword(password, cb) {
-	password = _.trim(password);
+	password = password.trim();
 
 	bcrypt.hash(password, 10, function(err, hash) {
 		if (err) {
@@ -199,7 +231,6 @@ function usernameAvailable(username, cb) {
 
 exports.checkPassword	=	checkPassword;
 exports.create	= create;
-exports.getFieldUuid	= getFieldUuid;
 exports.hashPassword	= hashPassword;
 exports.ready	= ready;
 exports.usernameAvailable	= usernameAvailable;

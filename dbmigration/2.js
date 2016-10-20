@@ -8,7 +8,7 @@ exports = module.exports = function(cb) {
 	const	tasks	= [];
 
 	/* Create example data to test this migration against existing data * /
-	let userUuid	= uuidLib.v4();
+	let userUuid	= uuidLib.v1();
 	let username	= 'fomme';
 	tasks.push(function(cb) {
 		db.query('INSERT INTO user_data_fields (name) VALUES(\'foo\'),(\'bar\');', cb);
@@ -42,7 +42,7 @@ exports = module.exports = function(cb) {
 				const	row	= rows[i];
 
 				tasks.push(function(cb) {
-					db.query('UPDATE user_data_fields SET uuid = UNHEX(?) WHERE id = ?;', [uuidLib.v4().replace(/-/g, ''), row.id], cb);
+					db.query('UPDATE user_data_fields SET uuid = UNHEX(?) WHERE id = ?;', [uuidLib.v1().replace(/-/g, ''), row.id], cb);
 				});
 			}
 
@@ -65,7 +65,7 @@ exports = module.exports = function(cb) {
 
 				tasks.push(function(cb) {
 					const	sql	= 'UPDATE user_users_data uud SET uud.uuid = UNHEX(?), uud.fieldUuid = (SELECT udf.uuid FROM user_data_fields udf WHERE udf.id = uud.fieldId) WHERE id = ?;',
-						dbFields	= [uuidLib.v4().replace(/-/g, ''), row.id];
+						dbFields	= [uuidLib.v1().replace(/-/g, ''), row.id];
 
 					db.query(sql, dbFields, cb);
 				});

@@ -90,9 +90,9 @@ function create(username, password, fields, uuid, cb) {
 
 	if (uuid instanceof Function && cb === undefined) {
 		cb	= uuid;
-		uuid	= uuidLib.v4();
+		uuid	= uuidLib.v1();
 	} else if (uuid === undefined) {
-		uuid	= uuidLib.v4();
+		uuid	= uuidLib.v1();
 	}
 
 	// Write the fields to the db
