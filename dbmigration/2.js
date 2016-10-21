@@ -50,31 +50,8 @@ exports = module.exports = function(cb) {
 		});
 	});
 
-	tasks.push(function(cb) {
-		db.query('ALTER TABLE `user_users_data` ADD `fieldUuid` binary(16) NOT NULL AFTER `userUuid`;', cb);
-	});
-
-	tasks.push(function(cb) {
-		db.query('SELECT id, fieldId FROM user_users_data', function(err, rows) {
-			const	tasks	= [];
-
-			if (err) { cb(err); return; }
-
-			for (let i = 0; rows[i] !== undefined; i ++) {
-				const	row	= rows[i];
-
-				tasks.push(function(cb) {
-					const	sql	= 'UPDATE user_users_data uud SET uud.uuid = UNHEX(?), uud.fieldUuid = (SELECT udf.uuid FROM user_data_fields udf WHERE udf.id = uud.fieldId) WHERE id = ?;',
-						dbFields	= [uuidLib.v1().replace(/-/g, ''), row.id];
-
-					db.query(sql, dbFields, cb);
-				});
-			}
-
-			async.parallel(tasks, cb);
-		});
-	});
-
+	tasks.push(function(cb) { db.query('ALTER TABLE `user_users_data` ADD `fieldUuid` binary(16) NOT NULL AFTER `userUuid`;',	cb); });
+	tasks.push(function(cb) { db.query('UPDATE user_users_data uud SET fieldUuid = (SELECT uuid FROM user_data_fields WHERE id = uud.fieldId)',	cb); });
 	tasks.push(function(cb) { db.query('ALTER TABLE `user_users_data` DROP FOREIGN KEY `user_users_data_ibfk_2`;',	cb); });
 	tasks.push(function(cb) { db.query('ALTER TABLE `user_users_data` DROP `id`, DROP `fieldId`;',	cb); });
 	tasks.push(function(cb) { db.query('ALTER TABLE `user_data_fields` DROP `id`;',	cb); });
