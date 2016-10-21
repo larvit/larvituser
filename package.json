@@ -1,4 +1,6 @@
 {
+  "name": "larvituser",
+  "version": "0.5.0",
   "author": {
     "name": "Mikael 'Lilleman' Göransson",
     "email": "lilleman@larvit.se",
@@ -7,10 +9,11 @@
   "contributors": [],
   "dependencies": {
     "async": "^2.0.1",
-    "bcrypt": "^0.8.5",
+    "bcryptjs": "^2.3.0",
+    "larvitamintercom": "^0.1.1",
     "larvitdb": "^1.0.0",
-    "larvitutils": "^1.0.2",
-    "lodash": "^4.6.1",
+    "larvitdbmigration": "^1.3.3",
+    "larvitutils": "^1.0.4",
     "node-uuid": "^1.4.7",
     "winston": "^2.1.1"
   },
@@ -27,13 +30,11 @@
     "auth",
     "user"
   ],
-  "main": "larvituser.js",
-  "name": "larvituser",
+  "main": "index.js",
   "repository": {
     "url": "https://github.com/larvit/larvituser",
     "type": "git"
   },
-  "version": "0.4.19",
   "readmeFilename": "README.md",
   "license": "MIT"
 }
