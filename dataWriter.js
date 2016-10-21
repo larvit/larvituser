@@ -3,6 +3,8 @@
 const	EventEmitter	= require('events').EventEmitter,
 	lUtils	= require('larvitutils'),
 	intercom	= lUtils.instances.intercom,
+	helpers	= require(__dirname + '/helpers.js'),
+	async	= require('async'),
 	log	= require('winston'),
 	db	= require('larvitdb');
 
@@ -16,102 +18,170 @@ function addField(params, deliveryTag, msgUuid) {
 	});
 }
 
+function addUserField(params, deliveryTag, msgUuid) {
+	helpers.getFieldUuid(params.fieldName, function(err, fieldUuid) {
+		const	dbFields	= [lUtils.uuidToBuffer(params.userUuid), lUtils.uuidToBuffer(fieldUuid), params.fieldValue],
+			sql	= 'INSERT INTO user_users_data (userUuid, fieldUuid, data) VALUES(?,?,?)';
+
+		if (err) {
+			exports.emitter.emit(msgUuid, err);
+			return;
+		}
+
+		db.query(sql, dbFields, function(err) {
+			exports.emitter.emit(msgUuid, err);
+		});
+	});
+}
+
 function create(params, deliveryTag, msgUuid) {
-	// Write the fields to the db
-	function writeFieldsToDb() {
-		replaceUserFields(uuid, fields, function(err) {
-			if (err) {
-				log.error('larvituser: create() - ' + err.message);
-				cb(err);
-				return;
-			}
+	const	dbFields	= [],
+		sql	= 'INSERT IGNORE INTO user_users (uuid, username, password) VALUES(?,?,?);';
 
-			log.debug('larvituser: create() - Fields written successfully to database', {'username': username, 'userUuid': uuid, 'fields': fields});
+	dbFields.push(lUtils.uuidToBuffer(params.uuid));
+	dbFields.push(params.username);
+	dbFields.push(params.password);
 
-			fromUuid(uuid, function(err, user) {
-				if (err) {
-					log.error('larvituser: create() - ' + err.message);
-					cb(err);
-					return;
-				}
+	if (dbFields[0] === false) {
+		const	err = new Error('Invalid user uuid supplied: "' + params.uuid + '", deliveryTag: "' + deliveryTag + '", msgUuid: "' + msgUuid + '"');
 
-				cb(null, user);
-			});
-		});
+		log.warn('larvituser: ./dataWriter.js - create() - ' + err.message);
+		exports.emitter.emit(msgUuid, err);
+
+		return;
 	}
 
-		// Write to database - called from the above cb
-		function writeToDb() {
-			const	sql	= 'INSERT INTO user_users (uuid, username, password) VALUES(UNHEX(REPLACE(?, \'-\', \'\')),?,?);',
-				dbFields	= [uuid, username, hashedPassword];
+	db.query(sql, dbFields, function(err) {
+		exports.emitter.emit(msgUuid, err);
+	});
+}
 
-			log.verbose('larvituser: create() - Trying to write username and password to database', {'sql': sql, 'fields': dbFields});
+function replaceFields(params, deliveryTag, msgUuid) {
+	const	fieldNamesToUuidBufs	= {},
+		userUuidBuf	= lUtils.uuidToBuffer(params.userUuid),
+		tasks	= [];
 
-			db.query(sql, dbFields, function(err) {
-				if (err) { cb(err); return; }
+	if (userUuidBuf === false) {
+		const	err = new Error('Invalid user uuid supplied: "' + params.userUuid + '", deliveryTag: "' + deliveryTag + '", msgUuid: "' + msgUuid + '"');
 
-				log.debug('larvituser: create() - Write to db successfull! Moving on to writing fields to database', {'username': username, 'uuid': uuid});
-				writeFieldsToDb();
+		log.warn('larvituser: ./dataWriter.js - replaceFields() - ' + err.message);
+		exports.emitter.emit(msgUuid, err);
+
+		return;
+	}
+
+	// Clean out previous data
+	tasks.push(function(cb) {
+		db.query('DELETE FROM user_users_data WHERE userUuid = ?', [userUuidBuf], cb);
+	});
+
+	// Get field uuids
+	tasks.push(function(cb) {
+		const	tasks	= [];
+
+		for (const fieldName of Object.keys(params.fields)) {
+			tasks.push(function(cb) {
+				helpers.getFieldUuid(fieldName, function(err, fieldUuid) {
+					fieldNamesToUuidBufs[fieldName] = lUtils.uuidToBuffer(fieldUuid);
+					cb(err);
+				});
 			});
 		}
 
-		// Hash password - called from the above cb
-		function hashPassword() {
-			if (password === false) {
-				log.debug('larvituser: create() - Password set to empty string for no-login, moving on to writing username and password to database', {'username': username});
-				hashedPassword	= '';
-				writeToDb();
-				return;
-			}
+		async.parallel(tasks, cb);
+	});
 
-			exports.hashPassword(password, function(err, hash) {
-				if (err) {
-					cb(err);
-				} else {
-					hashedPassword	= hash;
-					log.debug('larvituser: create() - Password hashed, moving on to writing username and password to database', {'username': username});
-					writeToDb();
-				}
-			});
+	// Add new data
+	tasks.push(function(cb) {
+		const	dbFields	= [];
+
+		let	sql = 'INSERT INTO user_users_data (userUuid, fieldUuid, data) VALUES';
+
+		if ( ! params.fields) {
+			cb();
+			return;
 		}
 
-		checkDbStructure(function() {
-			log.verbose('larvituser: create() - Trying to create user', {'username': username, 'fields': fields});
-
-			username = username.trim();
-			if (password !== false) {
-				password	= password.trim();
+		for (const fieldName of Object.keys(params.fields)) {
+			if ( ! (params.fields[fieldName] instanceof Array)) {
+				params.fields[fieldName] = [params.fields[fieldName]];
 			}
 
-			if ( ! username.length) {
-				const	err = new Error('Trying to create user with empty username');
-				log.warn('larvituser: create() - ' + err.message);
-				cb(err);
-				return;
-			}
+			for (let i = 0; params.fields[fieldName][i] !== undefined; i ++) {
+				const	fieldValue	= params.fields[fieldName][i];
 
-			// Check if username is available
-			usernameAvailable(username, function(err, res) {
-				if (err) {
-					cb(err);
-				} else if ( ! res) {
-					err = new Error('Trying to create user with taken username: "' + username + '"');
-					log.info('larvituser: create() - ' + err.message);
-					cb(err);
-				} else {
-					log.debug('larvituser: create() - Username available, moving on to hashing password', {'username': username});
-					hashPassword();
-				}
-			});
+				sql += '(?,?,?),';
+				dbFields.push(userUuidBuf);
+				dbFields.push(fieldNamesToUuidBufs[fieldName]);
+				dbFields.push(fieldValue);
+			}
+		}
+
+		sql = sql.substring(0, sql.length - 1) + ';';
+
+		if (dbFields.length === 0) {
+			cb();
+			return;
+		}
+
+		db.query(sql, dbFields, cb);
+	});
+
+	async.series(tasks, function(err) {
+		exports.emitter.emit(msgUuid, err);
+	});
+}
+
+function rmUserField(params, deliveryTag, msgUuid) {
+	helpers.getFieldUuid(params.fieldName, function(err, fieldUuid) {
+		const	dbFields	= [lUtils.uuidToBuffer(params.userUuid), lUtils.uuidToBuffer(fieldUuid)],
+			sql	= 'DELETE FROM user_users_data WHERE userUuid = ? AND fieldUuid = ?';
+
+		if (err) {
+			exports.emitter.emit(msgUuid, err);
+			return;
+		}
+
+		db.query(sql, dbFields, function(err) {
+			exports.emitter.emit(msgUuid, err);
 		});
+	});
+}
+
+function setPassword(params, deliveryTag, msgUuid) {
+	const	dbFields	= [],
+		sql	= 'UPDATE user_users SET password = ? WHERE uuid = ?;';
+
+	if (params.password === false) {
+		dbFields.push('');
+	} else {
+		dbFields.push(params.password);
 	}
 
+	dbFields.push(lUtils.uuidToBuffer(params.userUuid));
+	db.query(sql, dbFields, function(err) {
+		exports.emitter.emit(msgUuid, err);
+	});
+}
+
+function setUsername(params, deliveryTag, msgUuid) {
+	const	dbFields	= [params.username, lUtils.uuidToBuffer(params.userUuid)],
+		sql	= 'UPDATE user_users SET username = ? WHERE uuid = ?;';
+
+	db.query(sql, dbFields, function(err) {
+		exports.emitter.emit(msgUuid, err);
+	});
 }
 
 exports.addField	= addField;
+exports.addUserField	= addUserField;
 exports.create	= create;
 exports.emitter	= new EventEmitter();
 exports.exchangeName	= 'larvituser';
+exports.replaceFields	= replaceFields;
+exports.rmUserField	= rmUserField;
+exports.setPassword	= setPassword;
+exports.setUsername	= setUsername;
 
 intercom.subscribe({'exchange': exports.exchangeName}, function(message, ack, deliveryTag) {
 	ack(); // Ack first, if something goes wrong we log it and handle it manually
@@ -121,9 +191,15 @@ intercom.subscribe({'exchange': exports.exchangeName}, function(message, ack, de
 		return;
 	}
 
+	if (message.uuid === undefined) {
+		log.warn('larvituser: dataWriter.js - intercom.subscribe() - No message.uuid supplied. deliveryTag: "' + deliveryTag + '", message: "' + JSON.stringify(message) + '"');
+	}
+
 	if (typeof exports[message.action] === 'function') {
+		log.debug('larvituser: dataWriter.js - intercom.subscribe() - Running action "' + message.action + '", msgUuid: "' + message.uuid + '", deliveryTag: "' + deliveryTag + '"');
+
 		exports[message.action](message.params, deliveryTag, message.uuid);
 	} else {
-		log.warn('larvituser: dataWriter.js - intercom.subscribe() - Unknown message.action received: "' + message.action + '"');
+		log.warn('larvituser: dataWriter.js - intercom.subscribe() - Unknown message.action received: "' + message.action + '", msgUuid: "' + message.uuid + '", deliveryTag: "' + deliveryTag + '"');
 	}
 });

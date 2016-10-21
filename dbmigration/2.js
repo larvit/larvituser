@@ -51,7 +51,7 @@ exports = module.exports = function(cb) {
 	});
 
 	tasks.push(function(cb) {
-		db.query('ALTER TABLE `user_users_data` ADD `uuid` binary(16) NOT NULL FIRST, ADD `fieldUuid` binary(16) NOT NULL AFTER `userUuid`;', cb);
+		db.query('ALTER TABLE `user_users_data` ADD `fieldUuid` binary(16) NOT NULL AFTER `userUuid`;', cb);
 	});
 
 	tasks.push(function(cb) {
@@ -79,8 +79,8 @@ exports = module.exports = function(cb) {
 	tasks.push(function(cb) { db.query('ALTER TABLE `user_users_data` DROP `id`, DROP `fieldId`;',	cb); });
 	tasks.push(function(cb) { db.query('ALTER TABLE `user_data_fields` DROP `id`;',	cb); });
 	tasks.push(function(cb) { db.query('ALTER TABLE `user_data_fields` ADD PRIMARY KEY `uuid` (`uuid`);',	cb); });
-	tasks.push(function(cb) { db.query('ALTER TABLE `user_users_data` ADD PRIMARY KEY `uuid` (`uuid`);',	cb); });
 	tasks.push(function(cb) { db.query('ALTER TABLE `user_users_data` ADD FOREIGN KEY (`fieldUuid`) REFERENCES `user_data_fields` (`uuid`) ON DELETE NO ACTION ON UPDATE NO ACTION;',	cb); });
+	tasks.push(function(cb) { db.query('ALTER TABLE `user_users_data` DROP INDEX `userUuid_fieldId`;',	cb); });
 
 	async.series(tasks, cb);
 };
