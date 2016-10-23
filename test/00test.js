@@ -11,10 +11,10 @@ const	Intercom	= require('larvitamintercom'),
 
 // Set up winston
 log.remove(log.transports.Console);
-/** /log.add(log.transports.Console, {
+/**/log.add(log.transports.Console, {
 	'colorize':	true,
 	'timestamp':	true,
-	'level':	'debug',
+	'level':	'warn',
 	'json':	false
 });
 /**/
@@ -122,16 +122,19 @@ describe('User', function() {
 	});
 
 	describe('fields', function() {
+		let	fieldUuid;
+
 		it('should return an UUID for the field we are asking for', function(done) {
-			userLib.getFieldUuid('firstname', function(err, fieldUuid) {
+			userLib.getFieldUuid('firstname', function(err, result) {
 				if (err) throw err;
+				fieldUuid = result;
 				assert.notDeepEqual(lUtils.formatUuid(fieldUuid), false);
 				done();
 			});
 		});
 
-		it('shold return field name "firstname" for ID 1 we created above', function(done) {
-			userLib.getFieldName(1, function(err, fieldName) {
+		it('shold return field name "firstname" for the UUID we created above', function(done) {
+			userLib.getFieldName(fieldUuid, function(err, fieldName) {
 				if (err) throw err;
 				assert.deepEqual(fieldName, 'firstname');
 				done();
@@ -188,6 +191,7 @@ describe('User', function() {
 				done();
 			});
 		});
+
 	});
 
 	describe('logins', function() {
@@ -212,6 +216,38 @@ describe('User', function() {
 			userLib.fromUserAndPass('lilleman', 'nisse', function(err, user) {
 				if (err) throw err;
 				assert(user === false, 'user should be false');
+				done();
+			});
+		});
+
+		it('should log in user by field', function(done) {
+			userLib.fromField('firstname', 'migal', function(err, user) {
+				if (err) throw err;
+				assert.notDeepEqual(user, false);
+				done();
+			});
+		});
+
+		it('should fail to log in user by an errorous field', function(done) {
+			userLib.fromField('firstname', 'mupp', function(err, user) {
+				if (err) throw err;
+				assert.deepEqual(user, false);
+				done();
+			});
+		});
+
+		it('should log in user by multiple fields', function(done) {
+			userLib.fromFields({'firstname': 'migal', 'lastname': 'Arvidsson'}, function(err, user) {
+				if (err) throw err;
+				assert.notDeepEqual(user, false);
+				done();
+			});
+		});
+
+		it('should fail to log in user by multiple fields when one is wrong', function(done) {
+			userLib.fromFields({'firstname': 'migal', 'lastname': 'no its not'}, function(err, user) {
+				if (err) throw err;
+				assert.deepEqual(user, false);
 				done();
 			});
 		});
@@ -241,8 +277,8 @@ describe('User', function() {
 			userLib.fromUsername('lilleman', function(err, user) {
 				if (err) throw err;
 				user.addField('cell', 46709771337, function() {
-					assert.deepEqual(user.fields.cell[0], 46709771337);
-					assert.deepEqual(user.fields.lastname[0], 'Arvidsson');
+					assert.deepEqual(user.fields.cell[0],	46709771337);
+					assert.deepEqual(user.fields.lastname[0],	'Arvidsson');
 					done();
 				});
 			});
@@ -251,8 +287,8 @@ describe('User', function() {
 		it('should replace fields with new data', function(done) {
 			userLib.fromUsername('lilleman', function(err, user) {
 				const newFields = {
-					'foo':    'bar',
-					'income': [670, 'more than you']
+					'foo':	'bar',
+					'income':	[670, 'more than you']
 				};
 
 				if (err) throw err;

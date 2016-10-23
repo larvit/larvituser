@@ -103,7 +103,7 @@ userLib.fromFields({'firstname': 'John', 'lastname': 'Smith'}, function(err, use
 
 ```javascript
 userLib.fromUsername('username', function(err, user) {
-	console.log(user.uuid); // f9684592-b245-42fa-88c6-9f16b9236ac3
+	console.log(user.uuid); // f9684592-b245-42fa-88c6-9f16b9236ac3 or user will be false if no user is found
 });
 ```
 

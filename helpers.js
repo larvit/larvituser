@@ -1,59 +1,83 @@
 'use strict';
 
-const	dataWriter	= require(__dirname + '/dataWriter.js'),
-	intercom	= require('larvitutils').instances.intercom,
+const	EventEmitter	= require('events').EventEmitter,
+	eventEmitter	= new EventEmitter(),
+	dbmigration	= require('larvitdbmigration')({'tableName': 'users_db_version', 'migrationScriptsPath': __dirname + '/dbmigration'}),
 	uuidLib	= require('node-uuid'),
 	lUtils	= require('larvitutils'),
 	async	= require('async'),
 	log	= require('winston'),
 	db	= require('larvitdb');
 
-	/**
-	 * Get data field uuid by field name
-	 *
-	 * @param str fieldName
-	 * @param func cb(err, uuid)
-	 */
-	function getFieldUuid(fieldName, cb) {
-		ready(function() {
-			const	dbFields	= [],
-				sql	= 'SELECT uuid FROM user_data_fields WHERE name = ?';
+let	readyInProgress	= false,
+	isReady	= false,
+	dataWriter,
+	intercom;
 
-			fieldName	= fieldName.trim();
-			dbFields.push(fieldName);
+/**
+ * Get field name by uuid
+ *
+ * @param str uuid
+ * @param func cb(err, name) - name is false if no match is found
+ */
+function getFieldName(uuid, cb) {
+	ready(function() {
+		const	dbFields	= [lUtils.uuidToBuffer(uuid)],
+			sql	= 'SELECT name FROM user_data_fields WHERE uuid = ?';
 
-			db.query(sql, dbFields, function(err, rows) {
-				if (err) { cb(err); return; }
+		db.query(sql, dbFields, function(err, rows) {
+			if (err) { cb(err); return; }
 
-				if (rows.length) {
-					cb(null, lUtils.formatUuid(rows[0].uuid));
-				} else {
-					const	sendObj	= {};
-
-					sendObj.action	= 'addField';
-					sendObj.params	= {};
-					sendObj.params.uuid	= uuidLib.v4();
-					sendObj.params.name	= fieldName;
-
-					intercom.send()
-
-
-					db.query(sql, dbFields, function(err) {
-						if (err) {
-							cb(err);
-							return;
-						}
-
-						// Rerun this function, it should return correct now!
-						getFieldId(fieldName, function(err, id) {
-							cb(err, id);
-						});
-					});
-				}
-			});
+			if (rows.length) {
+				cb(null, rows[0].name);
+			} else {
+				cb(null, false);
+			}
 		});
-	}
+	});
+}
 
+/**
+ * Get data field uuid by field name
+ *
+ * @param str fieldName
+ * @param func cb(err, uuid)
+ */
+function getFieldUuid(fieldName, cb) {
+	ready(function() {
+		const	dbFields	= [],
+			sql	= 'SELECT uuid FROM user_data_fields WHERE name = ?';
+
+		fieldName	= fieldName.trim();
+		dbFields.push(fieldName);
+
+		db.query(sql, dbFields, function(err, rows) {
+			if (err) { cb(err); return; }
+
+			if (rows.length) {
+				cb(null, lUtils.formatUuid(rows[0].uuid));
+			} else {
+				const	options	= {'exchange': dataWriter.exchangeName},
+					sendObj	= {};
+
+				sendObj.action	= 'addField';
+				sendObj.params	= {};
+				sendObj.params.uuid	= uuidLib.v1();
+				sendObj.params.name	= fieldName;
+
+				intercom.send(sendObj, options, function(err, msgUuid) {
+					if (err) { cb(err); return; }
+
+					dataWriter.emitter.once(msgUuid, function(err) {
+						if (err) { cb(err); return; }
+
+						getFieldUuid(fieldName, cb);
+					});
+				});
+			}
+		});
+	});
+}
 
 function getOrderFieldUuid(fieldName, cb) {
 	for (let i = 0; exports.orderFields[i] !== undefined; i ++) {
@@ -71,7 +95,7 @@ function getOrderFieldUuid(fieldName, cb) {
 		message.action	= 'writeOrderField';
 		message.params	= {};
 
-		message.params.uuid	= uuidLib.v4();
+		message.params.uuid	= uuidLib.v1();
 		message.params.name	= fieldName;
 
 		intercom.send(message, options, function(err, msgUuid) {
@@ -143,7 +167,7 @@ function getRowFieldUuid(rowFieldName, cb) {
 		message.action	= 'writeRowField';
 		message.params	= {};
 
-		message.params.uuid	= uuidLib.v4();
+		message.params.uuid	= uuidLib.v1();
 		message.params.name	= rowFieldName;
 
 		intercom.send(message, options, function(err, msgUuid) {
@@ -231,6 +255,41 @@ function loadRowFieldsToCache(cb) {
 	});
 }
 
+function ready(cb) {
+	if (isReady === true) { cb(); return; }
+
+	if (readyInProgress === true) {
+		eventEmitter.on('ready', cb);
+		return;
+	}
+
+	readyInProgress	= true;
+	intercom	= lUtils.instances.intercom; // We must do this here since it might not be instanciated on module load
+
+	// We are strictly in need of the intercom!
+	if ( ! (intercom instanceof require('larvitamintercom'))) {
+		const	err	= new Error('larvitutils.instances.intercom is not an instance of Intercom!');
+		log.error('larvituser: helpers.js - ' + err.message);
+		throw err;
+	}
+
+	dataWriter	= require(__dirname + '/dataWriter.js'); // We must do this here since it might not be instanciated on module load
+
+	dbmigration(function(err) {
+		if (err) {
+			log.error('larvituser: orders.js: Database error: ' + err.message);
+			return;
+		}
+
+		isReady	= true;
+		eventEmitter.emit('ready');
+
+		cb();
+	});
+}
+
+exports.getFieldName	= getFieldName;
+exports.getFieldUuid	= getFieldUuid;
 exports.getOrderFieldUuids	= getOrderFieldUuids;
 exports.getRowFieldUuids	= getRowFieldUuids;
 exports.loadOrderFieldsToCache	= loadOrderFieldsToCache;
