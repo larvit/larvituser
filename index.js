@@ -274,6 +274,11 @@ function fromUserAndPass(username, password, cb) {
 	});
 
 	tasks.push(function(cb) {
+		if ( ! hashedPassword) {
+			cb();
+			return;
+		}
+
 		checkPassword(password, hashedPassword, function(err, res) {
 			if (err) {
 				log.error('larvituser: fromUserAndPass() - ' + err.message);

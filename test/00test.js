@@ -220,6 +220,14 @@ describe('User', function() {
 			});
 		});
 
+		it('should fail to log in a non existing user by username and password', function(done) {
+			userLib.fromUserAndPass('does_not_exist', 'foobar', function(err, user) {
+				if (err) throw err;
+				assert(user === false, 'user should be false');
+				done();
+			});
+		});
+
 		it('should log in user by field', function(done) {
 			userLib.fromField('firstname', 'migal', function(err, user) {
 				if (err) throw err;
