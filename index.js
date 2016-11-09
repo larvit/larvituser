@@ -134,6 +134,19 @@ function create(username, password, userData, uuid, cb) {
 		});
 	});
 
+	// Create all fields
+	tasks.push(function(cb) {
+		const	tasks	= [];
+
+		for (const fieldName of Object.keys(userData)) {
+			tasks.push(function(cb) {
+				exports.getFieldUuid(fieldName, cb);
+			});
+		}
+
+		async.parallel(tasks, cb);
+	});
+
 	// Write new user via queue
 	tasks.push(function(cb) {
 		const	options	= {'exchange': dataWriter.exchangeName},
