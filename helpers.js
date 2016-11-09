@@ -5,7 +5,6 @@ const	EventEmitter	= require('events').EventEmitter,
 	dbmigration	= require('larvitdbmigration')({'tableName': 'users_db_version', 'migrationScriptsPath': __dirname + '/dbmigration'}),
 	uuidLib	= require('node-uuid'),
 	lUtils	= require('larvitutils'),
-	async	= require('async'),
 	log	= require('winston'),
 	db	= require('larvitdb');
 
