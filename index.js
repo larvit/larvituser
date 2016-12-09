@@ -469,7 +469,7 @@ function ready(cb) {
 
 	dbmigration(function(err) {
 		if (err) {
-			log.error('larvituser: orders.js: Database error: ' + err.message);
+			log.error('larvituser: index.js: Database error: ' + err.message);
 			return;
 		}
 
@@ -763,4 +763,5 @@ exports.hashPassword	= hashPassword;
 exports.ready	= ready;
 exports.setUsername	= setUsername;
 exports.usernameAvailable	= usernameAvailable;
+exports.Users	= require(__dirname + '/users.js');
 Object.assign(exports, require(__dirname + '/helpers.js')); // extend this module with all helpers from the helpers file

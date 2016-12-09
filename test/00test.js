@@ -284,7 +284,9 @@ describe('User', function() {
 		it('should set a field on a logged in user', function(done) {
 			userLib.fromUsername('lilleman', function(err, user) {
 				if (err) throw err;
-				user.addField('cell', 46709771337, function() {
+				user.addField('cell', 46709771337, function(err) {
+					if (err) throw err;
+
 					assert.deepEqual(user.fields.cell[0],	46709771337);
 					assert.deepEqual(user.fields.lastname[0],	'Arvidsson');
 					done();
@@ -301,11 +303,23 @@ describe('User', function() {
 
 				if (err) throw err;
 
-				user.replaceFields(newFields, function() {
+				user.replaceFields(newFields, function(err) {
+					if (err) throw err;
+
 					assert.deepEqual(user.fields.foo,       ['bar']);
 					assert.deepEqual(user.fields.firstname, undefined);
 					assert.deepEqual(user.fields.income[1], 'more than you');
-					done();
+
+					// Reload user to make sure the fields are saved in database correctly
+					userLib.fromUsername('lilleman', function(err, secondUser) {
+						if (err) throw err;
+
+						assert.deepEqual(secondUser.fields.foo,       ['bar']);
+						assert.deepEqual(secondUser.fields.firstname, undefined);
+						assert.deepEqual(secondUser.fields.income[1], 'more than you');
+
+						done();
+					});
 				});
 			});
 		});
@@ -313,6 +327,7 @@ describe('User', function() {
 		it('should get field data from any user', function(done) {
 			userLib.fromUsername('lilleman', function(err, user) {
 				if (err) throw err;
+
 				userLib.getFieldData(user.uuid, 'foo', function(err, data) {
 					if (err) throw err;
 					assert.deepEqual(data, ['bar']);

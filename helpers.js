@@ -100,7 +100,7 @@ function ready(cb) {
 
 	dbmigration(function(err) {
 		if (err) {
-			log.error('larvituser: orders.js: Database error: ' + err.message);
+			log.error('larvituser: helpers.js: Database error: ' + err.message);
 			return;
 		}
 
@@ -113,5 +113,3 @@ function ready(cb) {
 
 exports.getFieldName	= getFieldName;
 exports.getFieldUuid	= getFieldUuid;
-exports.orderFields	= [];
-exports.rowFields	= [];
