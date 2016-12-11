@@ -45,6 +45,18 @@ userLib.fromUserAndPass('myUsername', 'myPassword', function(err, user) {
 });
 ```
 
+List multiple users
+
+```javascript
+const	users	= new userLib.Users();
+
+users.get(function(err, userList) {
+	if (err) throw err;
+	
+	console.log(userList); // An array of objects
+});
+```
+
 ### Advanced usage
 
 #### Add data to a user
