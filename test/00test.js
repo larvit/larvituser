@@ -392,6 +392,21 @@ describe('User', function() {
 		});
 	});
 
+	describe('remove user', function() {
+		it('should remove a user', function(done) {
+			userLib.rmUser(createdUuid, function(err) {
+				if (err) throw err;
+
+				db.query('SELECT * FROM user_users WHERE uuid = ?', [lUtils.uuidToBuffer(createdUuid)], function(err, rows) {
+					if (err) throw err;
+
+					assert.deepEqual(rows.length, 0);
+					done();
+				});
+			});
+		});
+	});
+
 	after(function(done) {
 		db.removeAllTables(done);
 	});

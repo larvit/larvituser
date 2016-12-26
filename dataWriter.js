@@ -132,6 +132,26 @@ function replaceFields(params, deliveryTag, msgUuid) {
 	});
 }
 
+function rmUser(params, deliveryTag, msgUuid) {
+	const	tasks	= [];
+
+	tasks.push(function(cb) {
+		const	sql	= 'DELETE FROM user_users_data WHERE userUuid = ?;';
+
+		db.query(sql, [lUtils.uuidToBuffer(params.userUuid)], cb);
+	});
+
+	tasks.push(function(cb) {
+		const	sql	= 'DELETE FROM user_users WHERE uuid = ?;';
+
+		db.query(sql, [lUtils.uuidToBuffer(params.userUuid)], cb);
+	});
+
+	async.series(tasks, function(err) {
+		exports.emitter.emit(msgUuid, err);
+	});
+}
+
 function rmUserField(params, deliveryTag, msgUuid) {
 	helpers.getFieldUuid(params.fieldName, function(err, fieldUuid) {
 		const	dbFields	= [lUtils.uuidToBuffer(params.userUuid), lUtils.uuidToBuffer(fieldUuid)],
@@ -179,6 +199,7 @@ exports.create	= create;
 exports.emitter	= new EventEmitter();
 exports.exchangeName	= 'larvituser';
 exports.replaceFields	= replaceFields;
+exports.rmUser	= rmUser;
 exports.rmUserField	= rmUserField;
 exports.setPassword	= setPassword;
 exports.setUsername	= setUsername;

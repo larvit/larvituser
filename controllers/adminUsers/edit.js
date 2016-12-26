@@ -21,7 +21,14 @@ exports.run = function(req, res, cb) {
 	if (data.global.formFields.save !== undefined) {
 		const	userFields	= {};
 
-		let	user;
+		let	newPassword,
+			user;
+
+		if ( ! data.global.formFields.password) {
+			newPassword = false;
+		} else {
+			newPassword = data.global.formFields.password.trim();
+		}
 
 		// Format userFields
 		for (let i = 0; data.global.formFields.fieldName[i] !== undefined; i ++) {
@@ -57,7 +64,7 @@ exports.run = function(req, res, cb) {
 			tasks.push(function(cb) {
 				if (data.global.errors.length) { cb(); return; }
 
-				userLib.create(data.global.formFields.username, data.global.formFields.password, userFields, function(err, result) {
+				userLib.create(data.global.formFields.username, newPassword, userFields, function(err, result) {
 					user = result;
 					cb(err);
 				});
@@ -105,7 +112,7 @@ exports.run = function(req, res, cb) {
 			tasks.push(function(cb) {
 				if (data.global.errors.length) { cb(); return; }
 
-				user.setPassword(data.global.formFields.password.trim(), cb);
+				user.setPassword(newPassword, cb);
 			});
 		}
 
@@ -121,6 +128,19 @@ exports.run = function(req, res, cb) {
 
 			data.global.messages = ['Saved'];
 			cb();
+		});
+	}
+
+	if (data.global.formFields.rmUser !== undefined) {
+		tasks.push(function(cb) {
+			userLib.rmUser(data.global.urlParsed.query.uuid, function(err) {
+				if (err) { cb(err); return; }
+
+				req.session.data.nextCallData = {'global': {'messages': ['User "' + data.global.urlParsed.query.uuid + '" erased']}};
+				res.statusCode = 302;
+				res.setHeader('Location', '/adminUsers/list');
+				cb();
+			});
 		});
 	}
 

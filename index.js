@@ -505,6 +505,27 @@ function replaceUserFields(uuid, fields, cb) {
 }
 
 /**
+ * Remove a user
+ *
+ * @param uuid userUuid
+ * @param func cb(err)
+ */
+function rmUser(userUuid, cb) {
+	const	options	= {'exchange': dataWriter.exchangeName},
+		sendObj	= {};
+
+	sendObj.action	= 'rmUser';
+	sendObj.params	= {};
+	sendObj.params.userUuid	= userUuid;
+
+	intercom.send(sendObj, options, function(err, msgUuid) {
+		if (err) { cb(err); return; }
+
+		dataWriter.emitter.once(msgUuid, cb);
+	});
+}
+
+/**
  * Remove a user field
  *
  * @param uuid userUuid
@@ -670,6 +691,24 @@ function userBase() {
 		});
 	};
 
+	returnObj.rm = function rm(cb) {
+		if (returnObj.uuid === undefined) {
+			const	err	= new Error('Cannot remove field; no user loaded');
+			cb(err);
+			return;
+		}
+
+		rmUser(returnObj.uuid, function(err) {
+			if (err) { cb(err); return; }
+
+			delete returnObj.uuid;
+			delete returnObj.fields;
+			delete returnObj.username;
+
+			cb();
+		});
+	};
+
 	/**
 	 * Remove a field from this user
 	 *
@@ -761,6 +800,7 @@ exports.fromUuid	= fromUuid;
 exports.getFieldData	= getFieldData;
 exports.hashPassword	= hashPassword;
 exports.ready	= ready;
+exports.rmUser	= rmUser;
 exports.setUsername	= setUsername;
 exports.usernameAvailable	= usernameAvailable;
 exports.Users	= require(__dirname + '/users.js');
