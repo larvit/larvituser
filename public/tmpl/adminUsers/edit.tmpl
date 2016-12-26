@@ -7,6 +7,13 @@
 			<label for="uuid">Uuid</label>
 			<input class="u-full-width" type="text" name="uuid" placeholder="auto generated" readonly="readonly" value="<%= obj.global.urlParsed.query.uuid %>" />
 		</div>
+
+		<div class="six columns">
+			<label for="disableLogin">
+				<input id="disableLogin" name="disableLogin" type="checkbox" value="yes" <% if (obj.user.passwordIsFalse === true) { print('checked="checked"');} %> />
+				<span class="label-body">Diasable login (will erase the password)</span>
+			</label>
+		</div>
 	</div>
 
 	<div class="row">
@@ -16,7 +23,7 @@
 		</div>
 
 		<div class="six columns">
-			<label for="password">Password</label>
+			<label for="password">Password (Leave empty to not change the password)</label>
 			<input class="u-full-width" type="password" name="password" />
 		</div>
 	</div>

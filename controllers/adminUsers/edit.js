@@ -24,7 +24,7 @@ exports.run = function(req, res, cb) {
 		let	newPassword,
 			user;
 
-		if ( ! data.global.formFields.password) {
+		if (data.global.formFields.disableLogin === 'yes') {
 			newPassword = false;
 		} else {
 			newPassword = data.global.formFields.password.trim();
@@ -108,7 +108,7 @@ exports.run = function(req, res, cb) {
 		});
 
 		// Update password
-		if (data.global.formFields.password.trim() !== '') {
+		if (data.global.formFields.password.trim() !== '' || newPassword === false) {
 			tasks.push(function(cb) {
 				if (data.global.errors.length) { cb(); return; }
 
@@ -152,6 +152,7 @@ exports.run = function(req, res, cb) {
 				data.user = {
 					'uuid':	user.uuid,
 					'username':	user.username,
+					'passwordIsFalse':	user.passwordIsFalse,
 					'fields':	user.fields
 				};
 

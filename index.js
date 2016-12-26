@@ -361,6 +361,7 @@ function fromUuid(userUuid, cb) {
 		sql	= 'SELECT\n' +
 			'	u.uuid,\n' +
 			'	u.username,\n' +
+			'	u.password,\n' +
 			'	uf.uuid AS fieldUuid,\n' +
 			'	uf.name AS fieldName,\n' +
 			'	ud.data AS fieldData\n' +
@@ -383,6 +384,12 @@ function fromUuid(userUuid, cb) {
 
 			returnObj.uuid	= lUtils.formatUuid(rows[0].uuid);
 			returnObj.username	= rows[0].username;
+
+			if (rows[0].password === '') {
+				returnObj.passwordIsFalse = true;
+			} else {
+				returnObj.passwordIsFalse = false;
+			}
 
 			for (let i = 0; rows[i] !== undefined; i ++) {
 				const	row	= rows[i];
