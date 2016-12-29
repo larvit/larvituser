@@ -10,8 +10,8 @@
 
 		<div class="six columns">
 			<label for="disableLogin">
-				<input id="disableLogin" name="disableLogin" type="checkbox" value="yes" <% if (obj.user.passwordIsFalse === true) { print('checked="checked"');} %> />
-				<span class="label-body">Diasable login (will erase the password)</span>
+				<input id="disableLogin" name="disableLogin" type="checkbox" value="yes" <% if (obj.user && obj.user.passwordIsFalse === true) { print('checked="checked"');} %> />
+				<span class="label-body">Disable login (will erase the password)</span>
 			</label>
 		</div>
 	</div>
