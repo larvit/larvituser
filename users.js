@@ -15,9 +15,18 @@ Users.prototype.get = function(cb) {
 		result;
 
 	tasks.push(function(cb) {
-		const	dbFields	= [];
 
-		let	sql	= 'SELECT uuid, username FROM user_users';
+		const	dbFields	= [];
+		let sql = 'SELECT uuid, username FROM user_users WHERE 1 ';
+
+		if (that.matchAllFields !== undefined) {
+			for (let field in that.matchAllFields) {
+				sql	+= 'AND uuid IN (SELECT userUuid FROM user_users_data WHERE data = ?\n'
+					+	' AND fieldUuid = (SELECT uuid FROM user_data_fields WHERE name = ?))';
+				dbFields.push(that.matchAllFields[field]);
+				dbFields.push(field);
+			}
+		}
 
 		if (that.limit !== undefined && ! isNaN(parseInt(that.limit))) {
 			sql += ' LIMIT ' + parseInt(that.limit);
@@ -30,11 +39,17 @@ Users.prototype.get = function(cb) {
 		db.query(sql, dbFields, function(err, rows) {
 			if (err) { cb(err); return; }
 
-			for (let i = 0; rows[i] !== undefined; i ++) {
-				rows[i].uuid = lUtils.formatUuid(rows[i].uuid);
-			}
+			result = [];
 
-			result = rows;
+			for (let i = 0; rows[i] !== undefined; i ++) {
+
+				const user = {};
+
+				user.uuid	= lUtils.formatUuid(rows[i].uuid);
+				user.username	= rows[i].username;
+
+				result.push(user);
+			}
 
 			cb(err);
 		});
@@ -43,7 +58,17 @@ Users.prototype.get = function(cb) {
 	tasks.push(function(cb) {
 		const	dbFields	= [];
 
-		let	sql	= 'SELECT COUNT(*) AS totalElements FROM user_users';
+		let	sql	= 'SELECT COUNT(*) AS totalElements FROM user_users WHERE 1 ';
+
+		if (that.matchAllFields !== undefined) {
+			for (let field in that.matchAllFields) {
+				sql	+= 'AND uuid IN (SELECT userUuid FROM user_users_data WHERE data = ?\n'
+					+	' AND fieldUuid = (SELECT uuid FROM user_data_fields WHERE name = ?))';
+
+				dbFields.push(that.matchAllFields[field]);
+				dbFields.push(field);
+			}
+		}
 
 		db.query(sql, dbFields, function(err, rows) {
 			if (err) { cb(err); return; }

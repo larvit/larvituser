@@ -407,6 +407,76 @@ describe('User', function() {
 		});
 	});
 
+	describe('Get list of users', function () {
+
+		const uuids = [];
+
+		it('Get list of users', function (done) {
+
+			const tasks	= [];
+
+			tasks.push(function (cb) {
+				userLib.create('user1', 'somepassword', { 'role' : ['customer', 'user']}, function (err, user) {
+					uuids.push(user.uuid);
+					if (err) throw err;
+					cb();
+				});
+			});
+
+			tasks.push(function (cb) {
+				userLib.create('user2', 'somepassword', { 'role' : ['not customer', 'user']}, function (err, user) {
+					uuids.push(user.uuid);
+					if (err) throw err;
+					cb();
+				});
+			});
+
+			tasks.push(function (cb) {
+				let u = new userLib.Users();
+
+				u.get(function (err, userList) {
+
+					if (err) ssert( ! err, err.message);
+					assert(userList.length >= 2, '2 or more users should exist in database');
+
+					let foundUser1 = false, foundUser2 = false;
+
+					for (let i = 0; i < userList.length; i ++) {
+						if (userList[i].uuid === uuids[0]) {
+							foundUser1 = true;
+						}
+
+						if (userList[i].uuid === uuids[1]) {
+							foundUser2 = true;
+						}
+					}
+
+					assert.deepEqual(foundUser1, true, 'user1 not found');
+					assert.deepEqual(foundUser2, true, 'user2 not found');
+
+					cb();
+				});
+			});
+
+			async.series(tasks, done);
+		});
+
+		it('Get list of users with matching fields', function (done) {
+			const users = new userLib.Users();
+			users.matchAllFields = { 'role': ['customer']};
+
+			users.get(function (err, userList, totalElements) {
+
+				if (err) throw err;
+				assert.deepEqual(totalElements, 1);
+				assert.deepEqual(userList.length, 1);
+				assert.deepEqual(userList[0].username, 'user1');
+
+				done();
+			});
+		});
+	});
+
 	after(function(done) {
 		db.removeAllTables(done);
 	});
