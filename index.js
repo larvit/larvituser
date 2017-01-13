@@ -807,6 +807,7 @@ exports.fromUuid	= fromUuid;
 exports.getFieldData	= getFieldData;
 exports.hashPassword	= hashPassword;
 exports.ready	= ready;
+exports.replaceUserFields = replaceUserFields;
 exports.rmUser	= rmUser;
 exports.setUsername	= setUsername;
 exports.usernameAvailable	= usernameAvailable;
