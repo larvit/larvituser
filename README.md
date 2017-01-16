@@ -9,13 +9,15 @@ User module for node.js
 First fire up the library connections like this:
 
 ```javascript
-var userLib = require('larvituser');
+const	userLib = require('larvituser');
+
+userLib.dataWriter.mode = 'master'; // Used for standalone use. If multiple applications connect via rabbitMQ the other should be "slave"
 ```
 
 Create a new user in the database, do like this:
 
 ```javascript
-var userData = {
+const userData = {
 	'firstname': 'Nisse',
 	'lastname': 'Nilsson',
 	'role': [
@@ -52,7 +54,7 @@ const	users	= new userLib.Users();
 
 users.get(function(err, userList) {
 	if (err) throw err;
-	
+
 	console.log(userList); // An array of objects
 });
 ```

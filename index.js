@@ -1,19 +1,12 @@
 'use strict';
 
-const	EventEmitter	= require('events').EventEmitter,
-	eventEmitter	= new EventEmitter(),
-	dbmigration	= require('larvitdbmigration')({'tableName': 'users_db_version', 'migrationScriptsPath': __dirname + '/dbmigration'}),
+const	dataWriter	= require(__dirname + '/dataWriter.js'),
 	lUtils	= require('larvitutils'),
 	uuidLib	= require('uuid'),
 	bcrypt	= require('bcryptjs'),
 	async	= require('async'),
 	log	= require('winston'),
 	db	= require('larvitdb');
-
-let	readyInProgress	= false,
-	isReady	= false,
-	dataWriter,
-	intercom;
 
 /**
  * Add a single user field to database
@@ -33,7 +26,7 @@ function addUserField(userUuid, fieldName, fieldValue, cb) {
 	sendObj.params.fieldName	= fieldName;
 	sendObj.params.fieldValue	= String(fieldValue).trim();
 
-	intercom.send(sendObj, options, function(err, msgUuid) {
+	dataWriter.intercom.send(sendObj, options, function(err, msgUuid) {
 		if (err) { cb(err); return; }
 
 		dataWriter.emitter.once(msgUuid, cb);
@@ -97,7 +90,7 @@ function create(username, password, userData, uuid, cb) {
 		return;
 	}
 
-	tasks.push(ready);
+	tasks.push(dataWriter.ready);
 
 	// Check for username availability
 	tasks.push(function(cb) {
@@ -158,7 +151,7 @@ function create(username, password, userData, uuid, cb) {
 		sendObj.params.username	= username;
 		sendObj.params.password	= hashedPassword;
 
-		intercom.send(sendObj, options, function(err, msgUuid) {
+		dataWriter.intercom.send(sendObj, options, function(err, msgUuid) {
 			if (err) { cb(err); return; }
 
 			dataWriter.emitter.once(msgUuid, cb);
@@ -194,13 +187,15 @@ function create(username, password, userData, uuid, cb) {
  * @param func cb(err, user) - "user" being a new user object or boolean false on failed search
  */
 function fromField(fieldName, fieldValue, cb) {
-	ready(function() {
+	dataWriter.ready(function(err) {
 		const	dbFields	=	[fieldName.trim(), fieldValue.trim()],
 			sql	=	'SELECT uud.userUuid\n' +
 					'FROM user_users_data uud\n' +
 					'	JOIN user_data_fields udf ON udf.uuid = uud.fieldUuid\n' +
 					'WHERE udf.name = ? AND uud.data = ?\n' +
 					'LIMIT 1';
+
+		if (err) { cb(err); return; }
 
 		db.query(sql, dbFields, function(err, rows) {
 			if (err) { cb(err); return; }
@@ -223,10 +218,12 @@ function fromField(fieldName, fieldValue, cb) {
  * @param func cb(err, user) - "user" being a new user object or boolean false on failed search
  */
 function fromFields(fields, cb) {
-	ready(function() {
+	dataWriter.ready(function(err) {
 		const	dbFields	= [];
 
 		let	sql	= 'SELECT uuid FROM user_users u\nWHERE\n		1 + 1\n';
+
+		if (err) { cb(err); return; }
 
 		for (const fieldName of Object.keys(fields)) {
 			sql += '	AND	uuid IN (SELECT userUuid FROM user_users_data WHERE data = ? AND fieldUuid = (SELECT uuid FROM user_data_fields WHERE name = ?))\n';
@@ -265,7 +262,7 @@ function fromUserAndPass(username, password, cb) {
 	username	= username.trim();
 	password	= password.trim();
 
-	tasks.push(ready);
+	tasks.push(dataWriter.ready);
 
 	tasks.push(function(cb) {
 		const	dbFields	= [username],
@@ -331,7 +328,9 @@ function fromUsername(username, cb) {
 	username	= username.trim();
 	dbFields.push(username);
 
-	ready(function() {
+	dataWriter.ready(function(err) {
+		if (err) { cb(err); return; }
+
 		db.query(sql, dbFields, function(err, rows) {
 			if (err) { cb(err); return; }
 
@@ -371,7 +370,9 @@ function fromUuid(userUuid, cb) {
 			'		LEFT JOIN user_data_fields	uf ON uf.uuid	= ud.fieldUuid\n' +
 			'WHERE u.uuid = ?';
 
-	ready(function() {
+	dataWriter.ready(function(err) {
+		if (err) { cb(err); return; }
+
 		db.query(sql, dbFields, function(err, rows) {
 			if (err) { cb(err); return; }
 
@@ -454,39 +455,6 @@ function hashPassword(password, cb) {
 	});
 }
 
-function ready(cb) {
-	if (isReady === true) { cb(); return; }
-
-	if (readyInProgress === true) {
-		eventEmitter.on('ready', cb);
-		return;
-	}
-
-	readyInProgress	= true;
-	intercom	= lUtils.instances.intercom; // We must do this here since it might not be instanciated on module load
-
-	// We are strictly in need of the intercom!
-	if ( ! (intercom instanceof require('larvitamintercom'))) {
-		const	err	= new Error('larvitutils.instances.intercom is not an instance of Intercom!');
-		log.error('larvituser: index.js - ' + err.message);
-		throw err;
-	}
-
-	dataWriter	= require(__dirname + '/dataWriter.js'); // We must do this here since it might not be instanciated on module load
-
-	dbmigration(function(err) {
-		if (err) {
-			log.error('larvituser: index.js: Database error: ' + err.message);
-			return;
-		}
-
-		isReady	= true;
-		eventEmitter.emit('ready');
-
-		cb();
-	});
-}
-
 /**
  * Replace all fields
  * IMPORTANT!!! Will clear all data not given in the fields parameter
@@ -504,7 +472,7 @@ function replaceUserFields(uuid, fields, cb) {
 	sendObj.params.userUuid	= uuid;
 	sendObj.params.fields	= fields;
 
-	intercom.send(sendObj, options, function(err, msgUuid) {
+	dataWriter.intercom.send(sendObj, options, function(err, msgUuid) {
 		if (err) { cb(err); return; }
 
 		dataWriter.emitter.once(msgUuid, cb);
@@ -525,7 +493,7 @@ function rmUser(userUuid, cb) {
 	sendObj.params	= {};
 	sendObj.params.userUuid	= userUuid;
 
-	intercom.send(sendObj, options, function(err, msgUuid) {
+	dataWriter.intercom.send(sendObj, options, function(err, msgUuid) {
 		if (err) { cb(err); return; }
 
 		dataWriter.emitter.once(msgUuid, cb);
@@ -548,7 +516,7 @@ function rmUserField(userUuid, fieldName, cb) {
 	sendObj.params.userUuid	= userUuid;
 	sendObj.params.fieldName	= fieldName;
 
-	intercom.send(sendObj, options, function(err, msgUuid) {
+	dataWriter.intercom.send(sendObj, options, function(err, msgUuid) {
 		if (err) { cb(err); return; }
 
 		dataWriter.emitter.once(msgUuid, cb);
@@ -588,7 +556,7 @@ function setPassword(userUuid, newPassword, cb) {
 		sendObj.params.userUuid	= userUuid;
 		sendObj.params.password	= hashedPassword;
 
-		intercom.send(sendObj, options, function(err, msgUuid) {
+		dataWriter.intercom.send(sendObj, options, function(err, msgUuid) {
 			if (err) { cb(err); return; }
 
 			dataWriter.emitter.once(msgUuid, cb);
@@ -634,7 +602,7 @@ function setUsername(userUuid, newUsername, cb) {
 		sendObj.params.userUuid	= userUuid;
 		sendObj.params.username	= newUsername;
 
-		intercom.send(sendObj, options, function(err, msgUuid) {
+		dataWriter.intercom.send(sendObj, options, function(err, msgUuid) {
 			if (err) { cb(err); return; }
 
 			dataWriter.emitter.once(msgUuid, cb);
@@ -773,7 +741,7 @@ function usernameAvailable(username, cb) {
 
 	username = username.trim();
 
-	tasks.push(ready);
+	tasks.push(dataWriter.ready);
 
 	tasks.push(function(cb) {
 		db.query('SELECT uuid FROM user_users WHERE username = ?', [username], function(err, rows) {
@@ -799,6 +767,7 @@ function usernameAvailable(username, cb) {
 exports.addUserField	= addUserField;
 exports.checkPassword	=	checkPassword;
 exports.create	= create;
+exports.dataWriter	= dataWriter;
 exports.fromField	= fromField;
 exports.fromFields	= fromFields;
 exports.fromUserAndPass	= fromUserAndPass;
@@ -806,7 +775,7 @@ exports.fromUsername	= fromUsername;
 exports.fromUuid	= fromUuid;
 exports.getFieldData	= getFieldData;
 exports.hashPassword	= hashPassword;
-exports.ready	= ready;
+exports.ready	= dataWriter.ready;
 exports.rmUser	= rmUser;
 exports.setUsername	= setUsername;
 exports.usernameAvailable	= usernameAvailable;

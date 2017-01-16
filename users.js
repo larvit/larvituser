@@ -1,6 +1,7 @@
 'use strict';
 
-const	lUtils	= require('larvitutils'),
+const	dataWriter	= require(__dirname + '/dataWriter.js'),
+	lUtils	= require('larvitutils'),
 	async	= require('async'),
 	db	= require('larvitdb');
 
@@ -14,10 +15,12 @@ Users.prototype.get = function(cb) {
 	let	totalElements,
 		result;
 
-	tasks.push(function(cb) {
+	tasks.push(dataWriter.ready);
 
+	tasks.push(function(cb) {
 		const	dbFields	= [];
-		let sql = 'SELECT uuid, username FROM user_users WHERE 1 ';
+
+		let	sql	= 'SELECT uuid, username FROM user_users WHERE 1 ';
 
 		if (that.matchAllFields !== undefined) {
 			for (let field in that.matchAllFields) {
@@ -43,7 +46,7 @@ Users.prototype.get = function(cb) {
 
 			for (let i = 0; rows[i] !== undefined; i ++) {
 
-				const user = {};
+				const	user	= {};
 
 				user.uuid	= lUtils.formatUuid(rows[i].uuid);
 				user.username	= rows[i].username;
