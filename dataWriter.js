@@ -350,6 +350,7 @@ function runDumpServer(cb) {
 	args.push(db.conf.database);
 
 	// Tables
+	args.push('users_db_version');
 	args.push('user_data_fields');
 	args.push('user_roles_rights');
 	args.push('user_users');
