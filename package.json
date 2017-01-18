@@ -1,6 +1,6 @@
 {
   "name": "larvituser",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "author": {
     "name": "Mikael 'Lilleman' Göransson",
     "email": "lilleman@larvit.se",
@@ -11,7 +11,7 @@
     "async": "^2.0.1",
     "bcryptjs": "^2.3.0",
     "larvitamintercom": "^0.1.1",
-    "larvitamsync": "^0.1.10",
+    "larvitamsync": "^0.2.0",
     "larvitdb": "^1.0.0",
     "larvitdbmigration": "^1.3.3",
     "larvitutils": "^1.0.4",
