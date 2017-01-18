@@ -17,6 +17,7 @@ const	dataWriter	= require(__dirname + '/dataWriter.js'),
  * @param func cb(err)
  */
 function addUserField(userUuid, fieldName, fieldValue, cb) {
+throw new Error('Should implement addUserFields()');
 	const	options	= {'exchange': dataWriter.exchangeName},
 		sendObj	= {};
 
@@ -31,6 +32,17 @@ function addUserField(userUuid, fieldName, fieldValue, cb) {
 
 		dataWriter.emitter.once(msgUuid, cb);
 	});
+}
+
+/**
+ * Add user fields
+ *
+ * @param str userUuid
+ * @param obj fields - field name as key, field values as array to that key - ex: {'role': ['admin','user']}
+ * @param func cb(err)
+ */
+function addUserFields(userUuid, fields, cb) {
+
 }
 
 /**
@@ -160,7 +172,7 @@ function create(username, password, userData, uuid, cb) {
 
 	// Write fields via queue
 	tasks.push(function(cb) {
-		replaceUserFields(uuid, userData, cb);
+		addUserFields(uuid, userData, cb);
 	});
 
 	async.series(tasks, function(err) {
