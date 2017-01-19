@@ -14,35 +14,33 @@ const	EventEmitter	= require('events').EventEmitter,
 let	readyInProgress	= false,
 	isReady	= false,
 	intercom;
-/*
-function addField(params, deliveryTag, msgUuid) {
-	const	uuid	= params.uuid,
-		name	= params.name,
-		sql	= 'REPLACE INTO user_data_fields (uuid, name) VALUES(?,?)';
 
-	db.query(sql, [lUtils.uuidToBuffer(uuid), name], function(err) {
-		exports.emitter.emit(msgUuid, err);
-	});
-} */
-
-
-function addUserField(params, deliveryTag, msgUuid) {
+function addUserField(params, deliveryTag, msgUuid, cb) {
 
 	const	uuid	= params.uuid,
 		name	= params.name,
 		sql	= 'REPLACE INTO user_data_fields (uuid, name) VALUES(?,?)';
+
+	if (cb === undefined || typeof cb !== 'function') {
+		cb = function() {};
+	}
 
 	db.query(sql, [lUtils.uuidToBuffer(uuid), name], function(err) {
 		if (err) log.warn(logPrefix + 'addUserField - ' + err.message);
 		exports.emitter.emit(msgUuid, err);
+		cb(err);
 	});
 }
 
-function addUserFields(params, deliveryTag, msgUuid) {
+function addUserFields(params, deliveryTag, msgUuid, cb) {
 
 	const tasks	= [],
 		dbValues	= [],
 		userUuidBuffer = lUtils.uuidToBuffer(params.userUuid);
+
+	if (cb === undefined || typeof cb !== 'function') {
+		cb = function() {};
+	}
 
 	let sql	= 'INSERT INTO user_users_data (userUuid, fieldUuid, data) VALUES';
 
@@ -81,6 +79,7 @@ function addUserFields(params, deliveryTag, msgUuid) {
 		if (err) {
 			log.warn(logPrefix + 'addUserFields() - ' + err.message);
 			exports.emitter.emit(msgUuid, err);
+			cb(err);
 			return;
 		}
 
@@ -89,20 +88,26 @@ function addUserFields(params, deliveryTag, msgUuid) {
 		if (dbValues.length === 0) {
 			log.warn(logPrefix + 'addUserFields() - ' + 'No fields or field data specifed');
 			exports.emitter.emit(msgUuid);
+			cb();
 			return;
 		}
 
 		db.query(sql, dbValues, function (err) {
 			if (err) { log.warn(logPrefix + ' addUserFields() - ' + err.message); }
 			exports.emitter.emit(msgUuid, err);
+			cb(err);
 		});
 	});
 }
 
-function create(params, deliveryTag, msgUuid) {
+function create(params, deliveryTag, msgUuid, cb) {
 
 	const	dbFields	= [],
 		sql	= 'INSERT IGNORE INTO user_users (uuid, username, password) VALUES(?,?,?);';
+
+	if (cb === undefined || typeof cb !== 'function') {
+		cb = function() {};
+	}
 
 	dbFields.push(lUtils.uuidToBuffer(params.uuid));
 	dbFields.push(params.username);
@@ -113,12 +118,14 @@ function create(params, deliveryTag, msgUuid) {
 
 		log.warn('larvituser: ./dataWriter.js - create() - ' + err.message);
 		exports.emitter.emit(msgUuid, err);
-
+		cb(err);
 		return;
 	}
 
 	db.query(sql, dbFields, function(err) {
+		if (err) log.warn(logPrefix + 'create() - ' + err.message);
 		exports.emitter.emit(msgUuid, err);
+		cb(err);
 	});
 }
 
@@ -277,17 +284,21 @@ function ready(retries, cb) {
 	});
 }
 
-function replaceFields(params, deliveryTag, msgUuid) {
+function replaceFields(params, deliveryTag, msgUuid, cb) {
 	const	fieldNamesToUuidBufs	= {},
 		userUuidBuf	= lUtils.uuidToBuffer(params.userUuid),
 		tasks	= [];
+
+	if (cb === undefined || typeof cb !== 'function') {
+		cb = function() {};
+	}
 
 	if (userUuidBuf === false) {
 		const	err = new Error('Invalid user uuid supplied: "' + params.userUuid + '", deliveryTag: "' + deliveryTag + '", msgUuid: "' + msgUuid + '"');
 
 		log.warn('larvituser: ./dataWriter.js - replaceFields() - ' + err.message);
 		exports.emitter.emit(msgUuid, err);
-
+		cb(err);
 		return;
 	}
 
@@ -349,12 +360,18 @@ function replaceFields(params, deliveryTag, msgUuid) {
 	});
 
 	async.series(tasks, function(err) {
+		if (err) log.warn(logPrefix + 'replaceFields() - ' + err.message);
 		exports.emitter.emit(msgUuid, err);
+		cb(err);
 	});
 }
 
-function rmUser(params, deliveryTag, msgUuid) {
+function rmUser(params, deliveryTag, msgUuid, cb) {
 	const	tasks	= [];
+
+	if (cb === undefined || typeof cb !== 'function') {
+		cb = function() {};
+	}
 
 	tasks.push(function(cb) {
 		const	sql	= 'DELETE FROM user_users_data WHERE userUuid = ?;';
@@ -369,11 +386,18 @@ function rmUser(params, deliveryTag, msgUuid) {
 	});
 
 	async.series(tasks, function(err) {
+		if (err) log.warn(logPrefix + 'rmUser() - ' + err.message);
 		exports.emitter.emit(msgUuid, err);
+		cb(err);
 	});
 }
 
-function rmUserField(params, deliveryTag, msgUuid) {
+function rmUserField(params, deliveryTag, msgUuid, cb) {
+
+	if (cb === undefined || typeof cb !== 'function') {
+		cb = function() {};
+	}
+
 	helpers.getFieldUuid(params.fieldName, function(err, fieldUuid) {
 		const	dbFields	= [lUtils.uuidToBuffer(params.userUuid), lUtils.uuidToBuffer(fieldUuid)],
 			sql	= 'DELETE FROM user_users_data WHERE userUuid = ? AND fieldUuid = ?';
@@ -384,7 +408,9 @@ function rmUserField(params, deliveryTag, msgUuid) {
 		}
 
 		db.query(sql, dbFields, function(err) {
+			if (err) log.warn(logPrefix + 'rmUserField() - ' + err.message);
 			exports.emitter.emit(msgUuid, err);
+			cb(err);
 		});
 	});
 }
@@ -426,9 +452,13 @@ function runDumpServer(cb) {
 	new amsync.SyncServer(options, cb);
 }
 
-function setPassword(params, deliveryTag, msgUuid) {
+function setPassword(params, deliveryTag, msgUuid, cb) {
 	const	dbFields	= [],
 		sql	= 'UPDATE user_users SET password = ? WHERE uuid = ?;';
+
+	if (cb === undefined || typeof cb !== 'function') {
+		cb = function() {};
+	}
 
 	if (params.password === false) {
 		dbFields.push('');
@@ -438,16 +468,24 @@ function setPassword(params, deliveryTag, msgUuid) {
 
 	dbFields.push(lUtils.uuidToBuffer(params.userUuid));
 	db.query(sql, dbFields, function(err) {
+		if (err) log.warn(logPrefix + 'setPassword() - ' + err.message);
 		exports.emitter.emit(msgUuid, err);
+		cb(err);
 	});
 }
 
-function setUsername(params, deliveryTag, msgUuid) {
+function setUsername(params, deliveryTag, msgUuid, cb) {
 	const	dbFields	= [params.username, lUtils.uuidToBuffer(params.userUuid)],
 		sql	= 'UPDATE user_users SET username = ? WHERE uuid = ?;';
+	
+	if (cb === undefined || typeof cb !== 'function') {
+		cb = function() {};
+	}
 
 	db.query(sql, dbFields, function(err) {
+		if (err) log.warn(logPrefix + 'setUsername() - ' + err.message);
 		exports.emitter.emit(msgUuid, err);
+		cb(err);
 	});
 }
 
