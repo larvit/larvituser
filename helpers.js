@@ -59,10 +59,10 @@ function getFieldUuid(fieldName, cb) {
 				const	options	= {'exchange': dataWriter.exchangeName},
 					sendObj	= {};
 
-				sendObj.action	= 'addField';
-				sendObj.params	= {};
+				sendObj.action	= 'addUserField';
+				sendObj.params 	= {};
+				sendObj.params.name = fieldName;
 				sendObj.params.uuid	= uuidLib.v1();
-				sendObj.params.name	= fieldName;
 
 				intercom.send(sendObj, options, function(err, msgUuid) {
 					if (err) { cb(err); return; }

@@ -17,21 +17,7 @@ const	dataWriter	= require(__dirname + '/dataWriter.js'),
  * @param func cb(err)
  */
 function addUserField(userUuid, fieldName, fieldValue, cb) {
-throw new Error('Should implement addUserFields()');
-	const	options	= {'exchange': dataWriter.exchangeName},
-		sendObj	= {};
-
-	sendObj.action	= 'addUserField';
-	sendObj.params	= {};
-	sendObj.params.userUuid	= userUuid;
-	sendObj.params.fieldName	= fieldName;
-	sendObj.params.fieldValue	= String(fieldValue).trim();
-
-	dataWriter.intercom.send(sendObj, options, function(err, msgUuid) {
-		if (err) { cb(err); return; }
-
-		dataWriter.emitter.once(msgUuid, cb);
-	});
+	addUserFields(userUuid, { fieldName: fieldValue }, cb);
 }
 
 /**
@@ -43,10 +29,26 @@ throw new Error('Should implement addUserFields()');
  */
 function addUserFields(userUuid, fields, cb) {
 
-}
+	dataWriter.ready(function(err) {
+		if (err) { cb(err); return; }
 
-/**
- * Checks a password for validity
+		const	options	= {'exchange': dataWriter.exchangeName},
+			sendObj	= {};
+
+		sendObj.action	= 'addUserFields';
+		sendObj.params	= {};
+		sendObj.params.userUuid	= userUuid;
+		sendObj.params.fields	= fields;
+
+		dataWriter.intercom.send(sendObj, options, function(err, msgUuid) {
+			if (err) { cb(err); return; }
+
+			dataWriter.emitter.once(msgUuid, cb);
+		});
+	});
+};
+
+/**￼Analyze ￼Optimize ￼Check ￼Repair ￼Truncate ￼Drop * Checks a password for validity
  *
  * @param str password - plain text password
  * @param str hash - hash to check password against
@@ -90,6 +92,8 @@ function create(username, password, userData, uuid, cb) {
 	}
 
 	username = username.trim();
+
+	console.log(password);
 
 	if (password) {
 		password = password.trim();
@@ -647,6 +651,36 @@ function userBase() {
 			}
 
 			returnObj.fields[name].push(value);
+			cb();
+		});
+	};
+
+	/**
+	 * Adds one or more fields with values to the user object. Does not overwrite existing values. It is possible to add the same value multiple times
+	 *
+	 * @param obj fields - field name as key, field values as array to that key - ex: {'role': ['admin','user']}
+	 * @param func cb(err)
+	 */
+	returnObj.addFields = function addFields(fields, cb) {
+		if (returnObj.uuid === undefined) {
+			const	err = new Error('Cannot add field; no user loaded');
+			cb(err);
+			return;
+		}
+
+		addUserFields(returnObj.uuid, fields, function(err) {
+			if (err) { cb(err); return; }
+
+			for (let key in fields) {
+				if (returnObj.fields[key] === undefined) {
+					returnObj[key] = fields[key];
+				} else {
+					for (let value of fields[key]) {
+						returnObj.fields[key].push(value);
+					}
+				}
+			}
+
 			cb();
 		});
 	};

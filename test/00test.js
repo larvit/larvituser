@@ -16,7 +16,7 @@ log.remove(log.transports.Console);
 /**/log.add(log.transports.Console, {
 	'colorize':	true,
 	'timestamp':	true,
-	'level':	'warn',
+	'level':	'info',
 	'json':	false
 });
 /**/
@@ -363,6 +363,23 @@ describe('User', function() {
 							});
 						});
 					});
+				});
+			});
+		});
+
+		it('should add a new field along side existing fields', function (done) {
+			userLib.fromUsername('lilleman', function (err, user) {
+				if (err) throw err;
+				assert(user != false, 'The user object should not be false');
+				assert.deepEqual(user.fields.foo.length, 1);
+				assert.deepEqual(user.fields.foo[0], 'bar');
+
+				user.addFields({'foo': ['yes', 'no', 'bar']}, function (err) {
+					if (err) throw err;
+
+					assert.deepEqual(user.fields.foo.length, 4);
+
+					done();
 				});
 			});
 		});

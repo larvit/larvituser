@@ -8,12 +8,13 @@ const	EventEmitter	= require('events').EventEmitter,
 	amsync	= require('larvitamsync'),
 	async	= require('async'),
 	log	= require('winston'),
-	db	= require('larvitdb');
+	db	= require('larvitdb'),
+	logPrefix	= 'larvituser: ./dataWriter.js - ';
 
 let	readyInProgress	= false,
 	isReady	= false,
 	intercom;
-
+/*
 function addField(params, deliveryTag, msgUuid) {
 	const	uuid	= params.uuid,
 		name	= params.name,
@@ -22,25 +23,84 @@ function addField(params, deliveryTag, msgUuid) {
 	db.query(sql, [lUtils.uuidToBuffer(uuid), name], function(err) {
 		exports.emitter.emit(msgUuid, err);
 	});
-}
+} */
+
 
 function addUserField(params, deliveryTag, msgUuid) {
-	helpers.getFieldUuid(params.fieldName, function(err, fieldUuid) {
-		const	dbFields	= [lUtils.uuidToBuffer(params.userUuid), lUtils.uuidToBuffer(fieldUuid), params.fieldValue],
-			sql	= 'INSERT INTO user_users_data (userUuid, fieldUuid, data) VALUES(?,?,?)';
+
+	const	uuid	= params.uuid,
+		name	= params.name,
+		sql	= 'REPLACE INTO user_data_fields (uuid, name) VALUES(?,?)';
+
+	db.query(sql, [lUtils.uuidToBuffer(uuid), name], function(err) {
+		if (err) log.warn(logPrefix + 'addUserField - ' + err.message);
+		exports.emitter.emit(msgUuid, err);
+	});
+}
+
+function addUserFields(params, deliveryTag, msgUuid) {
+
+	const tasks	= [],
+		dbValues	= [],
+		userUuidBuffer = lUtils.uuidToBuffer(params.userUuid);
+
+	let sql	= 'INSERT INTO user_users_data (userUuid, fieldUuid, data) VALUES';
+
+	for (let key in params.fields) {
+		tasks.push(function (cb) {
+			helpers.getFieldUuid(key, function (err, fieldUuid) {
+
+				if (err) {
+					log.warn(logPrefix + 'addUserFields() - ' + err.message);
+					cb(err);
+					return;
+				}
+
+				if (params.fields[key] === null || params.fields[key] === undefined) {
+					sql += '(?,?,NULL),';
+					dbValues.push(userUuidBuffer, lUtils.uuidToBuffer(fieldUuid));
+				} else {
+					if (Array.isArray(params.fields[key])) {
+						for (let i = 0; i < params.fields[key].length; i ++) {
+							sql += '(?,?,?),';
+							dbValues.push(userUuidBuffer, lUtils.uuidToBuffer(fieldUuid), params.fields[key][i]);
+						}
+					} else {
+						sql += '(?,?,?),';
+						dbValues.push(userUuidBuffer, lUtils.uuidToBuffer(fieldUuid), params.fields[key]);
+					}
+				}
+
+				cb(err);
+			});
+		});
+	}
+
+	async.parallel(tasks, function (err){
 
 		if (err) {
+			log.warn(logPrefix + 'addUserFields() - ' + err.message);
 			exports.emitter.emit(msgUuid, err);
 			return;
 		}
 
-		db.query(sql, dbFields, function(err) {
+		sql = sql.substring(0, sql.length - 1);
+
+		if (dbValues.length === 0) {
+			log.warn(logPrefix + 'addUserFields() - ' + 'No fields or field data specifed');
+			exports.emitter.emit(msgUuid);
+			return;
+		}
+
+		db.query(sql, dbValues, function (err) {
+			if (err) { log.warn(logPrefix + ' addUserFields() - ' + err.message); }
 			exports.emitter.emit(msgUuid, err);
 		});
 	});
 }
 
 function create(params, deliveryTag, msgUuid) {
+
 	const	dbFields	= [],
 		sql	= 'INSERT IGNORE INTO user_users (uuid, username, password) VALUES(?,?,?);';
 
@@ -391,8 +451,9 @@ function setUsername(params, deliveryTag, msgUuid) {
 	});
 }
 
-exports.addField	= addField;
+//exports.addField	= addField;
 exports.addUserField	= addUserField;
+exports.addUserFields	= addUserFields;
 exports.create	= create;
 exports.emitter	= new EventEmitter();
 exports.exchangeName	= 'larvituser';
