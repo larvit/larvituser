@@ -486,7 +486,6 @@ function setUsername(params, deliveryTag, msgUuid, cb) {
 	});
 }
 
-//exports.addField	= addField;
 exports.addUserField	= addUserField;
 exports.addUserDataFields	= addUserDataFields;
 exports.create	= create;

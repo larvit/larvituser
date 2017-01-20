@@ -17,7 +17,11 @@ const	dataWriter	= require(__dirname + '/dataWriter.js'),
  * @param func cb(err)
  */
 function addUserDataField(userUuid, fieldName, fieldValue, cb) {
-	addUserDataFields(userUuid, { fieldName: fieldValue }, cb);
+	const	fields	= {};
+
+	fields[fieldName] = fieldValue;
+
+	addUserDataFields(userUuid, fields, cb);
 }
 
 /**
