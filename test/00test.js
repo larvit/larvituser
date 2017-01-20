@@ -7,8 +7,7 @@ const	Intercom	= require('larvitamintercom'),
 	async	= require('async'),
 	log	= require('winston'),
 	db	= require('larvitdb'),
-	fs	= require('fs'),
-	_	= require('lodash');
+	fs	= require('fs');
 
 userLib.dataWriter.mode = 'master';
 
@@ -504,9 +503,9 @@ describe('User', function() {
 				assert.deepEqual(err, undefined);
 				assert.deepEqual(result.length, 3);
 
-				assert.deepEqual(_.indexOf(result, 'biff') > - 1, true);
-				assert.deepEqual(_.indexOf(result, 'baff') > - 1, true);
-				assert.deepEqual(_.indexOf(result, 'bonk') > - 1, true);
+				assert.deepEqual(result.indexOf('biff') > - 1, true);
+				assert.deepEqual(result.indexOf('baff') > - 1, true);
+				assert.deepEqual(result.indexOf('bonk') > - 1, true);
 			});
 
 			done();
