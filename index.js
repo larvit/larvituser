@@ -92,8 +92,6 @@ function create(username, password, userData, uuid, cb) {
 
 	username = username.trim();
 
-	console.log(password);
-
 	if (password) {
 		password = password.trim();
 	}

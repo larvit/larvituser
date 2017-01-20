@@ -17,7 +17,7 @@ log.remove(log.transports.Console);
 /**/log.add(log.transports.Console, {
 	'colorize':	true,
 	'timestamp':	true,
-	'level':	'info',
+	'level':	'warn',
 	'json':	false
 });
 /**/
@@ -504,7 +504,7 @@ describe('User', function() {
 				assert.deepEqual(err, undefined);
 				assert.deepEqual(result.length, 3);
 
-				assert.deepEqual(_.indexOf(result, 'biff') > - 1, true); 
+				assert.deepEqual(_.indexOf(result, 'biff') > - 1, true);
 				assert.deepEqual(_.indexOf(result, 'baff') > - 1, true);
 				assert.deepEqual(_.indexOf(result, 'bonk') > - 1, true);
 			});
