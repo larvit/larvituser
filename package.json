@@ -22,7 +22,8 @@
   "devDependencies": {
     "freeport": "^1.0.5",
     "mocha": "^3.1.0",
-    "mocha-eslint": "^3.0.1"
+    "mocha-eslint": "^3.0.1",
+    "lodash": "^4.17.4"
   },
   "scripts": {
     "test": "mocha"

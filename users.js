@@ -8,6 +8,29 @@ const	dataWriter	= require(__dirname + '/dataWriter.js'),
 function Users() {
 }
 
+/**
+ * Gets distinct data values from speciefied field for all users
+ *
+ * @param str fieldName - the name of the field
+ * @param func cb(err, result) - an array with values liek ['value1', 'value2']
+ */
+Users.prototype.getFieldData = function (fieldName, cb) {
+
+	db.query('SELECT DISTINCT d.data FROM user_users_data d '
+	+ 'JOIN user_data_fields f ON d.fieldUuid = f.uuid '
+	+ 'WHERE f.name = "' + fieldName + '"', function (err, rows) {
+		if (err) { cb(err); return; }
+
+		let result = [];
+
+		for (let row of rows) {
+			result.push(row.data);
+		}
+
+		cb(err, result);
+	});
+};
+
 Users.prototype.get = function(cb) {
 	const	tasks	= [],
 		that	= this;

@@ -7,7 +7,8 @@ const	Intercom	= require('larvitamintercom'),
 	async	= require('async'),
 	log	= require('winston'),
 	db	= require('larvitdb'),
-	fs	= require('fs');
+	fs	= require('fs'),
+	_	= require('lodash');
 
 userLib.dataWriter.mode = 'master';
 
@@ -443,7 +444,7 @@ describe('User', function() {
 			});
 
 			tasks.push(function (cb) {
-				userLib.create('user2', 'somepassword', { 'role' : ['not customer', 'user']}, function (err, user) {
+				userLib.create('user2', 'somepassword', { 'role' : ['not customer', 'user'], 'lastname': ['biff', 'bonk']}, function (err, user) {
 					uuids.push(user.uuid);
 					if (err) throw err;
 					cb();
@@ -493,6 +494,22 @@ describe('User', function() {
 
 				done();
 			});
+		});
+
+		it('Get list of data values for field', function (done) {
+			const users = new userLib.Users();
+
+			users.getFieldData('lastname', function (err, result) {
+
+				assert.deepEqual(err, undefined);
+				assert.deepEqual(result.length, 3);
+
+				assert.deepEqual(_.indexOf(result, 'biff') > - 1, true); 
+				assert.deepEqual(_.indexOf(result, 'baff') > - 1, true);
+				assert.deepEqual(_.indexOf(result, 'bonk') > - 1, true);
+			});
+
+			done();
 		});
 	});
 

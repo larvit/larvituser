@@ -16,8 +16,8 @@ const	dataWriter	= require(__dirname + '/dataWriter.js'),
  * @param str fieldValue
  * @param func cb(err)
  */
-function addUserField(userUuid, fieldName, fieldValue, cb) {
-	addUserFields(userUuid, { fieldName: fieldValue }, cb);
+function addUserDataField(userUuid, fieldName, fieldValue, cb) {
+	addUserDataFields(userUuid, { fieldName: fieldValue }, cb);
 }
 
 /**
@@ -27,15 +27,14 @@ function addUserField(userUuid, fieldName, fieldValue, cb) {
  * @param obj fields - field name as key, field values as array to that key - ex: {'role': ['admin','user']}
  * @param func cb(err)
  */
-function addUserFields(userUuid, fields, cb) {
-
+function addUserDataFields(userUuid, fields, cb) {
 	dataWriter.ready(function(err) {
 		if (err) { cb(err); return; }
 
 		const	options	= {'exchange': dataWriter.exchangeName},
 			sendObj	= {};
 
-		sendObj.action	= 'addUserFields';
+		sendObj.action	= 'addUserDataFields';
 		sendObj.params	= {};
 		sendObj.params.userUuid	= userUuid;
 		sendObj.params.fields	= fields;
@@ -176,7 +175,7 @@ function create(username, password, userData, uuid, cb) {
 
 	// Write fields via queue
 	tasks.push(function(cb) {
-		addUserFields(uuid, userData, cb);
+		addUserDataFields(uuid, userData, cb);
 	});
 
 	async.series(tasks, function(err) {
@@ -643,7 +642,7 @@ function userBase() {
 			return;
 		}
 
-		addUserField(returnObj.uuid, name, value, function(err) {
+		addUserDataField(returnObj.uuid, name, value, function(err) {
 			if (err) { cb(err); return; }
 
 			if (returnObj.fields[name] === undefined) {
@@ -668,7 +667,7 @@ function userBase() {
 			return;
 		}
 
-		addUserFields(returnObj.uuid, fields, function(err) {
+		addUserDataFields(returnObj.uuid, fields, function(err) {
 			if (err) { cb(err); return; }
 
 			for (let key in fields) {
@@ -810,7 +809,8 @@ function usernameAvailable(username, cb) {
 	});
 }
 
-exports.addUserField	= addUserField;
+exports.addUserDataField	= addUserDataField;
+exports.addUserDataFields	= addUserDataFields;
 exports.checkPassword	=	checkPassword;
 exports.create	= create;
 exports.dataWriter	= dataWriter;

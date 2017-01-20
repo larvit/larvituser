@@ -16,7 +16,6 @@ let	readyInProgress	= false,
 	intercom;
 
 function addUserField(params, deliveryTag, msgUuid, cb) {
-
 	const	uuid	= params.uuid,
 		name	= params.name,
 		sql	= 'REPLACE INTO user_data_fields (uuid, name) VALUES(?,?)';
@@ -32,8 +31,7 @@ function addUserField(params, deliveryTag, msgUuid, cb) {
 	});
 }
 
-function addUserFields(params, deliveryTag, msgUuid, cb) {
-
+function addUserDataFields(params, deliveryTag, msgUuid, cb) {
 	const tasks	= [],
 		dbValues	= [],
 		userUuidBuffer = lUtils.uuidToBuffer(params.userUuid);
@@ -49,7 +47,7 @@ function addUserFields(params, deliveryTag, msgUuid, cb) {
 			helpers.getFieldUuid(key, function (err, fieldUuid) {
 
 				if (err) {
-					log.warn(logPrefix + 'addUserFields() - ' + err.message);
+					log.warn(logPrefix + 'addUserDataFields() - ' + err.message);
 					cb(err);
 					return;
 				}
@@ -74,10 +72,9 @@ function addUserFields(params, deliveryTag, msgUuid, cb) {
 		});
 	}
 
-	async.parallel(tasks, function (err){
-
+	async.parallel(tasks, function (err) {
 		if (err) {
-			log.warn(logPrefix + 'addUserFields() - ' + err.message);
+			log.warn(logPrefix + 'addUserDataFields() - ' + err.message);
 			exports.emitter.emit(msgUuid, err);
 			cb(err);
 			return;
@@ -86,14 +83,14 @@ function addUserFields(params, deliveryTag, msgUuid, cb) {
 		sql = sql.substring(0, sql.length - 1);
 
 		if (dbValues.length === 0) {
-			log.warn(logPrefix + 'addUserFields() - ' + 'No fields or field data specifed');
+			log.info(logPrefix + 'addUserDataFields() - ' + 'No fields or field data specifed');
 			exports.emitter.emit(msgUuid);
 			cb();
 			return;
 		}
 
 		db.query(sql, dbValues, function (err) {
-			if (err) { log.warn(logPrefix + ' addUserFields() - ' + err.message); }
+			if (err) { log.warn(logPrefix + ' addUserDataFields() - ' + err.message); }
 			exports.emitter.emit(msgUuid, err);
 			cb(err);
 		});
@@ -477,7 +474,7 @@ function setPassword(params, deliveryTag, msgUuid, cb) {
 function setUsername(params, deliveryTag, msgUuid, cb) {
 	const	dbFields	= [params.username, lUtils.uuidToBuffer(params.userUuid)],
 		sql	= 'UPDATE user_users SET username = ? WHERE uuid = ?;';
-	
+
 	if (cb === undefined || typeof cb !== 'function') {
 		cb = function() {};
 	}
@@ -491,7 +488,7 @@ function setUsername(params, deliveryTag, msgUuid, cb) {
 
 //exports.addField	= addField;
 exports.addUserField	= addUserField;
-exports.addUserFields	= addUserFields;
+exports.addUserDataFields	= addUserDataFields;
 exports.create	= create;
 exports.emitter	= new EventEmitter();
 exports.exchangeName	= 'larvituser';
