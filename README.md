@@ -59,12 +59,24 @@ users.get(function(err, userList) {
 });
 ```
 
+Get distinct values for field from all users
+
+```javascript
+const	users	= new userLib.Users();
+
+users.getFieldData('fieldName', function(err, result) {
+	if (err) throw err;
+
+	console.log(userList); // An array of strings
+});
+```
+
 ### Advanced usage
 
 #### Add data to a user
 
 ```javascript
-userLib.addUserField(userUuid, fieldName, fieldValue, function(err) {
+userLib.addUserDataField(userUuid, fieldName, fieldValue, function(err) {
 	// Field have been added
 });
 ```
