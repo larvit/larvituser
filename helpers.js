@@ -3,7 +3,6 @@
 const	EventEmitter	= require('events').EventEmitter,
 	eventEmitter	= new EventEmitter(),
 	dbmigration	= require('larvitdbmigration')({'tableName': 'users_db_version', 'migrationScriptsPath': __dirname + '/dbmigration'}),
-	uuidLib	= require('uuid'),
 	lUtils	= require('larvitutils'),
 	log	= require('winston'),
 	db	= require('larvitdb');
@@ -59,10 +58,9 @@ function getFieldUuid(fieldName, cb) {
 				const	options	= {'exchange': dataWriter.exchangeName},
 					sendObj	= {};
 
-				sendObj.action	= 'addUserField';
+				sendObj.action	= 'addUserFieldReq';
 				sendObj.params 	= {};
 				sendObj.params.name = fieldName;
-				sendObj.params.uuid	= uuidLib.v1();
 
 				intercom.send(sendObj, options, function(err, msgUuid) {
 					if (err) { cb(err); return; }

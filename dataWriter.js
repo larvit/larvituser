@@ -3,33 +3,18 @@
 const	EventEmitter	= require('events').EventEmitter,
 	eventEmitter	= new EventEmitter(),
 	dbmigration	= require('larvitdbmigration')({'tableName': 'users_db_version', 'migrationScriptsPath': __dirname + '/dbmigration'}),
+	logPrefix	= 'larvituser: ./dataWriter.js - ',
 	helpers	= require(__dirname + '/helpers.js'),
+	uuidLib	= require('uuid'),
 	lUtils	= require('larvitutils'),
 	amsync	= require('larvitamsync'),
 	async	= require('async'),
 	log	= require('winston'),
-	db	= require('larvitdb'),
-	logPrefix	= 'larvituser: ./dataWriter.js - ';
+	db	= require('larvitdb');
 
 let	readyInProgress	= false,
 	isReady	= false,
 	intercom;
-
-function addUserField(params, deliveryTag, msgUuid, cb) {
-	const	uuid	= params.uuid,
-		name	= params.name,
-		sql	= 'REPLACE INTO user_data_fields (uuid, name) VALUES(?,?)';
-
-	if (cb === undefined || typeof cb !== 'function') {
-		cb = function() {};
-	}
-
-	db.query(sql, [lUtils.uuidToBuffer(uuid), name], function(err) {
-		if (err) log.warn(logPrefix + 'addUserField - ' + err.message);
-		exports.emitter.emit(msgUuid, err);
-		cb(err);
-	});
-}
 
 function addUserDataFields(params, deliveryTag, msgUuid, cb) {
 	const tasks	= [],
@@ -45,7 +30,6 @@ function addUserDataFields(params, deliveryTag, msgUuid, cb) {
 	for (let key in params.fields) {
 		tasks.push(function (cb) {
 			helpers.getFieldUuid(key, function (err, fieldUuid) {
-
 				if (err) {
 					log.warn(logPrefix + 'addUserDataFields() - ' + err.message);
 					cb(err);
@@ -97,8 +81,67 @@ function addUserDataFields(params, deliveryTag, msgUuid, cb) {
 	});
 }
 
-function create(params, deliveryTag, msgUuid, cb) {
+function addUserField(params, deliveryTag, msgUuid, cb) {
+	const	uuid	= params.uuid,
+		name	= params.name,
+		sql	= 'REPLACE INTO user_data_fields (uuid, name) VALUES(?,?)';
 
+	if (typeof cb !== 'function') {
+		cb = function() {};
+	}
+
+	db.query(sql, [lUtils.uuidToBuffer(uuid), name], function(err) {
+		if (err) log.warn(logPrefix + 'addUserField - ' + err.message);
+
+		exports.emitter.emit(msgUuid, err);
+		cb(err);
+	});
+}
+
+function addUserFieldReq(params, deliveryTag, msgUuid, cb) {
+	const	fieldName	= params.name;
+
+	if (typeof cb !== 'function') {
+		cb = function() {};
+	}
+
+	if (exports.mode === 'master') {
+		function run() {
+			const	options	= {'exchange': exports.exchangeName},
+				sendObj	= {};
+
+			if (exports.addUserFieldReqRunning === true) {
+				setTimeout(run, 10);
+				return;
+			}
+
+			exports.addUserFieldReqRunning = true;
+
+			sendObj.action	= 'addUserField';
+			sendObj.params 	= {};
+			sendObj.params.name = fieldName;
+			sendObj.params.uuid	= uuidLib.v1();
+
+			intercom.send(sendObj, options, function(err, msgUuid2) {
+				if (err) { cb(err); return; }
+
+				exports.emitter.once(msgUuid2, function(err) {
+					if (err) { cb(err); return; }
+
+					exports.addUserFieldReqRunning = false;
+					exports.emitter.emit(msgUuid, err);
+
+					cb(err);
+				});
+			});
+		}
+		run();
+	} else {
+		log.debug(logPrefix + 'Ignoring addUserFieldReq() since we are not master');
+	}
+}
+
+function create(params, deliveryTag, msgUuid, cb) {
 	const	dbFields	= [],
 		sql	= 'INSERT IGNORE INTO user_users (uuid, username, password) VALUES(?,?,?);';
 
@@ -113,7 +156,7 @@ function create(params, deliveryTag, msgUuid, cb) {
 	if (dbFields[0] === false) {
 		const	err = new Error('Invalid user uuid supplied: "' + params.uuid + '", deliveryTag: "' + deliveryTag + '", msgUuid: "' + msgUuid + '"');
 
-		log.warn('larvituser: ./dataWriter.js - create() - ' + err.message);
+		log.warn(logPrefix + 'create() - ' + err.message);
 		exports.emitter.emit(msgUuid, err);
 		cb(err);
 		return;
@@ -154,7 +197,7 @@ function listenToQueue(retries, cb) {
 		listenMethod = 'subscribe';
 	} else {
 		const	err	= new Error('Invalid exports.mode. Must be either "master" or "slave"');
-		log.error('larvituser: dataWriter.js - listenToQueue() - ' + err.message);
+		log.error(logPrefix + 'listenToQueue() - ' + err.message);
 		cb(err);
 		return;
 	}
@@ -168,15 +211,15 @@ function listenToQueue(retries, cb) {
 		}, 50);
 		return;
 	} else if ( ! (intercom instanceof require('larvitamintercom'))) {
-		log.error('larvituser: dataWriter.js - listenToQueue() - Intercom is not set!');
+		log.error(logPrefix + 'listenToQueue() - Intercom is not set!');
 		return;
 	}
 
-	log.info('larvituser: dataWriter.js - listenToQueue() - listenMethod: ' + listenMethod);
+	log.info(logPrefix + 'listenToQueue() - listenMethod: ' + listenMethod);
 
 	intercom.ready(function(err) {
 		if (err) {
-			log.error('larvituser: dataWriter.js - listenToQueue() - intercom.ready() err: ' + err.message);
+			log.error(logPrefix + 'listenToQueue() - intercom.ready() err: ' + err.message);
 			return;
 		}
 
@@ -185,19 +228,19 @@ function listenToQueue(retries, cb) {
 				ack(err); // Ack first, if something goes wrong we log it and handle it manually
 
 				if (err) {
-					log.error('larvituser: dataWriter.js - listenToQueue() - intercom.' + listenMethod + '() - exports.ready() returned err: ' + err.message);
+					log.error(logPrefix + 'listenToQueue() - intercom.' + listenMethod + '() - exports.ready() returned err: ' + err.message);
 					return;
 				}
 
 				if (typeof message !== 'object') {
-					log.error('larvituser: dataWriter.js - listenToQueue() - intercom.' + listenMethod + '() - Invalid message received, is not an object! deliveryTag: "' + deliveryTag + '"');
+					log.error(logPrefix + 'listenToQueue() - intercom.' + listenMethod + '() - Invalid message received, is not an object! deliveryTag: "' + deliveryTag + '"');
 					return;
 				}
 
 				if (typeof exports[message.action] === 'function') {
 					exports[message.action](message.params, deliveryTag, message.uuid);
 				} else {
-					log.warn('larvituser: dataWriter.js - listenToQueue() - intercom.' + listenMethod + '() - Unknown message.action received: "' + message.action + '"');
+					log.warn(logPrefix + 'listenToQueue() - intercom.' + listenMethod + '() - Unknown message.action received: "' + message.action + '"');
 				}
 			});
 		}, ready);
@@ -239,14 +282,14 @@ function ready(retries, cb) {
 		}, 50);
 		return;
 	} else if ( ! (intercom instanceof require('larvitamintercom'))) {
-		log.error('larvituser: dataWriter.js - ready() - Intercom is not set!');
+		log.error(logPrefix + 'ready() - Intercom is not set!');
 		return;
 	}
 
 	readyInProgress = true;
 
 	if (exports.mode === 'both' || exports.mode === 'slave') {
-		log.verbose('larvituser: dataWriter.js - ready() - exports.mode: "' + exports.mode + '", so read');
+		log.verbose(logPrefix + 'ready() - exports.mode: "' + exports.mode + '", so read');
 
 		tasks.push(function(cb) {
 			amsync.mariadb({'exchange': exports.exchangeName + '_dataDump'}, cb);
@@ -257,7 +300,7 @@ function ready(retries, cb) {
 	tasks.push(function(cb) {
 		dbmigration(function(err) {
 			if (err) {
-				log.error('larvituser: dataWriter.js - ready() - Database error: ' + err.message);
+				log.error(logPrefix + 'ready() - Database error: ' + err.message);
 			}
 
 			cb(err);
@@ -293,7 +336,7 @@ function replaceFields(params, deliveryTag, msgUuid, cb) {
 	if (userUuidBuf === false) {
 		const	err = new Error('Invalid user uuid supplied: "' + params.userUuid + '", deliveryTag: "' + deliveryTag + '", msgUuid: "' + msgUuid + '"');
 
-		log.warn('larvituser: ./dataWriter.js - replaceFields() - ' + err.message);
+		log.warn(logPrefix + 'replaceFields() - ' + err.message);
 		exports.emitter.emit(msgUuid, err);
 		cb(err);
 		return;
@@ -390,7 +433,6 @@ function rmUser(params, deliveryTag, msgUuid, cb) {
 }
 
 function rmUserField(params, deliveryTag, msgUuid, cb) {
-
 	if (cb === undefined || typeof cb !== 'function') {
 		cb = function() {};
 	}
@@ -486,8 +528,9 @@ function setUsername(params, deliveryTag, msgUuid, cb) {
 	});
 }
 
-exports.addUserField	= addUserField;
 exports.addUserDataFields	= addUserDataFields;
+exports.addUserField	= addUserField;
+exports.addUserFieldReq	= addUserFieldReq;
 exports.create	= create;
 exports.emitter	= new EventEmitter();
 exports.exchangeName	= 'larvituser';

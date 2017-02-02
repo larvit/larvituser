@@ -135,6 +135,7 @@ describe('User', function() {
 			});
 		});
 
+
 		it('shold return field name "firstname" for the UUID we created above', function(done) {
 			userLib.getFieldName(fieldUuid, function(err, fieldName) {
 				if (err) throw err;
@@ -427,11 +428,9 @@ describe('User', function() {
 	});
 
 	describe('Get list of users', function () {
-
 		const uuids = [];
 
 		it('Get list of users', function (done) {
-
 			const tasks	= [];
 
 			tasks.push(function (cb) {
@@ -482,6 +481,7 @@ describe('User', function() {
 
 		it('Get list of users with matching fields', function (done) {
 			const users = new userLib.Users();
+
 			users.matchAllFields = { 'role': ['customer']};
 
 			users.get(function (err, userList, totalElements) {
@@ -499,7 +499,6 @@ describe('User', function() {
 			const users = new userLib.Users();
 
 			users.getFieldData('lastname', function (err, result) {
-
 				assert.deepEqual(err, undefined);
 				assert.deepEqual(result.length, 3);
 
@@ -511,8 +510,8 @@ describe('User', function() {
 			done();
 		});
 	});
+});
 
-	after(function(done) {
-		db.removeAllTables(done);
-	});
+after(function(done) {
+	db.removeAllTables(done);
 });
