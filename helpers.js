@@ -62,12 +62,11 @@ function getFieldUuid(fieldName, cb) {
 				sendObj.params 	= {};
 				sendObj.params.name = fieldName;
 
-				intercom.send(sendObj, options, function(err, msgUuid) {
+				intercom.send(sendObj, options, function(err) {
 					if (err) { cb(err); return; }
 
-					dataWriter.emitter.once(msgUuid, function(err) {
+					dataWriter.emitter.once('addedField_' + fieldName, function(err) {
 						if (err) { cb(err); return; }
-
 						getFieldUuid(fieldName, cb);
 					});
 				});

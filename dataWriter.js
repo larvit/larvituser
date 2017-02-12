@@ -84,16 +84,17 @@ function addUserDataFields(params, deliveryTag, msgUuid, cb) {
 function addUserField(params, deliveryTag, msgUuid, cb) {
 	const	uuid	= params.uuid,
 		name	= params.name,
-		sql	= 'REPLACE INTO user_data_fields (uuid, name) VALUES(?,?)';
+		sql	= 'INSERT IGNORE INTO user_data_fields (uuid, name) VALUES(?,?)';
 
 	if (typeof cb !== 'function') {
 		cb = function() {};
 	}
 
 	db.query(sql, [lUtils.uuidToBuffer(uuid), name], function(err) {
-		if (err) log.warn(logPrefix + 'addUserField - ' + err.message);
+		if (err) log.warn(logPrefix + 'addUserField() - ' + err.message);
 
 		exports.emitter.emit(msgUuid, err);
+		exports.emitter.emit('addedField_' + name, err);
 		cb(err);
 	});
 }
@@ -107,9 +108,6 @@ function addUserFieldReq(params, deliveryTag, msgUuid, cb) {
 
 	if (exports.mode === 'master') {
 		function run() {
-			const	options	= {'exchange': exports.exchangeName},
-				sendObj	= {};
-
 			if (exports.addUserFieldReqRunning === true) {
 				setTimeout(run, 10);
 				return;
@@ -117,27 +115,40 @@ function addUserFieldReq(params, deliveryTag, msgUuid, cb) {
 
 			exports.addUserFieldReqRunning = true;
 
-			sendObj.action	= 'addUserField';
-			sendObj.params 	= {};
-			sendObj.params.name = fieldName;
-			sendObj.params.uuid	= uuidLib.v1();
+			// Check if this is already set in the database
+			db.query('SELECT uuid FROM user_data_fields WHERE name = ?', [fieldName], function(err, rows) {
+				const	options	= {'exchange': exports.exchangeName},
+					sendObj	= {};
 
-			intercom.send(sendObj, options, function(err, msgUuid2) {
 				if (err) { cb(err); return; }
 
-				exports.emitter.once(msgUuid2, function(err) {
+				sendObj.action	= 'addUserField';
+				sendObj.params 	= {};
+				sendObj.params.name = fieldName;
+				sendObj.params.uuid	= (rows.length) ? lUtils.formatUuid(rows[0].uuid) : uuidLib.v1();
+
+				exports.emitter.once('addedField_' + fieldName, function(err) {
+					if (err) { cb(err); return; }
+					exports.addUserFieldReqRunning = false;
+				});
+
+				intercom.send(sendObj, options, function(err, msgUuid2) {
 					if (err) { cb(err); return; }
 
-					exports.addUserFieldReqRunning = false;
-					exports.emitter.emit(msgUuid, err);
+					exports.emitter.once(msgUuid2, function(err) {
+						if (err) { cb(err); return; }
 
-					cb(err);
+						exports.emitter.emit(msgUuid, err);
+
+						cb(err);
+					});
 				});
+
 			});
 		}
 		run();
 	} else {
-		log.debug(logPrefix + 'Ignoring addUserFieldReq() since we are not master');
+		log.debug(logPrefix + 'addUserFieldReq() - Ignoring since we are not master');
 	}
 }
 
