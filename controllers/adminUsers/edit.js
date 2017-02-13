@@ -64,7 +64,7 @@ exports.run = function(req, res, cb) {
 
 			// Create the user
 			tasks.push(function(cb) {
-				if (data.global.errors.length) { cb(); return; }
+				if (data.global.errors.length) { return cb(); }
 
 				userLib.create(data.global.formFields.username, newPassword, userFields, function(err, result) {
 					user = result;
@@ -108,7 +108,7 @@ exports.run = function(req, res, cb) {
 				return;
 			}
 
-			if (data.global.errors.length) { cb(); return; }
+			if (data.global.errors.length) { return cb(); }
 
 			user.setUsername(data.global.formFields.username.trim(), cb);
 		});
@@ -116,7 +116,7 @@ exports.run = function(req, res, cb) {
 		// Update password
 		if (data.global.formFields.password.trim() !== '' || newPassword === false) {
 			tasks.push(function(cb) {
-				if (data.global.errors.length) { cb(); return; }
+				if (data.global.errors.length) { return cb(); }
 
 				user.setPassword(newPassword, cb);
 			});
@@ -124,15 +124,18 @@ exports.run = function(req, res, cb) {
 
 		// Replace user fields
 		tasks.push(function(cb) {
-			if (data.global.errors.length) { cb(); return; }
+			if (data.global.errors.length) { return cb(); }
 
 			user.replaceFields(userFields, cb);
 		});
 
 		tasks.push(function(cb) {
-			if (data.global.errors.length) { cb(); return; }
+			if (data.global.errors.length) { return cb(); }
 
-			data.global.messages = ['Saved'];
+			req.session.data.nextCallData = {'global': {'messages': ['New user created']}};
+			res.statusCode = 302;
+			res.setHeader('Location', '/adminUsers/edit?uuid=' + user.uuid);
+
 			cb();
 		});
 	}
