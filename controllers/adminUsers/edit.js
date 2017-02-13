@@ -1,6 +1,6 @@
 'use strict';
 
-const	userLib	= require(__dirname + '/../../index.js'),
+const	userLib	= require('larvituser'),
 	async	= require('async');
 
 exports.run = function(req, res, cb) {
@@ -53,7 +53,9 @@ exports.run = function(req, res, cb) {
 					if (err) { cb(err); return; }
 
 					if (result !== true) {
-						data.global.errors.push('Username is taken by another user');
+						const	err	= new Error('Username is taken by another user');
+						data.global.errors.push(err.message);
+						return cb(err);
 					}
 
 					cb(err);
@@ -80,6 +82,10 @@ exports.run = function(req, res, cb) {
 
 		// Update username
 		tasks.push(function(cb) {
+			if ( ! user) {
+				throw new Error('Ingen user?!??!');
+			}
+
 			if (data.global.formFields.username.trim() === user.username) {
 				cb();
 				return;
@@ -162,6 +168,10 @@ exports.run = function(req, res, cb) {
 	}
 
 	async.series(tasks, function(err) {
-		cb(err, req, res, data);
+		if (err && ! data.global.errors) {
+			cb(err, req, res, data);
+		} else {
+			cb(null, req, res, data);
+		}
 	});
 };
