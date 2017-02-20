@@ -826,6 +826,7 @@ exports.hashPassword	= hashPassword;
 exports.ready	= dataWriter.ready;
 exports.replaceUserFields	= replaceUserFields;
 exports.rmUser	= rmUser;
+exports.setPassword	= setPassword;
 exports.setUsername	= setUsername;
 exports.usernameAvailable	= usernameAvailable;
 exports.Users	= require(__dirname + '/users.js');

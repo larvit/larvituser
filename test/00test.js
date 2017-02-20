@@ -412,6 +412,33 @@ describe('User', function() {
 		});
 	});
 
+	describe('set new password', function() {
+		let user;
+
+		it('should log the created user in by username', function(done) {
+			userLib.fromUsername('lilleman', function(err, result) {
+				assert.equal(result.username, 'lilleman');
+				user = result;
+				done();
+			});
+		});
+
+		it('should set new password', function(done) {
+			userLib.setPassword(user.uuid, 'secretpassword', function(err) {
+				if (err) throw err;
+				done();
+			});
+		});
+
+		it('should log the user in by the new password', function(done) {
+			userLib.fromUserAndPass(user.username, 'secretpassword', function(err, result) {
+				if (err) throw err;
+				assert(user.uuid === result.uuid, 'uuid should match the earlier created uuid');
+				done();
+			});
+		});
+	});
+
 	describe('remove user', function() {
 		it('should remove a user', function(done) {
 			userLib.rmUser(createdUuid, function(err) {
