@@ -204,7 +204,7 @@ function listenToQueue(retries, cb) {
 				// out messages from us, and we want "consume"
 				// since we want the queue to persist even if this
 				// minion goes offline.
-	} else if (exports.mode === 'slave') {
+	} else if (exports.mode === 'slave' || exports.mode === 'noSync') {
 		listenMethod = 'subscribe';
 	} else {
 		const	err	= new Error('Invalid exports.mode. Must be either "master" or "slave"');
@@ -305,6 +305,10 @@ function ready(retries, cb) {
 		tasks.push(function(cb) {
 			amsync.mariadb({'exchange': exports.exchangeName + '_dataDump'}, cb);
 		});
+	}
+
+	if (exports.mode === 'noSync') {
+		log.warn(logPrefix + 'ready() - exports.mode: "' + exports.mode + '", never run this mode in production!');
 	}
 
 	// Migrate database
@@ -545,7 +549,7 @@ exports.addUserFieldReq	= addUserFieldReq;
 exports.create	= create;
 exports.emitter	= new EventEmitter();
 exports.exchangeName	= 'larvituser';
-exports.mode	= ''; // "slave" or "master"
+exports.mode	= ''; // "slave", "master" or "noSync"
 exports.ready	= ready;
 exports.replaceFields	= replaceFields;
 exports.rmUser	= rmUser;
