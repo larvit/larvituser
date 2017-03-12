@@ -26,7 +26,7 @@ const userData = {
 	]
 }
 
-userLib.create('myUsername', 'myPassword', userData, function(err, user) {
+userLib.create('myUsername', 'myPassword', userData, function (err, user) {
 	console.log('New user UUID: ' + user.uuid);
 });
 ```
@@ -34,7 +34,7 @@ userLib.create('myUsername', 'myPassword', userData, function(err, user) {
 To fetch a user from database based on username and password, do like this:
 
 ```javascript
-userLib.fromUserAndPass('myUsername', 'myPassword', function(err, user) {
+userLib.fromUserAndPass('myUsername', 'myPassword', function (err, user) {
 	if (err) {
 		throw err;
 	}
@@ -52,7 +52,7 @@ List multiple users
 ```javascript
 const	users	= new userLib.Users();
 
-users.get(function(err, userList) {
+users.get(function (err, userList) {
 	if (err) throw err;
 
 	console.log(userList); // An array of objects
@@ -64,7 +64,7 @@ Get distinct values for field from all users
 ```javascript
 const	users	= new userLib.Users();
 
-users.getFieldData('fieldName', function(err, result) {
+users.getFieldData('fieldName', function (err, result) {
 	if (err) throw err;
 
 	console.log(userList); // An array of strings
@@ -76,7 +76,7 @@ users.getFieldData('fieldName', function(err, result) {
 #### Add data to a user
 
 ```javascript
-userLib.addUserDataField(userUuid, fieldName, fieldValue, function(err) {
+userLib.addUserDataField(userUuid, fieldName, fieldValue, function (err) {
 	// Field have been added
 });
 ```
@@ -84,7 +84,7 @@ userLib.addUserDataField(userUuid, fieldName, fieldValue, function(err) {
 #### Check a password for validity
 
 ```javascript
-userLib.checkPassword('passwordToTest', 'theHashToTestAgainst', function(err, result) {
+userLib.checkPassword('passwordToTest', 'theHashToTestAgainst', function (err, result) {
 	// Result being either true or false
 });
 ```
@@ -92,7 +92,7 @@ userLib.checkPassword('passwordToTest', 'theHashToTestAgainst', function(err, re
 #### Create a new user
 
 ```javascript
-userLib.create('username', 'password', {'firstname': 'John', 'lastname': 'Smith'}, function(err, user) {
+userLib.create('username', 'password', {'firstname': 'John', 'lastname': 'Smith'}, function (err, user) {
 	console.log(user.uuid); // 91f15599-c1fa-4051-9e0e-906cab9819fe (or rather, a random Uuid)
 });
 ```
@@ -100,7 +100,7 @@ userLib.create('username', 'password', {'firstname': 'John', 'lastname': 'Smith'
 Or set an Uuid manually like this:
 
 ```javascript
-userLib.create('username', 'password', {'firstname': 'John', 'lastname': 'Smith'}, 'f9684592-b245-42fa-88c6-9f16b9236ac3', function(err, user) {
+userLib.create('username', 'password', {'firstname': 'John', 'lastname': 'Smith'}, 'f9684592-b245-42fa-88c6-9f16b9236ac3', function (err, user) {
 	console.log(user.uuid); // f9684592-b245-42fa-88c6-9f16b9236ac3
 });
 ```
@@ -110,7 +110,7 @@ userLib.create('username', 'password', {'firstname': 'John', 'lastname': 'Smith'
 Will fetch the first occurance in the database with this field name and field value.
 
 ```javascript
-userLib.fromField('firstname', 'John', function(err, user) {
+userLib.fromField('firstname', 'John', function (err, user) {
 	console.log(user.uuid); // f9684592-b245-42fa-88c6-9f16b9236ac3
 });
 ```
@@ -120,7 +120,7 @@ userLib.fromField('firstname', 'John', function(err, user) {
 Will fetch the first occurance in the database that matches all these field names and field values
 
 ```javascript
-userLib.fromFields({'firstname': 'John', 'lastname': 'Smith'}, function(err, user) {
+userLib.fromFields({'firstname': 'John', 'lastname': 'Smith'}, function (err, user) {
 	console.log(user.uuid); // f9684592-b245-42fa-88c6-9f16b9236ac3
 });
 ```
@@ -128,7 +128,7 @@ userLib.fromFields({'firstname': 'John', 'lastname': 'Smith'}, function(err, use
 #### Fetch a user based on just username
 
 ```javascript
-userLib.fromUsername('username', function(err, user) {
+userLib.fromUsername('username', function (err, user) {
 	console.log(user.uuid); // f9684592-b245-42fa-88c6-9f16b9236ac3 or user will be false if no user is found
 });
 ```
@@ -136,7 +136,7 @@ userLib.fromUsername('username', function(err, user) {
 #### Fetch a user from Uuid
 
 ```javascript
-userLib.fromUuid('f9684592-b245-42fa-88c6-9f16b9236ac3', function(err, user) {
+userLib.fromUuid('f9684592-b245-42fa-88c6-9f16b9236ac3', function (err, user) {
 	console.log(user.uuid); // f9684592-b245-42fa-88c6-9f16b9236ac3
 });
 ```
@@ -144,7 +144,7 @@ userLib.fromUuid('f9684592-b245-42fa-88c6-9f16b9236ac3', function(err, user) {
 #### Get field data from a user
 
 ```javascript
-userLib.getFieldData('f9684592-b245-42fa-88c6-9f16b9236ac3', 'firstname', function(err, data) {
+userLib.getFieldData('f9684592-b245-42fa-88c6-9f16b9236ac3', 'firstname', function (err, data) {
 	console.log(data); // ['John'] - Observe this will always be an array with values, since a field can hold several values
 });
 ```
@@ -154,11 +154,11 @@ userLib.getFieldData('f9684592-b245-42fa-88c6-9f16b9236ac3', 'firstname', functi
 IMPORTANT!!! Will clear all data not given in the fields parameter
 
 ```javascript
-userLib.replaceUserFields('f9684592-b245-42fa-88c6-9f16b9236ac3', {'lastname': ['Smith', 'Johnsson']}, function(err) {
+userLib.replaceUserFields('f9684592-b245-42fa-88c6-9f16b9236ac3', {'lastname': ['Smith', 'Johnsson']}, function (err) {
 	// The field "lastname" will now be replaced with the two values "Smith" and "Johnsson"
 	// And all other fields will be removed
 
-	userLib.getFieldData('f9684592-b245-42fa-88c6-9f16b9236ac3', 'lastname', function(err, data) {
+	userLib.getFieldData('f9684592-b245-42fa-88c6-9f16b9236ac3', 'lastname', function (err, data) {
 		console.log(data); // ['Smith', 'Johnsson']
 	});
 });
@@ -167,8 +167,8 @@ userLib.replaceUserFields('f9684592-b245-42fa-88c6-9f16b9236ac3', {'lastname': [
 #### Remove a field from a user
 
 ```javascript
-userLib.rmUserField('f9684592-b245-42fa-88c6-9f16b9236ac3', 'lastname', function(err) {
-	userLib.fromUuid('f9684592-b245-42fa-88c6-9f16b9236ac3', function(err, user) {
+userLib.rmUserField('f9684592-b245-42fa-88c6-9f16b9236ac3', 'lastname', function (err) {
+	userLib.fromUuid('f9684592-b245-42fa-88c6-9f16b9236ac3', function (err, user) {
 		console.log(user.fields); // {'firstname': ['John']}
 	});
 });
@@ -177,7 +177,7 @@ userLib.rmUserField('f9684592-b245-42fa-88c6-9f16b9236ac3', 'lastname', function
 #### Set password for a user
 
 ```javascript
-userLib.setPassword('f9684592-b245-42fa-88c6-9f16b9236ac3', 'newSuperSecretPwd', function(err) {
+userLib.setPassword('f9684592-b245-42fa-88c6-9f16b9236ac3', 'newSuperSecretPwd', function (err) {
 	// Now the users password is updated to "newSuperSecretPwd"
 });
 ```
@@ -185,7 +185,7 @@ userLib.setPassword('f9684592-b245-42fa-88c6-9f16b9236ac3', 'newSuperSecretPwd',
 To disable a login, use boolean false as the new password:
 
 ```javascript
-userLib.setPassword('f9684592-b245-42fa-88c6-9f16b9236ac3', false, function(err) {
+userLib.setPassword('f9684592-b245-42fa-88c6-9f16b9236ac3', false, function (err) {
 	// This user can no longer login
 });
 ```
@@ -193,7 +193,7 @@ userLib.setPassword('f9684592-b245-42fa-88c6-9f16b9236ac3', false, function(err)
 #### Set username for a user
 
 ```javascript
-userLib.setUsername('f9684592-b245-42fa-88c6-9f16b9236ac3', 'theNewUsername', function(err) {
+userLib.setUsername('f9684592-b245-42fa-88c6-9f16b9236ac3', 'theNewUsername', function (err) {
 	// Now the users password is updated to "theNewUsername"
 });
 ```

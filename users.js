@@ -31,7 +31,7 @@ Users.prototype.getFieldData = function (fieldName, cb) {
 	});
 };
 
-Users.prototype.get = function(cb) {
+Users.prototype.get = function (cb) {
 	const	tasks	= [],
 		that	= this;
 
@@ -40,7 +40,7 @@ Users.prototype.get = function(cb) {
 
 	tasks.push(dataWriter.ready);
 
-	tasks.push(function(cb) {
+	tasks.push(function (cb) {
 		const	dbFields	= [];
 
 		let	sql	= 'SELECT uuid, username FROM user_users WHERE 1 ';
@@ -62,7 +62,7 @@ Users.prototype.get = function(cb) {
 			}
 		}
 
-		db.query(sql, dbFields, function(err, rows) {
+		db.query(sql, dbFields, function (err, rows) {
 			if (err) { cb(err); return; }
 
 			result = [];
@@ -81,7 +81,7 @@ Users.prototype.get = function(cb) {
 		});
 	});
 
-	tasks.push(function(cb) {
+	tasks.push(function (cb) {
 		const	dbFields	= [];
 
 		let	sql	= 'SELECT COUNT(*) AS totalElements FROM user_users WHERE 1 ';
@@ -96,7 +96,7 @@ Users.prototype.get = function(cb) {
 			}
 		}
 
-		db.query(sql, dbFields, function(err, rows) {
+		db.query(sql, dbFields, function (err, rows) {
 			if (err) { cb(err); return; }
 
 			totalElements = rows[0].totalElements;
@@ -105,7 +105,7 @@ Users.prototype.get = function(cb) {
 		});
 	});
 
-	async.parallel(tasks, function(err) {
+	async.parallel(tasks, function (err) {
 		cb(err, result, totalElements);
 	});
 };

@@ -2,8 +2,8 @@
 
 const	EventEmitter	= require('events').EventEmitter,
 	eventEmitter	= new EventEmitter(),
-	dbmigration	= require('larvitdbmigration')({'tableName': 'users_db_version', 'migrationScriptsPath': __dirname + '/dbmigration'}),
-	logPrefix	= 'larvituser: ./dataWriter.js - ',
+	topLogPrefix	= 'larvituser: ./dataWriter.js - ',
+	DbMigration	= require('larvitdbmigration'),
 	helpers	= require(__dirname + '/helpers.js'),
 	uuidLib	= require('uuid'),
 	lUtils	= require('larvitutils'),
@@ -17,12 +17,13 @@ let	readyInProgress	= false,
 	intercom;
 
 function addUserDataFields(params, deliveryTag, msgUuid, cb) {
-	const tasks	= [],
+	const	userUuidBuffer	= lUtils.uuidToBuffer(params.userUuid),
+		logPrefix	= topLogPrefix + 'addUserDataFields() - ',
 		dbValues	= [],
-		userUuidBuffer = lUtils.uuidToBuffer(params.userUuid);
+		tasks	= [];
 
 	if (cb === undefined || typeof cb !== 'function') {
-		cb = function() {};
+		cb = function () {};
 	}
 
 	let sql	= 'INSERT INTO user_users_data (userUuid, fieldUuid, data) VALUES';
@@ -31,9 +32,8 @@ function addUserDataFields(params, deliveryTag, msgUuid, cb) {
 		tasks.push(function (cb) {
 			helpers.getFieldUuid(key, function (err, fieldUuid) {
 				if (err) {
-					log.warn(logPrefix + 'addUserDataFields() - ' + err.message);
-					cb(err);
-					return;
+					log.warn(logPrefix + err.message);
+					return cb(err);
 				}
 
 				if (params.fields[key] === null || params.fields[key] === undefined) {
@@ -58,23 +58,21 @@ function addUserDataFields(params, deliveryTag, msgUuid, cb) {
 
 	async.parallel(tasks, function (err) {
 		if (err) {
-			log.warn(logPrefix + 'addUserDataFields() - ' + err.message);
+			log.warn(logPrefix + err.message);
 			exports.emitter.emit(msgUuid, err);
-			cb(err);
-			return;
+			return cb(err);
 		}
 
 		sql = sql.substring(0, sql.length - 1);
 
 		if (dbValues.length === 0) {
-			log.info(logPrefix + 'addUserDataFields() - ' + 'No fields or field data specifed');
+			log.info(logPrefix + 'No fields or field data specifed');
 			exports.emitter.emit(msgUuid);
-			cb();
-			return;
+			return cb();
 		}
 
 		db.query(sql, dbValues, function (err) {
-			if (err) { log.warn(logPrefix + ' addUserDataFields() - ' + err.message); }
+			if (err) { log.warn(topLogPrefix + ' addUserDataFields() - ' + err.message); }
 			exports.emitter.emit(msgUuid, err);
 			cb(err);
 		});
@@ -82,16 +80,17 @@ function addUserDataFields(params, deliveryTag, msgUuid, cb) {
 }
 
 function addUserField(params, deliveryTag, msgUuid, cb) {
-	const	uuid	= params.uuid,
+	const	logPrefix	= topLogPrefix + 'addUserField() - ',
+		uuid	= params.uuid,
 		name	= params.name,
 		sql	= 'INSERT IGNORE INTO user_data_fields (uuid, name) VALUES(?,?)';
 
 	if (typeof cb !== 'function') {
-		cb = function() {};
+		cb = function () {};
 	}
 
-	db.query(sql, [lUtils.uuidToBuffer(uuid), name], function(err) {
-		if (err) log.warn(logPrefix + 'addUserField() - ' + err.message);
+	db.query(sql, [lUtils.uuidToBuffer(uuid), name], function (err) {
+		if (err) log.warn(logPrefix + err.message);
 
 		exports.emitter.emit(msgUuid, err);
 		exports.emitter.emit('addedField_' + name, err);
@@ -100,10 +99,11 @@ function addUserField(params, deliveryTag, msgUuid, cb) {
 }
 
 function addUserFieldReq(params, deliveryTag, msgUuid, cb) {
-	const	fieldName	= params.name;
+	const	logPrefix	= topLogPrefix + 'addUserFieldReq() - ',
+		fieldName	= params.name;
 
 	if (typeof cb !== 'function') {
-		cb = function() {};
+		cb = function () {};
 	}
 
 	if (exports.mode === 'master') {
@@ -116,48 +116,48 @@ function addUserFieldReq(params, deliveryTag, msgUuid, cb) {
 			exports.addUserFieldReqRunning = true;
 
 			// Check if this is already set in the database
-			db.query('SELECT uuid FROM user_data_fields WHERE name = ?', [fieldName], function(err, rows) {
+			db.query('SELECT uuid FROM user_data_fields WHERE name = ?', [fieldName], function (err, rows) {
 				const	options	= {'exchange': exports.exchangeName},
 					sendObj	= {};
 
-				if (err) { cb(err); return; }
+				if (err) return cb(err);
 
 				sendObj.action	= 'addUserField';
 				sendObj.params 	= {};
-				sendObj.params.name = fieldName;
+				sendObj.params.name	= fieldName;
 				sendObj.params.uuid	= (rows.length) ? lUtils.formatUuid(rows[0].uuid) : uuidLib.v1();
 
-				exports.emitter.once('addedField_' + fieldName, function(err) {
-					if (err) { cb(err); return; }
+				exports.emitter.once('addedField_' + fieldName, function (err) {
+					if (err) return cb(err);
 					exports.addUserFieldReqRunning = false;
 				});
 
-				intercom.send(sendObj, options, function(err, msgUuid2) {
-					if (err) { cb(err); return; }
+				intercom.send(sendObj, options, function (err, msgUuid2) {
+					if (err) return cb(err);
 
-					exports.emitter.once(msgUuid2, function(err) {
-						if (err) { cb(err); return; }
+					exports.emitter.once(msgUuid2, function (err) {
+						if (err) return cb(err);
 
 						exports.emitter.emit(msgUuid, err);
 
 						cb(err);
 					});
 				});
-
 			});
 		}
 		run();
 	} else {
-		log.debug(logPrefix + 'addUserFieldReq() - Ignoring since we are not master');
+		log.debug(logPrefix + 'Ignoring since we are not master');
 	}
 }
 
 function create(params, deliveryTag, msgUuid, cb) {
-	const	dbFields	= [],
+	const	logPrefix	= topLogPrefix + 'create() - ',
+		dbFields	= [],
 		sql	= 'INSERT IGNORE INTO user_users (uuid, username, password) VALUES(?,?,?);';
 
 	if (cb === undefined || typeof cb !== 'function') {
-		cb = function() {};
+		cb = function () {};
 	}
 
 	dbFields.push(lUtils.uuidToBuffer(params.uuid));
@@ -167,21 +167,21 @@ function create(params, deliveryTag, msgUuid, cb) {
 	if (dbFields[0] === false) {
 		const	err = new Error('Invalid user uuid supplied: "' + params.uuid + '", deliveryTag: "' + deliveryTag + '", msgUuid: "' + msgUuid + '"');
 
-		log.warn(logPrefix + 'create() - ' + err.message);
+		log.warn(logPrefix + err.message);
 		exports.emitter.emit(msgUuid, err);
-		cb(err);
-		return;
+		return cb(err);
 	}
 
-	db.query(sql, dbFields, function(err) {
-		if (err) log.warn(logPrefix + 'create() - ' + err.message);
+	db.query(sql, dbFields, function (err) {
+		if (err) log.warn(logPrefix + err.message);
 		exports.emitter.emit(msgUuid, err);
 		cb(err);
 	});
 }
 
 function listenToQueue(retries, cb) {
-	const	options	= {'exchange': exports.exchangeName};
+	const	logPrefix	= topLogPrefix + 'listenToQueue() - ',
+		options	= {'exchange': exports.exchangeName};
 
 	let	listenMethod;
 
@@ -191,7 +191,7 @@ function listenToQueue(retries, cb) {
 	}
 
 	if (typeof cb !== 'function') {
-		cb = function(){};
+		cb = function (){};
 	}
 
 	if (retries === undefined) {
@@ -208,7 +208,7 @@ function listenToQueue(retries, cb) {
 		listenMethod = 'subscribe';
 	} else {
 		const	err	= new Error('Invalid exports.mode. Must be either "master" or "slave"');
-		log.error(logPrefix + 'listenToQueue() - ' + err.message);
+		log.error(logPrefix + err.message);
 		cb(err);
 		return;
 	}
@@ -217,41 +217,41 @@ function listenToQueue(retries, cb) {
 
 	if ( ! (intercom instanceof require('larvitamintercom')) && retries < 10) {
 		retries ++;
-		setTimeout(function() {
+		setTimeout(function () {
 			listenToQueue(retries, cb);
 		}, 50);
 		return;
 	} else if ( ! (intercom instanceof require('larvitamintercom'))) {
-		log.error(logPrefix + 'listenToQueue() - Intercom is not set!');
+		log.error(logPrefix + 'Intercom is not set!');
 		return;
 	}
 
-	log.info(logPrefix + 'listenToQueue() - listenMethod: ' + listenMethod);
+	log.info(logPrefix + 'listenMethod: ' + listenMethod);
 
-	intercom.ready(function(err) {
+	intercom.ready(function (err) {
 		if (err) {
-			log.error(logPrefix + 'listenToQueue() - intercom.ready() err: ' + err.message);
+			log.error(logPrefix + 'intercom.ready() err: ' + err.message);
 			return;
 		}
 
-		intercom[listenMethod](options, function(message, ack, deliveryTag) {
-			exports.ready(function(err) {
+		intercom[listenMethod](options, function (message, ack, deliveryTag) {
+			exports.ready(function (err) {
 				ack(err); // Ack first, if something goes wrong we log it and handle it manually
 
 				if (err) {
-					log.error(logPrefix + 'listenToQueue() - intercom.' + listenMethod + '() - exports.ready() returned err: ' + err.message);
+					log.error(logPrefix + 'intercom.' + listenMethod + '() - exports.ready() returned err: ' + err.message);
 					return;
 				}
 
 				if (typeof message !== 'object') {
-					log.error(logPrefix + 'listenToQueue() - intercom.' + listenMethod + '() - Invalid message received, is not an object! deliveryTag: "' + deliveryTag + '"');
+					log.error(logPrefix + 'intercom.' + listenMethod + '() - Invalid message received, is not an object! deliveryTag: "' + deliveryTag + '"');
 					return;
 				}
 
 				if (typeof exports[message.action] === 'function') {
 					exports[message.action](message.params, deliveryTag, message.uuid);
 				} else {
-					log.warn(logPrefix + 'listenToQueue() - intercom.' + listenMethod + '() - Unknown message.action received: "' + message.action + '"');
+					log.warn(logPrefix + 'intercom.' + listenMethod + '() - Unknown message.action received: "' + message.action + '"');
 				}
 			});
 		}, ready);
@@ -262,7 +262,8 @@ function listenToQueue(retries, cb) {
 setImmediate(listenToQueue);
 
 function ready(retries, cb) {
-	const	tasks	= [];
+	const	logPrefix	= topLogPrefix + 'ready() - ',
+		tasks	= [];
 
 	if (typeof retries === 'function') {
 		cb	= retries;
@@ -270,14 +271,14 @@ function ready(retries, cb) {
 	}
 
 	if (typeof cb !== 'function') {
-		cb = function(){};
+		cb = function (){};
 	}
 
 	if (retries === undefined) {
 		retries	= 0;
 	}
 
-	if (isReady === true) { cb(); return; }
+	if (isReady === true) return cb();
 
 	if (readyInProgress === true) {
 		eventEmitter.on('ready', cb);
@@ -288,41 +289,53 @@ function ready(retries, cb) {
 
 	if ( ! (intercom instanceof require('larvitamintercom')) && retries < 10) {
 		retries ++;
-		setTimeout(function() {
+		setTimeout(function () {
 			ready(retries, cb);
 		}, 50);
 		return;
 	} else if ( ! (intercom instanceof require('larvitamintercom'))) {
-		log.error(logPrefix + 'ready() - Intercom is not set!');
+		log.error(logPrefix + 'Intercom is not set!');
 		return;
 	}
 
 	readyInProgress = true;
 
 	if (exports.mode === 'both' || exports.mode === 'slave') {
-		log.verbose(logPrefix + 'ready() - exports.mode: "' + exports.mode + '", so read');
+		log.verbose(logPrefix + 'exports.mode: "' + exports.mode + '", so read');
 
-		tasks.push(function(cb) {
+		tasks.push(function (cb) {
 			amsync.mariadb({'exchange': exports.exchangeName + '_dataDump'}, cb);
 		});
 	}
 
 	if (exports.mode === 'noSync') {
-		log.warn(logPrefix + 'ready() - exports.mode: "' + exports.mode + '", never run this mode in production!');
+		log.warn(logPrefix + 'exports.mode: "' + exports.mode + '", never run this mode in production!');
 	}
 
 	// Migrate database
-	tasks.push(function(cb) {
-		dbmigration(function(err) {
+	tasks.push(function (cb) {
+		const	options	= {};
+
+		let	dbMigration;
+
+		log.debug(logPrefix + 'Waiting for dbmigration()');
+
+		options.dbType	= 'larvitdb';
+		options.dbDriver	= db;
+		options.tableName	= 'users_db_version';
+		options.migrationScriptsPath	= __dirname + '/dbmigration';
+		dbMigration	= new DbMigration(options);
+
+		dbMigration.run(function (err) {
 			if (err) {
-				log.error(logPrefix + 'ready() - Database error: ' + err.message);
+				log.error(topLogPrefix + err.message);
 			}
 
 			cb(err);
 		});
 	});
 
-	async.series(tasks, function(err) {
+	async.series(tasks, function (err) {
 		if (err) {
 			return;
 		}
@@ -342,33 +355,33 @@ function ready(retries, cb) {
 function replaceFields(params, deliveryTag, msgUuid, cb) {
 	const	fieldNamesToUuidBufs	= {},
 		userUuidBuf	= lUtils.uuidToBuffer(params.userUuid),
+		logPrefix	= topLogPrefix + 'replaceFields() - ',
 		tasks	= [];
 
 	if (cb === undefined || typeof cb !== 'function') {
-		cb = function() {};
+		cb = function () {};
 	}
 
 	if (userUuidBuf === false) {
 		const	err = new Error('Invalid user uuid supplied: "' + params.userUuid + '", deliveryTag: "' + deliveryTag + '", msgUuid: "' + msgUuid + '"');
 
-		log.warn(logPrefix + 'replaceFields() - ' + err.message);
+		log.warn(logPrefix + err.message);
 		exports.emitter.emit(msgUuid, err);
-		cb(err);
-		return;
+		return cb(err);
 	}
 
 	// Clean out previous data
-	tasks.push(function(cb) {
+	tasks.push(function (cb) {
 		db.query('DELETE FROM user_users_data WHERE userUuid = ?', [userUuidBuf], cb);
 	});
 
 	// Get field uuids
-	tasks.push(function(cb) {
+	tasks.push(function (cb) {
 		const	tasks	= [];
 
 		for (const fieldName of Object.keys(params.fields)) {
-			tasks.push(function(cb) {
-				helpers.getFieldUuid(fieldName, function(err, fieldUuid) {
+			tasks.push(function (cb) {
+				helpers.getFieldUuid(fieldName, function (err, fieldUuid) {
 					fieldNamesToUuidBufs[fieldName] = lUtils.uuidToBuffer(fieldUuid);
 					cb(err);
 				});
@@ -379,15 +392,12 @@ function replaceFields(params, deliveryTag, msgUuid, cb) {
 	});
 
 	// Add new data
-	tasks.push(function(cb) {
+	tasks.push(function (cb) {
 		const	dbFields	= [];
 
 		let	sql = 'INSERT INTO user_users_data (userUuid, fieldUuid, data) VALUES';
 
-		if ( ! params.fields) {
-			cb();
-			return;
-		}
+		if ( ! params.fields) return cb();
 
 		for (const fieldName of Object.keys(params.fields)) {
 			if ( ! (params.fields[fieldName] instanceof Array)) {
@@ -406,53 +416,53 @@ function replaceFields(params, deliveryTag, msgUuid, cb) {
 
 		sql = sql.substring(0, sql.length - 1) + ';';
 
-		if (dbFields.length === 0) {
-			cb();
-			return;
-		}
+		if (dbFields.length === 0) return cb();
 
 		db.query(sql, dbFields, cb);
 	});
 
-	async.series(tasks, function(err) {
-		if (err) log.warn(logPrefix + 'replaceFields() - ' + err.message);
+	async.series(tasks, function (err) {
+		if (err) log.warn(logPrefix + err.message);
 		exports.emitter.emit(msgUuid, err);
 		cb(err);
 	});
 }
 
 function rmUser(params, deliveryTag, msgUuid, cb) {
-	const	tasks	= [];
+	const	logPrefix	= topLogPrefix + 'rmUser() - ',
+		tasks	= [];
 
 	if (cb === undefined || typeof cb !== 'function') {
-		cb = function() {};
+		cb = function () {};
 	}
 
-	tasks.push(function(cb) {
+	tasks.push(function (cb) {
 		const	sql	= 'DELETE FROM user_users_data WHERE userUuid = ?;';
 
 		db.query(sql, [lUtils.uuidToBuffer(params.userUuid)], cb);
 	});
 
-	tasks.push(function(cb) {
+	tasks.push(function (cb) {
 		const	sql	= 'DELETE FROM user_users WHERE uuid = ?;';
 
 		db.query(sql, [lUtils.uuidToBuffer(params.userUuid)], cb);
 	});
 
-	async.series(tasks, function(err) {
-		if (err) log.warn(logPrefix + 'rmUser() - ' + err.message);
+	async.series(tasks, function (err) {
+		if (err) log.warn(logPrefix + err.message);
 		exports.emitter.emit(msgUuid, err);
 		cb(err);
 	});
 }
 
 function rmUserField(params, deliveryTag, msgUuid, cb) {
+	const	logPrefix	= topLogPrefix + 'rmUserField() - ';
+
 	if (cb === undefined || typeof cb !== 'function') {
-		cb = function() {};
+		cb = function () {};
 	}
 
-	helpers.getFieldUuid(params.fieldName, function(err, fieldUuid) {
+	helpers.getFieldUuid(params.fieldName, function (err, fieldUuid) {
 		const	dbFields	= [lUtils.uuidToBuffer(params.userUuid), lUtils.uuidToBuffer(fieldUuid)],
 			sql	= 'DELETE FROM user_users_data WHERE userUuid = ? AND fieldUuid = ?';
 
@@ -461,8 +471,8 @@ function rmUserField(params, deliveryTag, msgUuid, cb) {
 			return;
 		}
 
-		db.query(sql, dbFields, function(err) {
-			if (err) log.warn(logPrefix + 'rmUserField() - ' + err.message);
+		db.query(sql, dbFields, function (err) {
+			if (err) log.warn(logPrefix + err.message);
 			exports.emitter.emit(msgUuid, err);
 			cb(err);
 		});
@@ -507,11 +517,12 @@ function runDumpServer(cb) {
 }
 
 function setPassword(params, deliveryTag, msgUuid, cb) {
-	const	dbFields	= [],
+	const	logPrefix	= topLogPrefix + 'setPassword() - ',
+		dbFields	= [],
 		sql	= 'UPDATE user_users SET password = ? WHERE uuid = ?;';
 
 	if (cb === undefined || typeof cb !== 'function') {
-		cb = function() {};
+		cb = function () {};
 	}
 
 	if (params.password === false) {
@@ -521,23 +532,24 @@ function setPassword(params, deliveryTag, msgUuid, cb) {
 	}
 
 	dbFields.push(lUtils.uuidToBuffer(params.userUuid));
-	db.query(sql, dbFields, function(err) {
-		if (err) log.warn(logPrefix + 'setPassword() - ' + err.message);
+	db.query(sql, dbFields, function (err) {
+		if (err) log.warn(logPrefix + err.message);
 		exports.emitter.emit(msgUuid, err);
 		cb(err);
 	});
 }
 
 function setUsername(params, deliveryTag, msgUuid, cb) {
-	const	dbFields	= [params.username, lUtils.uuidToBuffer(params.userUuid)],
+	const	logPrefix	= topLogPrefix + 'setUsername() - ',
+		dbFields	= [params.username, lUtils.uuidToBuffer(params.userUuid)],
 		sql	= 'UPDATE user_users SET username = ? WHERE uuid = ?;';
 
 	if (cb === undefined || typeof cb !== 'function') {
-		cb = function() {};
+		cb = function () {};
 	}
 
-	db.query(sql, dbFields, function(err) {
-		if (err) log.warn(logPrefix + 'setUsername() - ' + err.message);
+	db.query(sql, dbFields, function (err) {
+		if (err) log.warn(logPrefix + err.message);
 		exports.emitter.emit(msgUuid, err);
 		cb(err);
 	});

@@ -30,7 +30,7 @@
 
 	<h2>Fields</h2>
 	<% if (obj.user) { %>
-		<% _.forEach(obj.user.fields, function(fieldValues, fieldName) { %>
+		<% _.forEach(obj.user.fields, function (fieldValues, fieldName) { %>
 			<% if ( ! (fieldValues instanceof Array)) { fieldValues = [fieldValues]; } %>
 			<% for (var i = 0; fieldValues[i] !== undefined; i ++) { %>
 				<div class="row">

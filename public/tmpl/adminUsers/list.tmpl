@@ -9,7 +9,7 @@
 			</tr>
 		</thead>
 		<tbody>
-			<% _.forEach(obj.users, function(user) { %>
+			<% _.forEach(obj.users, function (user) { %>
 				<tr>
 					<td><a href="/adminUsers/edit?uuid=<%= user.uuid %>"><%= user.uuid %></a></td>
 					<td><%= user.username %></td>

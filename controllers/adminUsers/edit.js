@@ -3,7 +3,7 @@
 const	userLib	= require('larvituser'),
 	async	= require('async');
 
-exports.run = function(req, res, cb) {
+exports.run = function (req, res, cb) {
 	const	tasks	= [],
 		data	= {'global': res.globalData};
 
@@ -48,8 +48,8 @@ exports.run = function(req, res, cb) {
 		if (data.global.urlParsed.query.uuid === undefined) {
 
 			// Check so username is not taken
-			tasks.push(function(cb) {
-				userLib.usernameAvailable(data.global.formFields.username.trim(), function(err, result) {
+			tasks.push(function (cb) {
+				userLib.usernameAvailable(data.global.formFields.username.trim(), function (err, result) {
 					if (err) { cb(err); return; }
 
 					if (result !== true) {
@@ -63,17 +63,17 @@ exports.run = function(req, res, cb) {
 			});
 
 			// Create the user
-			tasks.push(function(cb) {
+			tasks.push(function (cb) {
 				if (data.global.errors.length) { return cb(); }
 
-				userLib.create(data.global.formFields.username, newPassword, userFields, function(err, result) {
+				userLib.create(data.global.formFields.username, newPassword, userFields, function (err, result) {
 					user = result;
 					cb(err);
 				});
 			});
 		} else {
-			tasks.push(function(cb) {
-				userLib.fromUuid(data.global.urlParsed.query.uuid, function(err, result) {
+			tasks.push(function (cb) {
+				userLib.fromUuid(data.global.urlParsed.query.uuid, function (err, result) {
 					user = result;
 					cb(err);
 				});
@@ -81,7 +81,7 @@ exports.run = function(req, res, cb) {
 		}
 
 		// Update username
-		tasks.push(function(cb) {
+		tasks.push(function (cb) {
 			if ( ! user) {
 				throw new Error('Ingen user?!??!');
 			}
@@ -91,7 +91,7 @@ exports.run = function(req, res, cb) {
 				return;
 			}
 
-			userLib.usernameAvailable(data.global.formFields.username.trim(), function(err, result) {
+			userLib.usernameAvailable(data.global.formFields.username.trim(), function (err, result) {
 				if (err) { cb(err); return; }
 
 				if (result !== true) {
@@ -102,7 +102,7 @@ exports.run = function(req, res, cb) {
 			});
 		});
 
-		tasks.push(function(cb) {
+		tasks.push(function (cb) {
 			if (data.global.formFields.username.trim() === user.username) {
 				cb();
 				return;
@@ -115,7 +115,7 @@ exports.run = function(req, res, cb) {
 
 		// Update password
 		if (data.global.formFields.password.trim() !== '' || newPassword === false) {
-			tasks.push(function(cb) {
+			tasks.push(function (cb) {
 				if (data.global.errors.length) { return cb(); }
 
 				user.setPassword(newPassword, cb);
@@ -123,13 +123,13 @@ exports.run = function(req, res, cb) {
 		}
 
 		// Replace user fields
-		tasks.push(function(cb) {
+		tasks.push(function (cb) {
 			if (data.global.errors.length) { return cb(); }
 
 			user.replaceFields(userFields, cb);
 		});
 
-		tasks.push(function(cb) {
+		tasks.push(function (cb) {
 			if (data.global.errors.length) { return cb(); }
 
 			req.session.data.nextCallData = {'global': {'messages': ['New user created']}};
@@ -141,8 +141,8 @@ exports.run = function(req, res, cb) {
 	}
 
 	if (data.global.formFields.rmUser !== undefined) {
-		tasks.push(function(cb) {
-			userLib.rmUser(data.global.urlParsed.query.uuid, function(err) {
+		tasks.push(function (cb) {
+			userLib.rmUser(data.global.urlParsed.query.uuid, function (err) {
 				if (err) { cb(err); return; }
 
 				req.session.data.nextCallData = {'global': {'messages': ['User "' + data.global.urlParsed.query.uuid + '" erased']}};
@@ -154,8 +154,8 @@ exports.run = function(req, res, cb) {
 	}
 
 	if (data.global.urlParsed.query.uuid !== undefined) {
-		tasks.push(function(cb) {
-			userLib.fromUuid(data.global.urlParsed.query.uuid, function(err, user) {
+		tasks.push(function (cb) {
+			userLib.fromUuid(data.global.urlParsed.query.uuid, function (err, user) {
 				if (err) { cb(err); return; }
 
 				data.user = {
@@ -170,7 +170,7 @@ exports.run = function(req, res, cb) {
 		});
 	}
 
-	async.series(tasks, function(err) {
+	async.series(tasks, function (err) {
 		if (err && ! data.global.errors) {
 			cb(err, req, res, data);
 		} else {

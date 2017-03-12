@@ -32,7 +32,7 @@ function addUserDataField(userUuid, fieldName, fieldValue, cb) {
  * @param func cb(err)
  */
 function addUserDataFields(userUuid, fields, cb) {
-	dataWriter.ready(function(err) {
+	dataWriter.ready(function (err) {
 		if (err) { cb(err); return; }
 
 		const	options	= {'exchange': dataWriter.exchangeName},
@@ -43,7 +43,7 @@ function addUserDataFields(userUuid, fields, cb) {
 		sendObj.params.userUuid	= userUuid;
 		sendObj.params.fields	= fields;
 
-		dataWriter.intercom.send(sendObj, options, function(err, msgUuid) {
+		dataWriter.intercom.send(sendObj, options, function (err, msgUuid) {
 			if (err) { cb(err); return; }
 
 			dataWriter.emitter.once(msgUuid, cb);
@@ -60,7 +60,7 @@ function addUserDataFields(userUuid, fields, cb) {
 function checkPassword(password, hash, cb) {
 	password = password.trim();
 
-	bcrypt.compare(password, hash, function(err, result) {
+	bcrypt.compare(password, hash, function (err, result) {
 		if (err) {
 			log.error('larvituser: checkPassword() - ' + err.message);
 		}
@@ -91,7 +91,7 @@ function create(username, password, userData, uuid, cb) {
 		userData	= undefined;
 		uuid	= uuidLib.v1();
 	} else if (cb === undefined) {
-		cb	= function() {};
+		cb	= function () {};
 	}
 
 	username = username.trim();
@@ -110,8 +110,8 @@ function create(username, password, userData, uuid, cb) {
 	tasks.push(dataWriter.ready);
 
 	// Check for username availability
-	tasks.push(function(cb) {
-		usernameAvailable(username, function(err, result) {
+	tasks.push(function (cb) {
+		usernameAvailable(username, function (err, result) {
 			if (err) { cb(err); return; }
 
 			if (result === true) {
@@ -127,7 +127,7 @@ function create(username, password, userData, uuid, cb) {
 	});
 
 	// Hash Password
-	tasks.push(function(cb) {
+	tasks.push(function (cb) {
 		if (password === false) {
 			log.debug('larvituser: ./index.js - create() - Password set to empty string for no-login, username: "' + username + '"');
 			hashedPassword	= '';
@@ -135,7 +135,7 @@ function create(username, password, userData, uuid, cb) {
 			return;
 		}
 
-		hashPassword(password, function(err, hash) {
+		hashPassword(password, function (err, hash) {
 			if (err) { cb(err); return; }
 
 			hashedPassword	= hash;
@@ -145,11 +145,11 @@ function create(username, password, userData, uuid, cb) {
 	});
 
 	// Create all fields
-	tasks.push(function(cb) {
+	tasks.push(function (cb) {
 		const	tasks	= [];
 
 		for (const fieldName of Object.keys(userData)) {
-			tasks.push(function(cb) {
+			tasks.push(function (cb) {
 				exports.getFieldUuid(fieldName, cb);
 			});
 		}
@@ -158,7 +158,7 @@ function create(username, password, userData, uuid, cb) {
 	});
 
 	// Write new user via queue
-	tasks.push(function(cb) {
+	tasks.push(function (cb) {
 		const	options	= {'exchange': dataWriter.exchangeName},
 			sendObj	= {};
 
@@ -168,7 +168,7 @@ function create(username, password, userData, uuid, cb) {
 		sendObj.params.username	= username;
 		sendObj.params.password	= hashedPassword;
 
-		dataWriter.intercom.send(sendObj, options, function(err, msgUuid) {
+		dataWriter.intercom.send(sendObj, options, function (err, msgUuid) {
 			if (err) { cb(err); return; }
 
 			dataWriter.emitter.once(msgUuid, cb);
@@ -176,14 +176,14 @@ function create(username, password, userData, uuid, cb) {
 	});
 
 	// Write fields via queue
-	tasks.push(function(cb) {
+	tasks.push(function (cb) {
 		addUserDataFields(uuid, userData, cb);
 	});
 
-	async.series(tasks, function(err) {
+	async.series(tasks, function (err) {
 		if (err) { cb(err); return; }
 
-		fromUuid(uuid, function(err, user) {
+		fromUuid(uuid, function (err, user) {
 			if (err) {
 				log.error('larvituser: ./index.js - create() - ' + err.message);
 				cb(err);
@@ -204,7 +204,7 @@ function create(username, password, userData, uuid, cb) {
  * @param func cb(err, user) - "user" being a new user object or boolean false on failed search
  */
 function fromField(fieldName, fieldValue, cb) {
-	dataWriter.ready(function(err) {
+	dataWriter.ready(function (err) {
 		const	dbFields	=	[fieldName.trim(), fieldValue.trim()],
 			sql	=	'SELECT uud.userUuid\n' +
 					'FROM user_users_data uud\n' +
@@ -214,7 +214,7 @@ function fromField(fieldName, fieldValue, cb) {
 
 		if (err) { cb(err); return; }
 
-		db.query(sql, dbFields, function(err, rows) {
+		db.query(sql, dbFields, function (err, rows) {
 			if (err) { cb(err); return; }
 
 			if (rows.length === 0) {
@@ -235,7 +235,7 @@ function fromField(fieldName, fieldValue, cb) {
  * @param func cb(err, user) - "user" being a new user object or boolean false on failed search
  */
 function fromFields(fields, cb) {
-	dataWriter.ready(function(err) {
+	dataWriter.ready(function (err) {
 		const	dbFields	= [];
 
 		let	sql	= 'SELECT uuid FROM user_users u\nWHERE\n		1 + 1\n';
@@ -249,7 +249,7 @@ function fromFields(fields, cb) {
 		}
 
 		sql += 'LIMIT 1';
-		db.query(sql, dbFields, function(err, rows) {
+		db.query(sql, dbFields, function (err, rows) {
 			if (err) { cb(err); return; }
 
 			if (rows.length === 0) {
@@ -281,11 +281,11 @@ function fromUserAndPass(username, password, cb) {
 
 	tasks.push(dataWriter.ready);
 
-	tasks.push(function(cb) {
+	tasks.push(function (cb) {
 		const	dbFields	= [username],
 			sql	= 'SELECT uuid, password FROM user_users WHERE username = ?';
 
-		db.query(sql, dbFields, function(err, rows) {
+		db.query(sql, dbFields, function (err, rows) {
 			if (err) { cb(err); return; }
 
 			if (rows.length === 0) {
@@ -300,13 +300,13 @@ function fromUserAndPass(username, password, cb) {
 		});
 	});
 
-	tasks.push(function(cb) {
+	tasks.push(function (cb) {
 		if ( ! hashedPassword) {
 			cb();
 			return;
 		}
 
-		checkPassword(password, hashedPassword, function(err, res) {
+		checkPassword(password, hashedPassword, function (err, res) {
 			if (err) {
 				log.error('larvituser: fromUserAndPass() - ' + err.message);
 				cb(err);
@@ -319,7 +319,7 @@ function fromUserAndPass(username, password, cb) {
 				return;
 			}
 
-			fromUuid(lUtils.formatUuid(userUuid), function(err, result) {
+			fromUuid(lUtils.formatUuid(userUuid), function (err, result) {
 				userObj = result;
 				if (err) userObj = false;
 				cb(err);
@@ -327,7 +327,7 @@ function fromUserAndPass(username, password, cb) {
 		});
 	});
 
-	async.series(tasks, function(err) {
+	async.series(tasks, function (err) {
 		cb(err, userObj);
 	});
 }
@@ -345,10 +345,10 @@ function fromUsername(username, cb) {
 	username	= username.trim();
 	dbFields.push(username);
 
-	dataWriter.ready(function(err) {
+	dataWriter.ready(function (err) {
 		if (err) { cb(err); return; }
 
-		db.query(sql, dbFields, function(err, rows) {
+		db.query(sql, dbFields, function (err, rows) {
 			if (err) { cb(err); return; }
 
 			if (rows.length === 0) {
@@ -387,10 +387,10 @@ function fromUuid(userUuid, cb) {
 			'		LEFT JOIN user_data_fields	uf ON uf.uuid	= ud.fieldUuid\n' +
 			'WHERE u.uuid = ?';
 
-	dataWriter.ready(function(err) {
+	dataWriter.ready(function (err) {
 		if (err) { cb(err); return; }
 
-		db.query(sql, dbFields, function(err, rows) {
+		db.query(sql, dbFields, function (err, rows) {
 			if (err) { cb(err); return; }
 
 			if (rows.length === 0) {
@@ -434,13 +434,13 @@ function fromUuid(userUuid, cb) {
  * @param func cb(err, data) - data is always an array of data (or empty array)
  */
 function getFieldData(userUuid, fieldName, cb) {
-	exports.getFieldUuid(fieldName, function(err, fieldUuid) {
+	exports.getFieldUuid(fieldName, function (err, fieldUuid) {
 		const	dbFields	= [lUtils.uuidToBuffer(userUuid), lUtils.uuidToBuffer(fieldUuid)],
 			sql	= 'SELECT data FROM user_users_data WHERE userUuid = ? AND fieldUuid = ?';
 
 		if (err) { cb(err); return; }
 
-		db.query(sql, dbFields, function(err, rows) {
+		db.query(sql, dbFields, function (err, rows) {
 			const	data	= [];
 
 			if (err) { cb(err); return; }
@@ -463,7 +463,7 @@ function getFieldData(userUuid, fieldName, cb) {
 function hashPassword(password, cb) {
 	password = password.trim();
 
-	bcrypt.hash(password, 10, function(err, hash) {
+	bcrypt.hash(password, 10, function (err, hash) {
 		if (err) {
 			log.error('larvituser: hashPassword() - ' + err.message);
 		}
@@ -489,7 +489,7 @@ function replaceUserFields(uuid, fields, cb) {
 	sendObj.params.userUuid	= uuid;
 	sendObj.params.fields	= fields;
 
-	dataWriter.intercom.send(sendObj, options, function(err, msgUuid) {
+	dataWriter.intercom.send(sendObj, options, function (err, msgUuid) {
 		if (err) { cb(err); return; }
 
 		dataWriter.emitter.once(msgUuid, cb);
@@ -510,7 +510,7 @@ function rmUser(userUuid, cb) {
 	sendObj.params	= {};
 	sendObj.params.userUuid	= userUuid;
 
-	dataWriter.intercom.send(sendObj, options, function(err, msgUuid) {
+	dataWriter.intercom.send(sendObj, options, function (err, msgUuid) {
 		if (err) { cb(err); return; }
 
 		dataWriter.emitter.once(msgUuid, cb);
@@ -533,7 +533,7 @@ function rmUserField(userUuid, fieldName, cb) {
 	sendObj.params.userUuid	= userUuid;
 	sendObj.params.fieldName	= fieldName;
 
-	dataWriter.intercom.send(sendObj, options, function(err, msgUuid) {
+	dataWriter.intercom.send(sendObj, options, function (err, msgUuid) {
 		if (err) { cb(err); return; }
 
 		dataWriter.emitter.once(msgUuid, cb);
@@ -552,9 +552,9 @@ function setPassword(userUuid, newPassword, cb) {
 
 	let	hashedPassword;
 
-	tasks.push(function(cb) {
+	tasks.push(function (cb) {
 		if (newPassword) {
-			hashPassword(newPassword.trim(), function(err, hash) {
+			hashPassword(newPassword.trim(), function (err, hash) {
 				hashedPassword = hash;
 				cb(err);
 			});
@@ -564,7 +564,7 @@ function setPassword(userUuid, newPassword, cb) {
 		}
 	});
 
-	tasks.push(function(cb) {
+	tasks.push(function (cb) {
 		const	options	= {'exchange': dataWriter.exchangeName},
 			sendObj	= {};
 
@@ -573,7 +573,7 @@ function setPassword(userUuid, newPassword, cb) {
 		sendObj.params.userUuid	= userUuid;
 		sendObj.params.password	= hashedPassword;
 
-		dataWriter.intercom.send(sendObj, options, function(err, msgUuid) {
+		dataWriter.intercom.send(sendObj, options, function (err, msgUuid) {
 			if (err) { cb(err); return; }
 
 			dataWriter.emitter.once(msgUuid, cb);
@@ -602,7 +602,7 @@ function setUsername(userUuid, newUsername, cb) {
 		return;
 	}
 
-	db.query('SELECT uuid FROM user_users WHERE username = ? AND uuid != ?', [newUsername, userUuidBuf], function(err, rows) {
+	db.query('SELECT uuid FROM user_users WHERE username = ? AND uuid != ?', [newUsername, userUuidBuf], function (err, rows) {
 		const	options	= {'exchange': dataWriter.exchangeName},
 			sendObj	= {};
 
@@ -619,7 +619,7 @@ function setUsername(userUuid, newUsername, cb) {
 		sendObj.params.userUuid	= userUuid;
 		sendObj.params.username	= newUsername;
 
-		dataWriter.intercom.send(sendObj, options, function(err, msgUuid) {
+		dataWriter.intercom.send(sendObj, options, function (err, msgUuid) {
 			if (err) { cb(err); return; }
 
 			dataWriter.emitter.once(msgUuid, cb);
@@ -644,7 +644,7 @@ function userBase() {
 			return;
 		}
 
-		addUserDataField(returnObj.uuid, name, value, function(err) {
+		addUserDataField(returnObj.uuid, name, value, function (err) {
 			if (err) { cb(err); return; }
 
 			if (returnObj.fields[name] === undefined) {
@@ -669,7 +669,7 @@ function userBase() {
 			return;
 		}
 
-		addUserDataFields(returnObj.uuid, fields, function(err) {
+		addUserDataFields(returnObj.uuid, fields, function (err) {
 			if (err) { cb(err); return; }
 
 			for (let key in fields) {
@@ -700,11 +700,11 @@ function userBase() {
 			return;
 		}
 
-		replaceUserFields(returnObj.uuid, fields, function(err) {
+		replaceUserFields(returnObj.uuid, fields, function (err) {
 			if (err) { cb(err); return; }
 
 			// Reload everything
-			fromUuid(returnObj.uuid, function(err, user) {
+			fromUuid(returnObj.uuid, function (err, user) {
 				if (err) { cb(err); return; }
 
 				returnObj.fields = user.fields;
@@ -720,7 +720,7 @@ function userBase() {
 			return;
 		}
 
-		rmUser(returnObj.uuid, function(err) {
+		rmUser(returnObj.uuid, function (err) {
 			if (err) { cb(err); return; }
 
 			delete returnObj.uuid;
@@ -744,7 +744,7 @@ function userBase() {
 			return;
 		}
 
-		rmUserField(returnObj.uuid, name, function(err) {
+		rmUserField(returnObj.uuid, name, function (err) {
 			if (err) { cb(err); return; }
 
 			delete returnObj.fields[name];
@@ -752,7 +752,7 @@ function userBase() {
 		});
 	};
 
-	returnObj.setPassword = function(newPassword, cb) {
+	returnObj.setPassword = function (newPassword, cb) {
 		if (returnObj.uuid === undefined) {
 			const	err	= new Error('Cannot set password; no user loaded');
 			cb(err);
@@ -762,7 +762,7 @@ function userBase() {
 		setPassword(returnObj.uuid, newPassword, cb);
 	};
 
-	returnObj.setUsername = function(newUsername, cb) {
+	returnObj.setUsername = function (newUsername, cb) {
 		if (returnObj.uuid === undefined) {
 			const	err	= new Error('Cannot set username; no user loaded');
 			cb(err);
@@ -790,8 +790,8 @@ function usernameAvailable(username, cb) {
 
 	tasks.push(dataWriter.ready);
 
-	tasks.push(function(cb) {
-		db.query('SELECT uuid FROM user_users WHERE username = ?', [username], function(err, rows) {
+	tasks.push(function (cb) {
+		db.query('SELECT uuid FROM user_users WHERE username = ?', [username], function (err, rows) {
 			if (err) { cb(err); return; }
 
 			if (rows.length === 0) {
@@ -804,7 +804,7 @@ function usernameAvailable(username, cb) {
 		});
 	});
 
-	async.series(tasks, function(err) {
+	async.series(tasks, function (err) {
 		if (err) { cb(err); return; }
 
 		cb(null, isAvailable);

@@ -3,7 +3,7 @@
 const	userLib	= require(__dirname + '/../../index.js'),
 	async	= require('async');
 
-exports.run = function(req, res, cb) {
+exports.run = function (req, res, cb) {
 	const	tasks	= [],
 		data	= {'global': res.globalData};
 
@@ -19,7 +19,7 @@ exports.run = function(req, res, cb) {
 	data.pagination.urlParsed	= data.global.urlParsed;
 	data.pagination.elementsPerPage	= 100;
 
-	tasks.push(function(cb) {
+	tasks.push(function (cb) {
 		const	users	= new userLib.Users();
 
 		//users.returnFields	= ['firstname', 'lastname'];
@@ -34,14 +34,14 @@ exports.run = function(req, res, cb) {
 		//	users.matchAllFields = {'status': data.global.urlParsed.query.filterStatus};
 		//}
 
-		users.get(function(err, result, totalElements) {
+		users.get(function (err, result, totalElements) {
 			data.users	= result;
 			data.pagination.totalElements	= totalElements;
 			cb(err);
 		});
 	});
 
-	async.series(tasks, function(err) {
+	async.series(tasks, function (err) {
 		cb(err, req, res, data);
 	});
 };
