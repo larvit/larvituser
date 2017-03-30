@@ -387,6 +387,12 @@ function fromUuid(userUuid, cb) {
 			'		LEFT JOIN user_data_fields	uf ON uf.uuid	= ud.fieldUuid\n' +
 			'WHERE u.uuid = ?';
 
+	if ( ! userUuidBuf) {
+		const	err	= new Error('Invalid userUuid');
+		log.warn('larvituser: ./index.js - fromUuid() - ' + err.message);
+		return cb(err);
+	}
+
 	dataWriter.ready(function (err) {
 		if (err) { cb(err); return; }
 
