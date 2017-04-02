@@ -50,7 +50,7 @@ exports.run = function (req, res, cb) {
 			// Check so username is not taken
 			tasks.push(function (cb) {
 				userLib.usernameAvailable(data.global.formFields.username.trim(), function (err, result) {
-					if (err) { cb(err); return; }
+					if (err) return cb(err);
 
 					if (result !== true) {
 						const	err	= new Error('Username is taken by another user');
@@ -64,7 +64,7 @@ exports.run = function (req, res, cb) {
 
 			// Create the user
 			tasks.push(function (cb) {
-				if (data.global.errors.length) { return cb(); }
+				if (data.global.errors.length) return cb();
 
 				userLib.create(data.global.formFields.username, newPassword, userFields, function (err, result) {
 					user = result;
@@ -83,16 +83,15 @@ exports.run = function (req, res, cb) {
 		// Update username
 		tasks.push(function (cb) {
 			if ( ! user) {
-				throw new Error('Ingen user?!??!');
+				throw new Error('No user set');
 			}
 
-			if (data.global.formFields.username.trim() === user.username) {
-				cb();
-				return;
-			}
+			data.global.formFields.username = data.global.formFields.username.trim();
 
-			userLib.usernameAvailable(data.global.formFields.username.trim(), function (err, result) {
-				if (err) { cb(err); return; }
+			if (data.global.formFields.username === user.username) return cb();
+
+			userLib.usernameAvailable(data.global.formFields.username, function (err, result) {
+				if (err) return cb(err);
 
 				if (result !== true) {
 					data.global.errors.push('Username is taken by another user');
@@ -103,20 +102,17 @@ exports.run = function (req, res, cb) {
 		});
 
 		tasks.push(function (cb) {
-			if (data.global.formFields.username.trim() === user.username) {
-				cb();
-				return;
-			}
+			if (data.global.formFields.username === user.username) return cb();
 
-			if (data.global.errors.length) { return cb(); }
+			if (data.global.errors.length) return cb();
 
 			user.setUsername(data.global.formFields.username.trim(), cb);
 		});
 
 		// Update password
-		if (data.global.formFields.password.trim() !== '' || newPassword === false) {
+		if (newPassword !== '' || newPassword === false) {
 			tasks.push(function (cb) {
-				if (data.global.errors.length) { return cb(); }
+				if (data.global.errors.length) return cb();
 
 				user.setPassword(newPassword, cb);
 			});
@@ -124,17 +120,21 @@ exports.run = function (req, res, cb) {
 
 		// Replace user fields
 		tasks.push(function (cb) {
-			if (data.global.errors.length) { return cb(); }
+			if (data.global.errors.length) return cb();
 
 			user.replaceFields(userFields, cb);
 		});
 
 		tasks.push(function (cb) {
-			if (data.global.errors.length) { return cb(); }
+			if (data.global.errors.length) return cb();
 
-			req.session.data.nextCallData = {'global': {'messages': ['New user created']}};
-			res.statusCode = 302;
-			res.setHeader('Location', '/adminUsers/edit?uuid=' + user.uuid);
+			if (data.global.urlParsed.query.uuid === undefined) {
+				req.session.data.nextCallData = {'global': {'messages': ['New user created']}};
+				res.statusCode = 302;
+				res.setHeader('Location', '/adminUsers/edit?uuid=' + user.uuid);
+			} else {
+				data.global.messages = ['Saved'];
+			}
 
 			cb();
 		});
@@ -143,7 +143,7 @@ exports.run = function (req, res, cb) {
 	if (data.global.formFields.rmUser !== undefined) {
 		tasks.push(function (cb) {
 			userLib.rmUser(data.global.urlParsed.query.uuid, function (err) {
-				if (err) { cb(err); return; }
+				if (err) return cb(err);
 
 				req.session.data.nextCallData = {'global': {'messages': ['User "' + data.global.urlParsed.query.uuid + '" erased']}};
 				res.statusCode = 302;
@@ -156,7 +156,7 @@ exports.run = function (req, res, cb) {
 	if (data.global.urlParsed.query.uuid !== undefined) {
 		tasks.push(function (cb) {
 			userLib.fromUuid(data.global.urlParsed.query.uuid, function (err, user) {
-				if (err) { cb(err); return; }
+				if (err) return cb(err);
 
 				data.user = {
 					'uuid':	user.uuid,
