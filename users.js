@@ -77,7 +77,60 @@ Users.prototype.get = function (cb) {
 				result.push(user);
 			}
 
-			cb(err);
+			// fetch field data for users, if requested
+			if (that.returnFields !== undefined) {
+				
+				const subTasks = [];
+
+				for (let u of result) {
+
+					subTasks.push(function (cb) {
+						let subFields = [],
+							sql = 'SELECT uf.uuid AS fieldUuid,\n' +
+							'uf.name AS fieldName,\n' +
+							'ud.data AS fieldData,\n' +
+							'ud.userUuid AS userUuid\n' +
+								'FROM\n' +
+        							'user_data_fields uf\n' +
+                						'LEFT JOIN user_users_data       ud ON ud.fieldUuid       = uf.uuid\n' +
+        					'WHERE uf.name IN (';
+					
+						for (let fn of that.returnFields) {
+							sql += '?,';
+							subFields.push(fn);
+						}
+
+						sql = sql.substring(0, sql.length - 1);
+
+						sql += ') AND ud.userUuid = ?';
+						subFields.push(lUtils.uuidToBuffer(u.uuid));
+
+						db.query(sql, subFields, function (err, rows) {
+
+							if (err) { return cb(err); }
+
+							for (let i = 0; rows[i] !== undefined; i ++) {
+								const	row	= rows[i];
+
+								if (row.fieldUuid) {
+									if (u[row.fieldName] === undefined) {
+										u[row.fieldName] = [];
+									}
+
+									u[row.fieldName].push(row.fieldData);
+								}
+							}
+
+							cb();
+						});
+					});
+				}
+
+				async.parallel(subTasks, cb);
+
+			} else {
+				cb(err);
+			}
 		});
 	});
 

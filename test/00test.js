@@ -457,6 +457,8 @@ describe('User', function () {
 	describe('Get list of users', function () {
 		const uuids = [];
 
+		this.timeout(5000);
+
 		it('Get list of users', function (done) {
 			const tasks	= [];
 
@@ -532,9 +534,31 @@ describe('User', function () {
 				assert.deepEqual(result.indexOf('biff') > - 1, true);
 				assert.deepEqual(result.indexOf('baff') > - 1, true);
 				assert.deepEqual(result.indexOf('bonk') > - 1, true);
+				done();
 			});
+		});
 
-			done();
+		it('Get list of users with requested field data', function (done) {
+			const users = new userLib.Users();
+
+			users.returnFields = ['lastname'];
+
+			users.get(function (err, result) {
+
+				assert.strictEqual(err, null);
+				assert.notStrictEqual(result, undefined);
+				assert.strictEqual(result.length, 4);
+				
+				const expectedFields = ['uuid', 'username', 'lastname'];
+
+				for (let r of result) {
+					for (let key in r) {
+						assert.strictEqual(expectedFields.indexOf(key) > - 1, true);
+					}
+				}
+
+				done();
+			});
 		});
 	});
 });
