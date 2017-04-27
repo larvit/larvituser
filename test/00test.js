@@ -512,6 +512,7 @@ describe('User', function () {
 			const users = new userLib.Users();
 
 			users.matchAllFields = { 'role': ['customer']};
+			users.returnFields = [];
 
 			users.get(function (err, userList, totalElements) {
 

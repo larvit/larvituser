@@ -77,8 +77,12 @@ Users.prototype.get = function (cb) {
 				result.push(user);
 			}
 
+			if (that.returnFields !== undefined && ! Array.isArray(that.returnFields)) {
+				that.returnFields = [that.returnFields];
+			}
+
 			// fetch field data for users, if requested
-			if (that.returnFields !== undefined) {
+			if (that.returnFields !== undefined && that.returnFields.length > 0) {
 				
 				const subTasks = [];
 
