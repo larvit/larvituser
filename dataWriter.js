@@ -207,7 +207,7 @@ function listenToQueue(retries, cb) {
 	} else if (exports.mode === 'slave' || exports.mode === 'noSync') {
 		listenMethod = 'subscribe';
 	} else {
-		const	err	= new Error('Invalid exports.mode. Must be either "master" or "slave"');
+		const	err	= new Error('Invalid exports.mode. Must be either "master", "slave" or "noSync"');
 		log.error(logPrefix + err.message);
 		cb(err);
 		return;
@@ -306,10 +306,6 @@ function ready(retries, cb) {
 		tasks.push(function (cb) {
 			amsync.mariadb({'exchange': exports.exchangeName + '_dataDump'}, cb);
 		});
-	}
-
-	if (exports.mode === 'noSync') {
-		log.warn(logPrefix + 'exports.mode: "' + exports.mode + '", never run this mode in production!');
 	}
 
 	// Migrate database
