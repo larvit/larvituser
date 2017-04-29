@@ -40,7 +40,6 @@ before(function (done) {
 		// First look for absolute path
 		fs.stat(confFile, function (err) {
 			if (err) {
-
 				// Then look for this string in the config folder
 				confFile = __dirname + '/../config/' + confFile;
 				fs.stat(confFile, function (err) {
@@ -72,36 +71,8 @@ before(function (done) {
 
 	// Setup intercom
 	tasks.push(function (cb) {
-		let confFile;
-
-		if (process.env.INTCONFFILE === undefined) {
-			confFile = __dirname + '/../config/amqp_test.json';
-		} else {
-			confFile = process.env.INTCONFFILE;
-		}
-
-		log.verbose('Intercom config file: "' + confFile + '"');
-
-		// First look for absolute path
-		fs.stat(confFile, function (err) {
-			if (err) {
-
-				// Then look for this string in the config folder
-				confFile = __dirname + '/../config/' + confFile;
-				fs.stat(confFile, function (err) {
-					if (err) throw err;
-					log.verbose('Intercom config: ' + JSON.stringify(require(confFile)));
-					lUtils.instances.intercom = new Intercom(require(confFile).default);
-					lUtils.instances.intercom.on('ready', cb);
-				});
-
-				return;
-			}
-
-			log.verbose('Intercom config: ' + JSON.stringify(require(confFile)));
-			lUtils.instances.intercom = new Intercom(require(confFile).default);
-			lUtils.instances.intercom.on('ready', cb);
-		});
+		lUtils.instances.intercom = new Intercom('loopback interface');
+		lUtils.instances.intercom.on('ready', cb);
 	});
 
 	// Migrating user db etc
@@ -118,7 +89,7 @@ describe('User', function () {
 	it('should check if a username is available', function (done) {
 		userLib.usernameAvailable('testuser', function (err, res) {
 			if (err) throw err;
-			assert.deepEqual(res, true);
+			assert.strictEqual(res, true);
 			done();
 		});
 	});
@@ -130,16 +101,15 @@ describe('User', function () {
 			userLib.getFieldUuid('firstname', function (err, result) {
 				if (err) throw err;
 				fieldUuid = result;
-				assert.notDeepEqual(lUtils.formatUuid(fieldUuid), false);
+				assert.notStrictEqual(lUtils.formatUuid(fieldUuid), false);
 				done();
 			});
 		});
 
-
 		it('shold return field name "firstname" for the UUID we created above', function (done) {
 			userLib.getFieldName(fieldUuid, function (err, fieldName) {
 				if (err) throw err;
-				assert.deepEqual(fieldName, 'firstname');
+				assert.strictEqual(fieldName, 'firstname');
 				done();
 			});
 		});
@@ -159,7 +129,7 @@ describe('User', function () {
 		it('should check the hashed password back against the plain text password', function (done) {
 			userLib.checkPassword('foobar', hashedPassword, function (err, res) {
 				if (err) throw err;
-				assert.deepEqual(res, true);
+				assert.strictEqual(res, true);
 				done();
 			});
 		});
@@ -172,7 +142,7 @@ describe('User', function () {
 
 				createdUuid = user.uuid;
 
-				assert.deepEqual(user.fields.lastname[1], 'Göransson');
+				assert.strictEqual(user.fields.lastname[1], 'Göransson');
 				assert(typeof user.uuid === 'string', 'uuid should be a string');
 				assert(user.uuid.length === 36, 'uuid should be exactly 36 characters long');
 				done();
@@ -182,7 +152,7 @@ describe('User', function () {
 		it('should try to create a new user with the same username and fail', function (done) {
 			userLib.create('lilleman', 'foobar', {'firstname': 'migal', 'lastname': ['Arvidsson', 'Göransson']}, function (err, user) {
 				assert.notEqual(err, null);
-				assert.equal(user, undefined);
+				assert.strictEqual(user, undefined);
 				done();
 			});
 		});
@@ -190,7 +160,7 @@ describe('User', function () {
 		it('should try to create a user with a field that is undefined', function (done) {
 			userLib.create('trams', false, {'firstname': undefined, 'lastname': ['biff', 'baff']}, function (err, user) {
 				if (err) throw err;
-				assert(user.uuid !== undefined);
+				assert.notStrictEqual(user.uuid,	undefined);
 				done();
 			});
 		});
@@ -234,7 +204,7 @@ describe('User', function () {
 		it('should log in user by field', function (done) {
 			userLib.fromField('firstname', 'migal', function (err, user) {
 				if (err) throw err;
-				assert.notDeepEqual(user, false);
+				assert.notStrictEqual(user, false);
 				done();
 			});
 		});
@@ -242,7 +212,7 @@ describe('User', function () {
 		it('should fail to log in user by an errorous field', function (done) {
 			userLib.fromField('firstname', 'mupp', function (err, user) {
 				if (err) throw err;
-				assert.deepEqual(user, false);
+				assert.strictEqual(user, false);
 				done();
 			});
 		});
@@ -250,7 +220,7 @@ describe('User', function () {
 		it('should log in user by multiple fields', function (done) {
 			userLib.fromFields({'firstname': 'migal', 'lastname': 'Arvidsson'}, function (err, user) {
 				if (err) throw err;
-				assert.notDeepEqual(user, false);
+				assert.notStrictEqual(user, false);
 				done();
 			});
 		});
@@ -258,7 +228,7 @@ describe('User', function () {
 		it('should fail to log in user by multiple fields when one is wrong', function (done) {
 			userLib.fromFields({'firstname': 'migal', 'lastname': 'no its not'}, function (err, user) {
 				if (err) throw err;
-				assert.deepEqual(user, false);
+				assert.strictEqual(user, false);
 				done();
 			});
 		});
@@ -270,13 +240,13 @@ describe('User', function () {
 				if (err) throw err;
 				assert.deepEqual(user.fields.firstname, ['migal']);
 				user.rmField('firstname', function () {
-					assert.deepEqual(user.fields.firstname, undefined);
-					assert.deepEqual(user.fields.lastname[0], 'Arvidsson');
+					assert.strictEqual(user.fields.firstname, undefined);
+					assert.strictEqual(user.fields.lastname[0], 'Arvidsson');
 
 					// Trying to load the user again to be sure
 					userLib.fromUsername('lilleman', function (err, user) {
 						if (err) throw err;
-						assert.deepEqual(user.fields.firstname, undefined);
+						assert.strictEqual(user.fields.firstname, undefined);
 
 						done();
 					});
@@ -290,8 +260,8 @@ describe('User', function () {
 				user.addField('cell', 46709771337, function (err) {
 					if (err) throw err;
 
-					assert.deepEqual(user.fields.cell[0],	46709771337);
-					assert.deepEqual(user.fields.lastname[0],	'Arvidsson');
+					assert.strictEqual(user.fields.cell[0],	46709771337);
+					assert.strictEqual(user.fields.lastname[0],	'Arvidsson');
 					done();
 				});
 			});
@@ -309,17 +279,17 @@ describe('User', function () {
 				user.replaceFields(newFields, function (err) {
 					if (err) throw err;
 
-					assert.deepEqual(user.fields.foo,       ['bar']);
-					assert.deepEqual(user.fields.firstname, undefined);
-					assert.deepEqual(user.fields.income[1], 'more than you');
+					assert.deepEqual(user.fields.foo,	['bar']);
+					assert.strictEqual(user.fields.firstname,	undefined);
+					assert.strictEqual(user.fields.income[1],	'more than you');
 
 					// Reload user to make sure the fields are saved in database correctly
 					userLib.fromUsername('lilleman', function (err, secondUser) {
 						if (err) throw err;
 
-						assert.deepEqual(secondUser.fields.foo,       ['bar']);
-						assert.deepEqual(secondUser.fields.firstname, undefined);
-						assert.deepEqual(secondUser.fields.income[1], 'more than you');
+						assert.deepEqual(secondUser.fields.foo,	['bar']);
+						assert.strictEqual(secondUser.fields.firstname,	undefined);
+						assert.strictEqual(secondUser.fields.income[1],	'more than you');
 
 						done();
 					});
@@ -371,16 +341,34 @@ describe('User', function () {
 		it('should add a new field along side existing fields', function (done) {
 			userLib.fromUsername('lilleman', function (err, user) {
 				if (err) throw err;
-				assert(user != false, 'The user object should not be false');
-				assert.deepEqual(user.fields.foo.length, 1);
-				assert.deepEqual(user.fields.foo[0], 'bar');
+				assert.notStrictEqual(user,	false);
+				assert.strictEqual(user.fields.foo.length,	1);
+				assert.strictEqual(user.fields.foo[0],	'bar');
 
 				user.addFields({'foo': ['yes', 'no', 'bar']}, function (err) {
 					if (err) throw err;
 
-					assert.deepEqual(user.fields.foo.length, 4);
+					assert.strictEqual(user.fields.foo.length, 4);
 
 					done();
+				});
+			});
+		});
+
+		it('should set no fields on a user', function (done) {
+			userLib.fromUsername('trams', function (err, user1) {
+				if (err) throw err;
+
+				userLib.addUserDataFields(user1.uuid, {}, function (err) {
+					if (err) throw err;
+
+					userLib.fromUsername('trams', function (err, user2) {
+						if (err) throw err;
+
+						assert.deepEqual(user1.fields,	user2.fields);
+
+						done();
+					});
 				});
 			});
 		});
@@ -391,18 +379,15 @@ describe('User', function () {
 			let userUuid;
 
 			userLib.create('habblabang', false, {}, function (err, user) {
-				if (err)
-					assert( ! err, 'Err should be negative, but is: ' + err.message);
+				if (err) throw err;
 
 				userUuid = user.uuid;
 
 				userLib.setUsername(userUuid, 'blambadam', function (err) {
-					if (err)
-						assert( ! err, 'Err should be negative, but is: ' + err.message);
+					if (err) throw err;
 
 					userLib.fromUsername('blambadam', function (err, user) {
-						if (err)
-							assert( ! err, 'Err should be negative, but is: ' + err.message);
+						if (err) throw err;
 
 						assert(user.uuid === userUuid, 'User Uuids missmatch! Is "' + user.uuid + '" but should be "' + userUuid + '"');
 						done();
@@ -417,6 +402,7 @@ describe('User', function () {
 
 		it('should log the created user in by username', function (done) {
 			userLib.fromUsername('lilleman', function (err, result) {
+				if (err) throw err;
 				assert.equal(result.username, 'lilleman');
 				user = result;
 				done();
@@ -447,7 +433,7 @@ describe('User', function () {
 				db.query('SELECT * FROM user_users WHERE uuid = ?', [lUtils.uuidToBuffer(createdUuid)], function (err, rows) {
 					if (err) throw err;
 
-					assert.deepEqual(rows.length, 0);
+					assert.strictEqual(rows.length, 0);
 					done();
 				});
 			});
@@ -482,8 +468,7 @@ describe('User', function () {
 				let u = new userLib.Users();
 
 				u.get(function (err, userList) {
-
-					if (err) ssert( ! err, err.message);
+					if (err) throw err;
 					assert(userList.length >= 2, '2 or more users should exist in database');
 
 					let foundUser1 = false, foundUser2 = false;
@@ -498,8 +483,8 @@ describe('User', function () {
 						}
 					}
 
-					assert.deepEqual(foundUser1, true, 'user1 not found');
-					assert.deepEqual(foundUser2, true, 'user2 not found');
+					assert.strictEqual(foundUser1, true, 'user1 not found');
+					assert.strictEqual(foundUser2, true, 'user2 not found');
 
 					cb();
 				});
@@ -515,11 +500,10 @@ describe('User', function () {
 			users.returnFields = [];
 
 			users.get(function (err, userList, totalElements) {
-
 				if (err) throw err;
-				assert.deepEqual(totalElements, 1);
-				assert.deepEqual(userList.length, 1);
-				assert.deepEqual(userList[0].username, 'user1');
+				assert.strictEqual(totalElements, 1);
+				assert.strictEqual(userList.length, 1);
+				assert.strictEqual(userList[0].username, 'user1');
 
 				done();
 			});
@@ -529,12 +513,12 @@ describe('User', function () {
 			const users = new userLib.Users();
 
 			users.getFieldData('lastname', function (err, result) {
-				assert.deepEqual(err, undefined);
-				assert.deepEqual(result.length, 3);
+				if (err) throw err;
+				assert.strictEqual(result.length, 3);
 
-				assert.deepEqual(result.indexOf('biff') > - 1, true);
-				assert.deepEqual(result.indexOf('baff') > - 1, true);
-				assert.deepEqual(result.indexOf('bonk') > - 1, true);
+				assert.strictEqual(result.indexOf('biff') > - 1, true);
+				assert.strictEqual(result.indexOf('baff') > - 1, true);
+				assert.strictEqual(result.indexOf('bonk') > - 1, true);
 				done();
 			});
 		});
@@ -545,11 +529,10 @@ describe('User', function () {
 			users.returnFields = ['lastname'];
 
 			users.get(function (err, result) {
-
-				assert.strictEqual(err, null);
+				if (err) throw err;
 				assert.notStrictEqual(result, undefined);
 				assert.strictEqual(result.length, 4);
-				
+
 				const expectedFields = ['uuid', 'username', 'lastname'];
 
 				for (let r of result) {

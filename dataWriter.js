@@ -2,7 +2,7 @@
 
 const	EventEmitter	= require('events').EventEmitter,
 	eventEmitter	= new EventEmitter(),
-	topLogPrefix	= 'larvituser: ./dataWriter.js - ',
+	topLogPrefix	= 'larvituser: dataWriter.js - ',
 	DbMigration	= require('larvitdbmigration'),
 	helpers	= require(__dirname + '/helpers.js'),
 	uuidLib	= require('uuid'),
@@ -22,11 +22,11 @@ function addUserDataFields(params, deliveryTag, msgUuid, cb) {
 		dbValues	= [],
 		tasks	= [];
 
+	let sql	= 'INSERT INTO user_users_data (userUuid, fieldUuid, data) VALUES';
+
 	if (cb === undefined || typeof cb !== 'function') {
 		cb = function () {};
 	}
-
-	let sql	= 'INSERT INTO user_users_data (userUuid, fieldUuid, data) VALUES';
 
 	for (let key in params.fields) {
 		tasks.push(function (cb) {
@@ -67,12 +67,19 @@ function addUserDataFields(params, deliveryTag, msgUuid, cb) {
 
 		if (dbValues.length === 0) {
 			log.info(logPrefix + 'No fields or field data specifed');
-			exports.emitter.emit(msgUuid);
-			return cb();
+
+			// We need to setImmediate here since a listener on the other side must be done async to obtain a msgUuid
+			setImmediate(function () {
+				exports.emitter.emit(msgUuid);
+				return cb();
+			});
+			return; // Make sure no more execution is taking place
 		}
 
 		db.query(sql, dbValues, function (err) {
-			if (err) { log.warn(topLogPrefix + ' addUserDataFields() - ' + err.message); }
+			if (err) {
+				log.warn(topLogPrefix + ' addUserDataFields() - ' + err.message);
+			}
 			exports.emitter.emit(msgUuid, err);
 			cb(err);
 		});

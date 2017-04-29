@@ -15,13 +15,12 @@ function Users() {
  * @param func cb(err, result) - an array with values liek ['value1', 'value2']
  */
 Users.prototype.getFieldData = function (fieldName, cb) {
+	const	sql	= 'SELECT DISTINCT d.data FROM user_users_data d JOIN user_data_fields f ON d.fieldUuid = f.uuid WHERE f.name = "' + fieldName + '"';
 
-	db.query('SELECT DISTINCT d.data FROM user_users_data d '
-	+ 'JOIN user_data_fields f ON d.fieldUuid = f.uuid '
-	+ 'WHERE f.name = "' + fieldName + '"', function (err, rows) {
-		if (err) { cb(err); return; }
+	db.query(sql, function (err, rows) {
+		const	result	= [];
 
-		let result = [];
+		if (err) return cb(err);
 
 		for (let row of rows) {
 			result.push(row.data);
@@ -63,7 +62,7 @@ Users.prototype.get = function (cb) {
 		}
 
 		db.query(sql, dbFields, function (err, rows) {
-			if (err) { cb(err); return; }
+			if (err) return cb(err);
 
 			result = [];
 
@@ -83,22 +82,21 @@ Users.prototype.get = function (cb) {
 
 			// fetch field data for users, if requested
 			if (that.returnFields !== undefined && that.returnFields.length > 0) {
-				
+
 				const subTasks = [];
 
 				for (let u of result) {
-
 					subTasks.push(function (cb) {
 						let subFields = [],
 							sql = 'SELECT uf.uuid AS fieldUuid,\n' +
 							'uf.name AS fieldName,\n' +
 							'ud.data AS fieldData,\n' +
 							'ud.userUuid AS userUuid\n' +
-								'FROM\n' +
-        							'user_data_fields uf\n' +
-                						'LEFT JOIN user_users_data       ud ON ud.fieldUuid       = uf.uuid\n' +
-        					'WHERE uf.name IN (';
-					
+							'FROM\n' +
+								'user_data_fields uf\n' +
+									'LEFT JOIN user_users_data ud ON ud.fieldUuid = uf.uuid\n' +
+								'WHERE uf.name IN (';
+
 						for (let fn of that.returnFields) {
 							sql += '?,';
 							subFields.push(fn);
@@ -110,8 +108,7 @@ Users.prototype.get = function (cb) {
 						subFields.push(lUtils.uuidToBuffer(u.uuid));
 
 						db.query(sql, subFields, function (err, rows) {
-
-							if (err) { return cb(err); }
+							if (err) return cb(err);
 
 							for (let i = 0; rows[i] !== undefined; i ++) {
 								const	row	= rows[i];
@@ -154,7 +151,7 @@ Users.prototype.get = function (cb) {
 		}
 
 		db.query(sql, dbFields, function (err, rows) {
-			if (err) { cb(err); return; }
+			if (err) return cb(err);
 
 			totalElements = rows[0].totalElements;
 
