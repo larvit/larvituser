@@ -495,15 +495,23 @@ function replaceUserFields(uuid, fields, cb) {
 	const	options	= {'exchange': dataWriter.exchangeName},
 		sendObj	= {};
 
-	sendObj.action	= 'replaceFields';
-	sendObj.params	= {};
-	sendObj.params.userUuid	= uuid;
-	sendObj.params.fields	= fields;
+	fromUuid(uuid, function (err, user) {
 
-	dataWriter.intercom.send(sendObj, options, function (err, msgUuid) {
-		if (err) return cb(err);
+		if (err) {
+			return cb(err);
+		}
 
-		dataWriter.emitter.once(msgUuid, cb);
+		sendObj.action	= 'replaceFields';
+		sendObj.params	= {};
+		sendObj.params.username	= user.username;
+		sendObj.params.userUuid	= uuid;
+		sendObj.params.fields	= fields;
+
+		dataWriter.intercom.send(sendObj, options, function (err, msgUuid) {
+			if (err) return cb(err);
+
+			dataWriter.emitter.once(msgUuid, cb);
+		});
 	});
 }
 
