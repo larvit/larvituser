@@ -133,6 +133,13 @@ describe('User', function () {
 				done();
 			});
 		});
+
+		it('should not crash when undefined is sent in', function (done) {
+			userLib.hashPassword(undefined, function (err) {
+				if (err) throw err;
+				done();
+			});
+		});
 	});
 
 	describe('create', function () {

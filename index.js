@@ -472,6 +472,10 @@ function getFieldData(userUuid, fieldName, cb) {
 function hashPassword(password, cb) {
 	const	logPrefix	= topLogPrefix + 'hashPassword() - ';
 
+	if ( ! password) {
+		password = '';
+	}
+
 	password = password.trim();
 
 	bcrypt.hash(password, 10, function (err, hash) {
