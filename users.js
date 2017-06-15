@@ -82,7 +82,6 @@ Users.prototype.get = function (cb) {
 
 			// fetch field data for users, if requested
 			if (that.returnFields !== undefined && that.returnFields.length > 0) {
-
 				const subTasks = [];
 
 				for (let u of result) {
@@ -128,7 +127,6 @@ Users.prototype.get = function (cb) {
 				}
 
 				async.parallel(subTasks, cb);
-
 			} else {
 				cb(err);
 			}
