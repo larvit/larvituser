@@ -45,12 +45,17 @@ Users.prototype.get = function (cb) {
 		let	sql	= 'SELECT uuid, username FROM user_users WHERE 1 ';
 
 		if (that.matchAllFields !== undefined) {
-			for (let field in that.matchAllFields) {
+			for (const field in that.matchAllFields) {
 				sql	+= 'AND uuid IN (SELECT userUuid FROM user_users_data WHERE data = ?\n'
 					+	' AND fieldUuid = (SELECT uuid FROM user_data_fields WHERE name = ?))';
 				dbFields.push(that.matchAllFields[field]);
 				dbFields.push(field);
 			}
+		}
+
+		if (that.q !== undefined) {
+			sql += ' AND uuid IN (SELECT userUuid FROM user_users_data WHERE data LIKE ?)\n';
+			dbFields.push('%' + that.q + '%');
 		}
 
 		if (that.limit !== undefined && ! isNaN(parseInt(that.limit))) {
@@ -67,7 +72,6 @@ Users.prototype.get = function (cb) {
 			result = [];
 
 			for (let i = 0; rows[i] !== undefined; i ++) {
-
 				const	user	= {};
 
 				user.uuid	= lUtils.formatUuid(rows[i].uuid);
@@ -139,13 +143,18 @@ Users.prototype.get = function (cb) {
 		let	sql	= 'SELECT COUNT(*) AS totalElements FROM user_users WHERE 1 ';
 
 		if (that.matchAllFields !== undefined) {
-			for (let field in that.matchAllFields) {
+			for (const field in that.matchAllFields) {
 				sql	+= 'AND uuid IN (SELECT userUuid FROM user_users_data WHERE data = ?\n'
 					+	' AND fieldUuid = (SELECT uuid FROM user_data_fields WHERE name = ?))';
 
 				dbFields.push(that.matchAllFields[field]);
 				dbFields.push(field);
 			}
+		}
+
+		if (that.q !== undefined) {
+			sql += ' AND uuid IN (SELECT userUuid FROM user_users_data WHERE data LIKE ?)\n';
+			dbFields.push('%' + that.q + '%');
 		}
 
 		db.query(sql, dbFields, function (err, rows) {
