@@ -194,7 +194,7 @@ userLib.setPassword('f9684592-b245-42fa-88c6-9f16b9236ac3', false, function (err
 
 ```javascript
 userLib.setUsername('f9684592-b245-42fa-88c6-9f16b9236ac3', 'theNewUsername', function (err) {
-	// Now the users password is updated to "theNewUsername"
+	// Now the users username is updated to "theNewUsername"
 });
 ```
 
