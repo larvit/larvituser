@@ -373,6 +373,21 @@ function replaceFields(params, deliveryTag, msgUuid, cb) {
 		return cb(err);
 	}
 
+	// Check so the user uuid is valid
+	tasks.push(function (cb) {
+		db.query('SELECT * FROM user_users WHERE uuid = ?', userUuidBuf, function (err, rows) {
+			if (err) return cb(err);
+
+			if (rows.length === 0) {
+				const	err	= new Error('Invalid user uuid: "' + params.userUuid + '", no records found in database of this user');
+				log.warn(logPrefix + err.message);
+				return cb(err);
+			}
+
+			return cb();
+		});
+	});
+
 	// Clean out previous data
 	tasks.push(function (cb) {
 		db.query('DELETE FROM user_users_data WHERE userUuid = ?', [userUuidBuf], cb);
