@@ -34,10 +34,10 @@ function addUserDataField(userUuid, fieldName, fieldValue, cb) {
  */
 function addUserDataFields(userUuid, fields, cb) {
 	dataWriter.ready(function (err) {
-		if (err) return cb(err);
-
 		const	options	= {'exchange': dataWriter.exchangeName},
 			sendObj	= {};
+
+		if (err) return cb(err);
 
 		sendObj.action	= 'addUserDataFields';
 		sendObj.params	= {};
