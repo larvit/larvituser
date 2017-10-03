@@ -180,9 +180,26 @@ function create(params, deliveryTag, msgUuid, cb) {
 	}
 
 	db.query(sql, dbFields, function (err) {
-		if (err) log.warn(logPrefix + err.message);
-		exports.emitter.emit(msgUuid, err);
-		cb(err);
+		const fieldsParams	= {},
+			msgUuid2	= uuidLib.v4();
+
+		if (err) {
+			log.warn(logPrefix + err.message);
+			exports.emitter.emit(msgUuid, err);
+			return cb(err);
+		}
+
+		fieldsParams.userUuid	= params.uuid;
+		fieldsParams.fields	= params.fields;
+
+		addUserDataFields(fieldsParams, '', msgUuid2, function (err) {
+			if (err) {
+				log.warn(logPrefix + err.message);
+			}
+
+			exports.emitter.emit(msgUuid, err);
+			cb(err);
+		});
 	});
 }
 

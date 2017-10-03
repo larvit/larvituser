@@ -34,12 +34,13 @@ function addUserDataField(userUuid, fieldName, fieldValue, cb) {
  */
 function addUserDataFields(userUuid, fields, cb) {
 	dataWriter.ready(function (err) {
-		if (err) return cb(err);
-
-		if ( ! fields || Object.keys(fields).length === 0) return cb();
-
 		const	options	= {'exchange': dataWriter.exchangeName},
 			sendObj	= {};
+
+		if (err) return cb(err);
+
+		// do not want to broadcast msg on queue for no reason
+		if ( ! fields || Object.keys(fields).length === 0) return cb();
 
 		sendObj.action	= 'addUserDataFields';
 		sendObj.params	= {};
