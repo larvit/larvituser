@@ -39,6 +39,9 @@ function addUserDataFields(userUuid, fields, cb) {
 
 		if (err) return cb(err);
 
+		// Do not want to broadcast msg on queue for no reason
+		if ( ! fields || Object.keys(fields).length === 0) return cb();
+
 		sendObj.action	= 'addUserDataFields';
 		sendObj.params	= {};
 		sendObj.params.userUuid	= userUuid;
