@@ -24,6 +24,12 @@ function addUserDataFields(params, deliveryTag, msgUuid, cb) {
 
 	let sql	= 'INSERT INTO user_users_data (userUuid, fieldUuid, data) VALUES';
 
+	if (typeof deliveryTag === 'function') {
+		cb	= deliveryTag;
+		deliveryTag	= false;
+		msgUuid	= false;
+	}
+
 	if (cb === undefined || typeof cb !== 'function') {
 		cb = function () {};
 	}
@@ -59,7 +65,7 @@ function addUserDataFields(params, deliveryTag, msgUuid, cb) {
 	async.parallel(tasks, function (err) {
 		if (err) {
 			log.warn(logPrefix + err.message);
-			exports.emitter.emit(msgUuid, err);
+			if (msgUuid !== false) exports.emitter.emit(msgUuid, err);
 			return cb(err);
 		}
 
@@ -70,7 +76,7 @@ function addUserDataFields(params, deliveryTag, msgUuid, cb) {
 
 			// We need to setImmediate here since a listener on the other side must be done async to obtain a msgUuid
 			setImmediate(function () {
-				exports.emitter.emit(msgUuid);
+				if (msgUuid !== false) exports.emitter.emit(msgUuid);
 				return cb();
 			});
 			return; // Make sure no more execution is taking place
@@ -80,7 +86,7 @@ function addUserDataFields(params, deliveryTag, msgUuid, cb) {
 			if (err) {
 				log.warn(topLogPrefix + ' addUserDataFields() - ' + err.message);
 			}
-			exports.emitter.emit(msgUuid, err);
+			if (msgUuid !== false) exports.emitter.emit(msgUuid, err);
 			cb(err);
 		});
 	});
@@ -180,8 +186,7 @@ function create(params, deliveryTag, msgUuid, cb) {
 	}
 
 	db.query(sql, dbFields, function (err) {
-		const fieldsParams	= {},
-			msgUuid2	= uuidLib.v4();
+		const fieldsParams	= {};
 
 		if (err) {
 			log.warn(logPrefix + err.message);
@@ -192,7 +197,7 @@ function create(params, deliveryTag, msgUuid, cb) {
 		fieldsParams.userUuid	= params.uuid;
 		fieldsParams.fields	= params.fields;
 
-		addUserDataFields(fieldsParams, '', msgUuid2, function (err) {
+		addUserDataFields(fieldsParams, function (err) {
 			if (err) {
 				log.warn(logPrefix + err.message);
 			}

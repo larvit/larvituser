@@ -39,7 +39,7 @@ function addUserDataFields(userUuid, fields, cb) {
 
 		if (err) return cb(err);
 
-		// Do not want to broadcast msg on queue for no reason
+		// do not want to broadcast msg on queue for no reason
 		if ( ! fields || Object.keys(fields).length === 0) return cb();
 
 		sendObj.action	= 'addUserDataFields';
@@ -172,17 +172,13 @@ function create(username, password, userData, uuid, cb) {
 		sendObj.params.uuid	= uuid;
 		sendObj.params.username	= username;
 		sendObj.params.password	= hashedPassword;
+		sendObj.params.fields	= userData;
 
 		dataWriter.intercom.send(sendObj, options, function (err, msgUuid) {
 			if (err) return cb(err);
 
 			dataWriter.emitter.once(msgUuid, cb);
 		});
-	});
-
-	// Write fields via queue
-	tasks.push(function (cb) {
-		addUserDataFields(uuid, userData, cb);
 	});
 
 	async.series(tasks, function (err) {
