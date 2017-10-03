@@ -36,6 +36,8 @@ function addUserDataFields(userUuid, fields, cb) {
 	dataWriter.ready(function (err) {
 		if (err) return cb(err);
 
+		if ( ! fields || Object.keys(fields).length === 0) return cb();
+
 		const	options	= {'exchange': dataWriter.exchangeName},
 			sendObj	= {};
 
