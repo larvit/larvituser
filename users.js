@@ -53,7 +53,10 @@ Users.prototype.get = function (cb) {
 		}
 
 		if (that.q !== undefined) {
-			sqlWhere += ' AND uuid IN (SELECT userUuid FROM user_users_data WHERE data LIKE ?)\n';
+			sqlWhere += ' AND (\n';
+			sqlWhere += '   uuid IN (SELECT userUuid FROM user_users_data WHERE data LIKE ?)\n';
+			sqlWhere += '   OR username LIKE ?\n';
+			sqlWhere += ')\n';
 			dbFields.push('%' + that.q + '%');
 		}
 
