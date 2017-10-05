@@ -58,6 +58,7 @@ Users.prototype.get = function (cb) {
 			sqlWhere += '   OR username LIKE ?\n';
 			sqlWhere += ')\n';
 			dbFields.push('%' + that.q + '%');
+			dbFields.push('%' + that.q + '%');
 		}
 
 		if (that.uuids !== undefined) {
