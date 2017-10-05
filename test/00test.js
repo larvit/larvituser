@@ -551,6 +551,20 @@ describe('User', function () {
 				done();
 			});
 		});
+
+		it('Get users by uuid', function (done) {
+			const	users	= new userLib.Users();
+
+			users.uuids	= [uuids[1]];
+
+			users.get(function (err, userList) {
+				if (err) throw err;
+
+				assert.strictEqual(userList.length,	1);
+				assert.strictEqual(uuids[1],	userList[0].uuid);
+				done();
+			});
+		});
 	});
 });
 

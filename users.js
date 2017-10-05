@@ -31,22 +31,21 @@ Users.prototype.getFieldData = function (fieldName, cb) {
 };
 
 Users.prototype.get = function (cb) {
-	const	tasks	= [],
+	const	dbFields	= [],
+		tasks	= [],
 		that	= this;
 
-	let	totalElements,
+	let	sqlWhere	= '',
+		totalElements,
 		result;
 
 	tasks.push(dataWriter.ready);
 
+	// Build where-statement
 	tasks.push(function (cb) {
-		const	dbFields	= [];
-
-		let	sql	= 'SELECT uuid, username FROM user_users WHERE 1 ';
-
 		if (that.matchAllFields !== undefined) {
 			for (const field in that.matchAllFields) {
-				sql	+= 'AND uuid IN (SELECT userUuid FROM user_users_data WHERE data = ?\n'
+				sqlWhere	+= 'AND uuid IN (SELECT userUuid FROM user_users_data WHERE data = ?\n'
 					+	' AND fieldUuid = (SELECT uuid FROM user_data_fields WHERE name = ?))';
 				dbFields.push(that.matchAllFields[field]);
 				dbFields.push(field);
@@ -54,9 +53,35 @@ Users.prototype.get = function (cb) {
 		}
 
 		if (that.q !== undefined) {
-			sql += ' AND uuid IN (SELECT userUuid FROM user_users_data WHERE data LIKE ?)\n';
+			sqlWhere += ' AND uuid IN (SELECT userUuid FROM user_users_data WHERE data LIKE ?)\n';
 			dbFields.push('%' + that.q + '%');
 		}
+
+		if (that.uuids !== undefined) {
+			if ( ! Array.isArray(that.uuids)) {
+				that.uuids	= [that.uuids];
+			}
+
+			if (that.uuids.count === 0) {
+				sqlWhere += ' AND 1 = 2\n';
+				return cb();
+			}
+
+			sqlWhere += ' AND uuid IN (';
+
+			for (let i = 0; that.uuids[i] !== undefined; i ++) {
+				sqlWhere += '?,';
+				dbFields.push(lUtils.uuidToBuffer(that.uuids[i]));
+			}
+
+			sqlWhere = sqlWhere.substring(0, sqlWhere.length - 1) + ')\n';
+		}
+
+		cb();
+	});
+
+	tasks.push(function (cb) {
+		let	sql	= 'SELECT uuid, username FROM user_users WHERE 1 ' + sqlWhere;
 
 		if (that.limit !== undefined && ! isNaN(parseInt(that.limit))) {
 			sql += ' LIMIT ' + parseInt(that.limit);
@@ -138,24 +163,7 @@ Users.prototype.get = function (cb) {
 	});
 
 	tasks.push(function (cb) {
-		const	dbFields	= [];
-
-		let	sql	= 'SELECT COUNT(*) AS totalElements FROM user_users WHERE 1 ';
-
-		if (that.matchAllFields !== undefined) {
-			for (const field in that.matchAllFields) {
-				sql	+= 'AND uuid IN (SELECT userUuid FROM user_users_data WHERE data = ?\n'
-					+	' AND fieldUuid = (SELECT uuid FROM user_data_fields WHERE name = ?))';
-
-				dbFields.push(that.matchAllFields[field]);
-				dbFields.push(field);
-			}
-		}
-
-		if (that.q !== undefined) {
-			sql += ' AND uuid IN (SELECT userUuid FROM user_users_data WHERE data LIKE ?)\n';
-			dbFields.push('%' + that.q + '%');
-		}
+		const	sql	= 'SELECT COUNT(*) AS totalElements FROM user_users WHERE 1 ' + sqlWhere;
 
 		db.query(sql, dbFields, function (err, rows) {
 			if (err) return cb(err);
