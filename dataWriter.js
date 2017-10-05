@@ -185,8 +185,14 @@ function create(params, deliveryTag, msgUuid, cb) {
 		return cb(err);
 	}
 
-	db.query(sql, dbFields, function (err) {
+	db.query(sql, dbFields, function (err, results) {
 		const fieldsParams	= {};
+
+		if (results.affectedRows === 0) {
+			const	err	= new Error('No user created, duplicate key on uuid: "' + params.uuid + '" or username: "' + params.username + '"');
+			log.warn(logPrefix + err.message);
+			return cb(err);
+		}
 
 		if (err) {
 			log.warn(logPrefix + err.message);
