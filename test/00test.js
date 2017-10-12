@@ -9,21 +9,21 @@ const	Intercom	= require('larvitamintercom'),
 	db	= require('larvitdb'),
 	fs	= require('fs');
 
-userLib.dataWriter.mode = 'master';
-
-// Set up winston
 log.remove(log.transports.Console);
 /**/log.add(log.transports.Console, {
+	'level':	'warn',
 	'colorize':	true,
 	'timestamp':	true,
-	'level':	'warn',
 	'json':	false
-});
-/**/
+}); /**/
 
 before(function (done) {
 	this.timeout(10000);
 	const	tasks	= [];
+
+	// Setting intercom and mode
+	userLib.dataWriter.mode	= 'master';
+	userLib.dataWriter.intercom	= new Intercom('loopback interface');
 
 	// Run DB Setup
 	tasks.push(function (cb) {
@@ -67,12 +67,6 @@ before(function (done) {
 
 			cb();
 		});
-	});
-
-	// Setup intercom
-	tasks.push(function (cb) {
-		lUtils.instances.intercom = new Intercom('loopback interface');
-		lUtils.instances.intercom.on('ready', cb);
 	});
 
 	// Migrating user db etc

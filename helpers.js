@@ -3,8 +3,7 @@
 const	lUtils	= require('larvitutils'),
 	db	= require('larvitdb');
 
-let	dataWriter,
-	intercom;
+let	dataWriter;
 
 /**
  * Get field name by uuid
@@ -56,7 +55,7 @@ function getFieldUuid(fieldName, cb) {
 				sendObj.params 	= {};
 				sendObj.params.name = fieldName;
 
-				intercom.send(sendObj, options, function (err) {
+				dataWriter.intercom.send(sendObj, options, function (err) {
 					if (err) { cb(err); return; }
 
 					dataWriter.emitter.once('addedField_' + fieldName, function (err) {
@@ -71,14 +70,7 @@ function getFieldUuid(fieldName, cb) {
 
 function ready(cb) {
 	dataWriter	= require(__dirname + '/dataWriter.js'); // We must do this here since it might not be instanciated on module load
-
-	dataWriter.ready(function (err) {
-		if (err) return cb(err);
-
-		intercom	= lUtils.instances.intercom; // We must do this here since it might not be instanciated on module load
-
-		cb();
-	});
+	dataWriter.ready(cb);
 }
 
 exports.getFieldName	= getFieldName;
