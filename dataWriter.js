@@ -309,6 +309,9 @@ function listenToQueue(retries, cb) {
 		});
 	});
 
+	// Run the ready function
+	tasks.push(ready);
+
 	async.series(tasks, cb);
 }
 // Run listenToQueue as soon as all I/O is done, this makes sure the exports.mode can be set
@@ -393,7 +396,7 @@ function ready(retries, cb) {
 
 		dbMigration.run(function (err) {
 			if (err) {
-				log.error(topLogPrefix + err.message);
+				log.error(logPrefix + err.message);
 			}
 
 			cb(err);
@@ -406,7 +409,7 @@ function ready(retries, cb) {
 		isReady	= true;
 		eventEmitter.emit('ready');
 
-		if (exports.mode === 'both' || exports.mode === 'master') {
+		if (exports.mode === 'master') {
 			runDumpServer(cb);
 		} else {
 			cb();

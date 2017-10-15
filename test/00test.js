@@ -44,6 +44,7 @@ before(function (done) {
 				confFile = __dirname + '/../config/' + confFile;
 				fs.stat(confFile, function (err) {
 					if (err) throw err;
+
 					log.verbose('DB config: ' + JSON.stringify(require(confFile)));
 					db.setup(require(confFile), cb);
 				});
@@ -53,19 +54,6 @@ before(function (done) {
 
 			log.verbose('DB config: ' + JSON.stringify(require(confFile)));
 			db.setup(require(confFile), cb);
-		});
-	});
-
-	// Check for empty db
-	tasks.push(function (cb) {
-		db.query('SHOW TABLES', function (err, rows) {
-			if (err) throw err;
-
-			if (rows.length) {
-				throw new Error('Database is not empty. To make a test, you must supply an empty database!');
-			}
-
-			cb();
 		});
 	});
 
@@ -563,5 +551,7 @@ describe('User', function () {
 });
 
 after(function (done) {
-	db.removeAllTables(done);
+	setTimeout(function () {
+		db.removeAllTables(done);
+	}, 1500);
 });
