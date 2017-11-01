@@ -499,10 +499,7 @@ function replaceUserFields(uuid, fields, cb) {
 		sendObj	= {};
 
 	fromUuid(uuid, function (err, user) {
-
-		if (err) {
-			return cb(err);
-		}
+		if (err) return cb(err);
 
 		sendObj.action	= 'replaceFields';
 		sendObj.params	= {};

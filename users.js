@@ -66,7 +66,7 @@ Users.prototype.get = function (cb) {
 				that.uuids	= [that.uuids];
 			}
 
-			if (that.uuids.count === 0) {
+			if (that.uuids.length === 0) {
 				sqlWhere += ' AND 1 = 2\n';
 				return cb();
 			}
@@ -113,7 +113,7 @@ Users.prototype.get = function (cb) {
 				that.returnFields = [that.returnFields];
 			}
 
-			// fetch field data for users, if requested
+			// Fetch field data for users, if requested
 			if (that.returnFields !== undefined && that.returnFields.length > 0) {
 				const subTasks = [];
 
