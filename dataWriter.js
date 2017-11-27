@@ -12,7 +12,8 @@ const	EventEmitter	= require('events').EventEmitter,
 	amsync	= require('larvitamsync'),
 	async	= require('async'),
 	log	= require('winston'),
-	db	= require('larvitdb');
+	db	= require('larvitdb'),
+	that	= this;
 
 let	readyInProgress	= false,
 	isReady	= false;
@@ -347,6 +348,17 @@ function ready(retries, cb) {
 	tasks.push(function (cb) {
 		checkKey({
 			'obj':	exports,
+			'objectKey':	'options',
+			'default':	{}
+		}, function (err, warning) {
+			if (warning) log.warn(logPrefix + warning);
+			cb(err);
+		});
+	});
+
+	tasks.push(function (cb) {
+		checkKey({
+			'obj':	exports,
 			'objectKey':	'mode',
 			'validValues':	['master', 'slave', 'noSync'],
 			'default':	'noSync'
@@ -560,8 +572,13 @@ function rmUserField(params, deliveryTag, msgUuid, cb) {
 }
 
 function runDumpServer(cb) {
-	const	options	= {'exchange': exports.exchangeName + '_dataDump'},
-		args	= [];
+	const args	= [],
+		options	= {
+			'exchange': exports.exchangeName + '_dataDump',
+			'host': (that.options.amsync && that.options.amsync.host) ? that.options.amsync.host : null,
+			'minPort':	(that.options.amsync && that.options.amsync.minPort) ? that.options.amsync.minPort : null,
+			'maxPort':	(that.options.amsync && that.options.amsync.maxPort) ? that.options.amsync.maxPort : null
+		};
 
 	if (db.conf.host) {
 		args.push('-h');
@@ -588,7 +605,7 @@ function runDumpServer(cb) {
 
 	options.dataDumpCmd = {
 		'command':	'mysqldump',
-		'args':	args
+		'args':	args,
 	};
 
 	options['Content-Type']	= 'application/sql';
@@ -642,6 +659,7 @@ exports.addUserFieldReq	= addUserFieldReq;
 exports.create	= create;
 exports.emitter	= new EventEmitter();
 exports.exchangeName	= 'larvituser';
+exports.options	= undefined;
 exports.ready	= ready;
 exports.replaceFields	= replaceFields;
 exports.rmUser	= rmUser;

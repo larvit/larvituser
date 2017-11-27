@@ -834,6 +834,7 @@ exports.fromUsername	= fromUsername;
 exports.fromUuid	= fromUuid;
 exports.getFieldData	= getFieldData;
 exports.hashPassword	= hashPassword;
+exports.options	= dataWriter.options;
 exports.ready	= dataWriter.ready;
 exports.replaceUserFields	= replaceUserFields;
 exports.rmUser	= rmUser;
