@@ -575,11 +575,9 @@ function runDumpServer(cb) {
 	const args	= [],
 		options	= {
 			'exchange': exports.exchangeName + '_dataDump',
-			'amsync': {
-				'host': (that.options.amsync && that.options.amsync.host) ? that.options.amsync.host : null,
-				'minPort':	(that.options.amsync && that.options.amsync.minPort) ? that.options.amsync.minPort : null,
-				'maxPort':	(that.options.amsync && that.options.amsync.maxPort) ? that.options.amsync.maxPort : null
-			}
+			'host': (that.options.amsync && that.options.amsync.host) ? that.options.amsync.host : null,
+			'minPort':	(that.options.amsync && that.options.amsync.minPort) ? that.options.amsync.minPort : null,
+			'maxPort':	(that.options.amsync && that.options.amsync.maxPort) ? that.options.amsync.maxPort : null
 		};
 
 	if (db.conf.host) {
