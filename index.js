@@ -838,6 +838,7 @@ exports.options	= dataWriter.options;
 exports.ready	= dataWriter.ready;
 exports.replaceUserFields	= replaceUserFields;
 exports.rmUser	= rmUser;
+exports.rmUserField	= rmUserField;
 exports.setPassword	= setPassword;
 exports.setUsername	= setUsername;
 exports.usernameAvailable	= usernameAvailable;
