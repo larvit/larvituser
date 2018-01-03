@@ -241,7 +241,7 @@ function listenToQueue(retries, cb) {
 			'obj':	exports,
 			'objectKey':	'mode',
 			'validValues':	['master', 'slave', 'noSync'],
-			'default':	'noSync'
+			'default':	'master'
 		}, function (err, warning) {
 			if (warning) log.warn(logPrefix + warning);
 			cb(err);
