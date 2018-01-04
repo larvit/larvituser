@@ -97,8 +97,14 @@ function create(username, password, userData, uuid, cb) {
 		cb	= userData;
 		userData	= undefined;
 		uuid	= uuidLib.v1();
-	} else if (cb === undefined) {
+	}
+
+	if (cb === undefined) {
 		cb	= function () {};
+	}
+
+	if (uuid === undefined) {
+		uuid = uuidLib.v1();
 	}
 
 	username = username.trim();
