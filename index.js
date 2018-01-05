@@ -786,7 +786,11 @@ function userBase() {
 			return cb(err);
 		}
 
-		setUsername(returnObj.uuid, newUsername, cb);
+		setUsername(returnObj.uuid, newUsername, function (err) {
+			if (err) return cb(err);
+			returnObj.username	= newUsername;
+			cb();
+		});
 	};
 
 	return returnObj;
