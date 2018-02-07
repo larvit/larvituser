@@ -449,10 +449,22 @@ function fromUuid(userUuid, cb) {
  */
 function getFieldData(userUuid, fieldName, cb) {
 	exports.getFieldUuid(fieldName, function (err, fieldUuid) {
-		const	dbFields	= [lUtils.uuidToBuffer(userUuid), lUtils.uuidToBuffer(fieldUuid)],
+		const	userUuidBuffer	= lUtils.uuidToBuffer(userUuid),
+			fieldUuidBuffer	= lUtils.uuidToBuffer(fieldUuid),
+			dbFields	= [userUuidBuffer, fieldUuidBuffer],
 			sql	= 'SELECT data FROM user_users_data WHERE userUuid = ? AND fieldUuid = ?';
 
 		if (err) return cb(err);
+
+		if (userUuidBuffer === false) {
+			const e = new Error('Invalid user uuid');
+			return cb(e);
+		}
+
+		if (fieldUuidBuffer === false) {
+			const e = new Error('Invalid field uuid');
+			return cb(e);
+		}
 
 		db.query(sql, dbFields, function (err, rows) {
 			const	data	= [];
@@ -623,6 +635,12 @@ function setUsername(userUuid, newUsername, cb) {
 
 	if ( ! newUsername) {
 		const	err	= new Error('No new username supplied');
+		log.warn(logPrefix + err.message);
+		return cb(err);
+	}
+
+	if (userUuidBuf === false) {
+		const	err	= new Error('Invalid user uuid');
 		log.warn(logPrefix + err.message);
 		return cb(err);
 	}

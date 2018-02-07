@@ -1,8 +1,10 @@
 'use strict';
 
-const	dataWriter	= require(__dirname + '/dataWriter.js'),
+const	topLogPrefix = 'larvituser: users.js ',
+	dataWriter	= require(__dirname + '/dataWriter.js'),
 	lUtils	= require('larvitutils'),
 	async	= require('async'),
+	log	= require('winston'),
 	db	= require('larvitdb');
 
 function Users() {
@@ -33,7 +35,8 @@ Users.prototype.getFieldData = function (fieldName, cb) {
 Users.prototype.get = function (cb) {
 	const	dbFields	= [],
 		tasks	= [],
-		that	= this;
+		that	= this,
+		logPrefix = topLogPrefix + ' get() - ';
 
 	let	sqlWhere	= '',
 		totalElements,
@@ -74,6 +77,11 @@ Users.prototype.get = function (cb) {
 			sqlWhere += ' AND uuid IN (';
 
 			for (let i = 0; that.uuids[i] !== undefined; i ++) {
+				if (lUtils.uuidToBuffer(that.uuids[i]) === false) {
+					log.warn(logPrefix  + 'Invalid field uuid, skipping');
+					continue;
+				}
+
 				sqlWhere += '?,';
 				dbFields.push(lUtils.uuidToBuffer(that.uuids[i]));
 			}
@@ -137,6 +145,12 @@ Users.prototype.get = function (cb) {
 						sql = sql.substring(0, sql.length - 1);
 
 						sql += ') AND ud.userUuid = ?';
+
+						if (lUtils.uuidToBuffer(u.uuid) === false) {
+							log.warn(logPrefix + 'Inavlid user uuid, skipping');
+							return cb();
+						}
+
 						subFields.push(lUtils.uuidToBuffer(u.uuid));
 
 						db.query(sql, subFields, function (err, rows) {

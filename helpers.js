@@ -13,10 +13,15 @@ let	dataWriter;
  */
 function getFieldName(uuid, cb) {
 	ready(function () {
-		const	dbFields	= [lUtils.uuidToBuffer(uuid)],
+		const	fieldUuidBuffer = lUtils.uuidToBuffer(uuid),
 			sql	= 'SELECT name FROM user_data_fields WHERE uuid = ?';
 
-		db.query(sql, dbFields, function (err, rows) {
+		if (fieldUuidBuffer === false) {
+			const e = new Error('Invalid field uuid');
+			return cb(e);
+		}
+
+		db.query(sql, [fieldUuidBuffer], function (err, rows) {
 			if (err) { cb(err); return; }
 
 			if (rows.length) {

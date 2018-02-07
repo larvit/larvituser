@@ -131,6 +131,7 @@ describe('User', function () {
 
 				createdUuid = user.uuid;
 
+				assert.notStrictEqual(createdUuid, false);
 				assert.strictEqual(user.fields.lastname[1], 'Göransson');
 				assert(typeof user.uuid === 'string', 'uuid should be a string');
 				assert(user.uuid.length === 36, 'uuid should be exactly 36 characters long');

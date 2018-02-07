@@ -36,26 +36,41 @@ function addUserDataFields(params, deliveryTag, msgUuid, cb) {
 		cb = function () {};
 	}
 
+	if (userUuidBuffer === false) {
+		const err = new Error('Invalid userUuid');
+		log.warn(logPrefix + err.message);
+		if (msgUuid !== false) exports.emitter.emit(msgUuid, err);
+		return cb(err);
+	}
+
 	for (let key in params.fields) {
 		tasks.push(function (cb) {
 			helpers.getFieldUuid(key, function (err, fieldUuid) {
+				const fieldUuidBuffer = lUtils.uuidToBuffer(fieldUuid);
+
 				if (err) {
 					log.warn(logPrefix + err.message);
 					return cb(err);
 				}
 
+				if (fieldUuidBuffer === false) {
+					const e = new Error('Invalid fieldUuid');
+					log.warn(logPrefix + e.message);
+					return cb(e);
+				}
+
 				if (params.fields[key] === null || params.fields[key] === undefined) {
 					sql += '(?,?,NULL),';
-					dbValues.push(userUuidBuffer, lUtils.uuidToBuffer(fieldUuid));
+					dbValues.push(userUuidBuffer, fieldUuidBuffer);
 				} else {
 					if (Array.isArray(params.fields[key])) {
 						for (let i = 0; i < params.fields[key].length; i ++) {
 							sql += '(?,?,?),';
-							dbValues.push(userUuidBuffer, lUtils.uuidToBuffer(fieldUuid), params.fields[key][i]);
+							dbValues.push(userUuidBuffer, fieldUuidBuffer, params.fields[key][i]);
 						}
 					} else {
 						sql += '(?,?,?),';
-						dbValues.push(userUuidBuffer, lUtils.uuidToBuffer(fieldUuid), params.fields[key]);
+						dbValues.push(userUuidBuffer, fieldUuidBuffer, params.fields[key]);
 					}
 				}
 
@@ -96,7 +111,7 @@ function addUserDataFields(params, deliveryTag, msgUuid, cb) {
 
 function addUserField(params, deliveryTag, msgUuid, cb) {
 	const	logPrefix	= topLogPrefix + 'addUserField() - ',
-		uuid	= params.uuid,
+		uuidBuffer	= lUtils.uuidToBuffer(params.uuid),
 		name	= params.name,
 		sql	= 'INSERT IGNORE INTO user_data_fields (uuid, name) VALUES(?,?)';
 
@@ -104,7 +119,16 @@ function addUserField(params, deliveryTag, msgUuid, cb) {
 		cb = function () {};
 	}
 
-	db.query(sql, [lUtils.uuidToBuffer(uuid), name], function (err) {
+	if (uuidBuffer === false) {
+		const e  = new Error('Invalid field uuid');
+		log.warn(logPrefix + e.message);
+
+		exports.emitter.emit(msgUuid, e);
+		exports.emitter.emit('addedField_' + name, e);
+		return cb(err);
+	}
+
+	db.query(sql, [uuidBuffer, name], function (err) {
 		if (err) log.warn(logPrefix + err.message);
 
 		exports.emitter.emit(msgUuid, err);
@@ -169,17 +193,18 @@ function addUserFieldReq(params, deliveryTag, msgUuid, cb) {
 function create(params, deliveryTag, msgUuid, cb) {
 	const	logPrefix	= topLogPrefix + 'create() - ',
 		dbFields	= [],
-		sql	= 'INSERT IGNORE INTO user_users (uuid, username, password) VALUES(?,?,?);';
+		sql	= 'INSERT IGNORE INTO user_users (uuid, username, password) VALUES(?,?,?);',
+		uuidBuffer =	lUtils.uuidToBuffer(params.uuid);
 
 	if (cb === undefined || typeof cb !== 'function') {
 		cb = function () {};
 	}
 
-	dbFields.push(lUtils.uuidToBuffer(params.uuid));
+	dbFields.push(uuidBuffer);
 	dbFields.push(params.username);
 	dbFields.push(params.password);
 
-	if (dbFields[0] === false) {
+	if (uuidBuffer === false) {
 		const	err = new Error('Invalid user uuid supplied: "' + params.uuid + '", deliveryTag: "' + deliveryTag + '", msgUuid: "' + msgUuid + '"');
 
 		log.warn(logPrefix + err.message);
@@ -475,6 +500,13 @@ function replaceFields(params, deliveryTag, msgUuid, cb) {
 			tasks.push(function (cb) {
 				helpers.getFieldUuid(fieldName, function (err, fieldUuid) {
 					fieldNamesToUuidBufs[fieldName] = lUtils.uuidToBuffer(fieldUuid);
+
+					if (fieldNamesToUuidBufs[fieldName] === false) {
+						const e = new Error('Invalid field uuid');
+						log.warn(logPrefix + e.message);
+						return cb(e);
+					}
+
 					cb(err);
 				});
 			});
@@ -522,22 +554,30 @@ function replaceFields(params, deliveryTag, msgUuid, cb) {
 
 function rmUser(params, deliveryTag, msgUuid, cb) {
 	const	logPrefix	= topLogPrefix + 'rmUser() - ',
-		tasks	= [];
+		tasks	= [],
+		uuidBuffer	= lUtils.uuidToBuffer(params.userUuid);
 
 	if (cb === undefined || typeof cb !== 'function') {
 		cb = function () {};
 	}
 
+	if (uuidBuffer === false) {
+		const err = new Error('Invalid user uuid');
+		log.warn(logPrefix + err.message);
+		exports.emitter.emit(msgUuid, err);
+		return cb(err);
+	}
+
 	tasks.push(function (cb) {
 		const	sql	= 'DELETE FROM user_users_data WHERE userUuid = ?;';
 
-		db.query(sql, [lUtils.uuidToBuffer(params.userUuid)], cb);
+		db.query(sql, [uuidBuffer], cb);
 	});
 
 	tasks.push(function (cb) {
 		const	sql	= 'DELETE FROM user_users WHERE uuid = ?;';
 
-		db.query(sql, [lUtils.uuidToBuffer(params.userUuid)], cb);
+		db.query(sql, [uuidBuffer], cb);
 	});
 
 	async.series(tasks, function (err) {
@@ -555,7 +595,8 @@ function rmUserField(params, deliveryTag, msgUuid, cb) {
 	}
 
 	helpers.getFieldUuid(params.fieldName, function (err, fieldUuid) {
-		const	dbFields	= [lUtils.uuidToBuffer(params.userUuid), lUtils.uuidToBuffer(fieldUuid)],
+		const	userUuidBuffer = lUtils.uuidToBuffer(params.userUuid),
+			fieldUuidBuffer	= lUtils.uuidToBuffer(fieldUuid),
 			sql	= 'DELETE FROM user_users_data WHERE userUuid = ? AND fieldUuid = ?';
 
 		if (err) {
@@ -563,7 +604,21 @@ function rmUserField(params, deliveryTag, msgUuid, cb) {
 			return;
 		}
 
-		db.query(sql, dbFields, function (err) {
+		if (userUuidBuffer === false) {
+			const e = new Error('Invalid user uuid');
+			log.warn(logPrefix + e.message);
+			exports.emitter.emit(msgUuid, err);
+			return cb(e);
+		}
+
+		if (fieldUuidBuffer === false) {
+			const e = new Error('Invalid field uuid');
+			log.warn(logPrefix + e.message);
+			exports.emitter.emit(msgUuid, err);
+			return cb(e);
+		}
+
+		db.query(sql, [userUuidBuffer, fieldUuidBuffer], function (err) {
 			if (err) log.warn(logPrefix + err.message);
 			exports.emitter.emit(msgUuid, err);
 			cb(err);
@@ -617,10 +672,18 @@ function runDumpServer(cb) {
 function setPassword(params, deliveryTag, msgUuid, cb) {
 	const	logPrefix	= topLogPrefix + 'setPassword() - ',
 		dbFields	= [],
+		userUuidBuffer = lUtils.uuidToBuffer(params.userUuid),
 		sql	= 'UPDATE user_users SET password = ? WHERE uuid = ?;';
 
 	if (cb === undefined || typeof cb !== 'function') {
 		cb = function () {};
+	}
+
+	if (userUuidBuffer === false) {
+		const e = new Error('Invalid user uuid');
+		log.warn(logPrefix + e.message);
+		exports.emitter.emit(msgUuid, err);
+		return cb(e);
 	}
 
 	if (params.password === false) {
@@ -629,7 +692,7 @@ function setPassword(params, deliveryTag, msgUuid, cb) {
 		dbFields.push(params.password);
 	}
 
-	dbFields.push(lUtils.uuidToBuffer(params.userUuid));
+	dbFields.push(userUuidBuffer);
 	db.query(sql, dbFields, function (err) {
 		if (err) log.warn(logPrefix + err.message);
 		exports.emitter.emit(msgUuid, err);
@@ -639,11 +702,19 @@ function setPassword(params, deliveryTag, msgUuid, cb) {
 
 function setUsername(params, deliveryTag, msgUuid, cb) {
 	const	logPrefix	= topLogPrefix + 'setUsername() - ',
-		dbFields	= [params.username, lUtils.uuidToBuffer(params.userUuid)],
+		userUuidBuffer = lUtils.uuidToBuffer(params.userUuid),
+		dbFields	= [params.username, userUuidBuffer],
 		sql	= 'UPDATE user_users SET username = ? WHERE uuid = ?;';
 
 	if (cb === undefined || typeof cb !== 'function') {
 		cb = function () {};
+	}
+
+	if (userUuidBuffer === false) {
+		const e = new Error('Invalid user uuid');
+		log.warn(logPrefix + e.message);
+		exports.emitter.emit(msgUuid, err);
+		return cb(e);
 	}
 
 	db.query(sql, dbFields, function (err) {
