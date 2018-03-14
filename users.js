@@ -46,6 +46,19 @@ Users.prototype.get = function (cb) {
 
 	// Build where-statement
 	tasks.push(function (cb) {
+		if (that.matchExistingFields !== undefined) {
+			sqlWhere	+= 'AND uuid IN (\n';
+			sqlWhere	+= 'SELECT DISTINCT userUuid FROM user_users_data WHERE fieldUuid IN (\n';
+			sqlWhere	+= 'SELECT uuid FROM user_data_fields WHERE\n';
+
+			for (let i = 0; that.matchExistingFields[i] !== undefined; i ++) {
+				sqlWhere += 'name = ? OR ';
+				dbFields.push(that.matchExistingFields[i]);
+			}
+
+			sqlWhere = sqlWhere.substring(0, sqlWhere.length - 4) + '))\n';
+		}
+
 		if (that.matchAllFields !== undefined) {
 			for (const field in that.matchAllFields) {
 				sqlWhere	+= 'AND uuid IN (SELECT userUuid FROM user_users_data WHERE data = ?\n'

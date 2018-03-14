@@ -439,7 +439,7 @@ describe('User', function () {
 			const tasks	= [];
 
 			tasks.push(function (cb) {
-				userLib.create('user1', 'somepassword', { 'role' : ['customer', 'user']}, function (err, user) {
+				userLib.create('user1', 'somepassword', { 'role' : ['customer', 'user'], 'veryUnique': ['muchUnique']}, function (err, user) {
 					uuids.push(user.uuid);
 					if (err) throw err;
 					cb();
@@ -530,6 +530,22 @@ describe('User', function () {
 						assert.strictEqual(expectedFields.indexOf(key) > - 1, true);
 					}
 				}
+
+				done();
+			});
+		});
+
+		it('Get list of users where fieldData exists', function (done) {
+			const users = new userLib.Users();
+
+			users.matchExistingFields = ['veryUnique'];
+
+			users.get(function (err, userList, totalElements) {
+				if (err) throw err;
+
+				assert.strictEqual(totalElements, 1);
+				assert.strictEqual(userList.length, 1);
+				assert.strictEqual(userList[0].username, 'user1');
 
 				done();
 			});
