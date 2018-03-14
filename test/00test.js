@@ -536,16 +536,16 @@ describe('User', function () {
 		});
 
 		it('Get list of users where fieldData exists', function (done) {
-			const users = new userLib.Users();
+			const	users	= new userLib.Users();
 
-			users.matchExistingFields = ['veryUnique'];
+			users.matchExistingFields	= ['veryUnique'];
 
 			users.get(function (err, userList, totalElements) {
 				if (err) throw err;
 
-				assert.strictEqual(totalElements, 1);
-				assert.strictEqual(userList.length, 1);
-				assert.strictEqual(userList[0].username, 'user1');
+				assert.strictEqual(totalElements,	1);
+				assert.strictEqual(userList.length,	1);
+				assert.strictEqual(userList[0].username,	'user1');
 
 				done();
 			});
