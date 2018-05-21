@@ -568,7 +568,5 @@ describe('User', function () {
 });
 
 after(function (done) {
-	setTimeout(function () {
-		db.removeAllTables(done);
-	}, 1500);
+	db.removeAllTables(done);
 });
