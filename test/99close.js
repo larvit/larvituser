@@ -1,6 +1,7 @@
 'use strict';
 
-after(function () {
+after(function (done) {
+	done();
 	setTimeout(function () {
 		process.exit();
 	}, 500);
