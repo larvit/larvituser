@@ -1,6 +1,6 @@
 {
   "name": "larvituser",
-  "version": "0.13.4",
+  "version": "0.13.5",
   "author": {
     "name": "Mikael 'Lilleman' Göransson",
     "email": "lilleman@larvit.se",
@@ -22,7 +22,7 @@
   "description": "User module for node.js",
   "devDependencies": {
     "freeport": "^1.0.5",
-    "mocha": "^4.0.1",
+    "mocha": "^5.2.0",
     "mocha-eslint": "^4.1.0"
   },
   "scripts": {
