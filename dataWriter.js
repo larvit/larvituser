@@ -12,8 +12,7 @@ const	EventEmitter	= require('events').EventEmitter,
 	amsync	= require('larvitamsync'),
 	async	= require('async'),
 	log	= require('winston'),
-	db	= require('larvitdb'),
-	that	= this;
+	db	= require('larvitdb');
 
 let	readyInProgress	= false,
 	isReady	= false;
@@ -373,17 +372,6 @@ function ready(retries, cb) {
 	tasks.push(function (cb) {
 		checkKey({
 			'obj':	exports,
-			'objectKey':	'options',
-			'default':	{}
-		}, function (err, warning) {
-			if (warning) log.warn(logPrefix + warning);
-			cb(err);
-		});
-	});
-
-	tasks.push(function (cb) {
-		checkKey({
-			'obj':	exports,
 			'objectKey':	'mode',
 			'validValues':	['master', 'slave', 'noSync'],
 			'default':	'noSync'
@@ -627,12 +615,12 @@ function rmUserField(params, deliveryTag, msgUuid, cb) {
 }
 
 function runDumpServer(cb) {
-	const args	= [],
+	const	args	= [],
 		options	= {
-			'exchange': exports.exchangeName + '_dataDump',
-			'host': (that.options.amsync && that.options.amsync.host) ? that.options.amsync.host : null,
-			'minPort':	(that.options.amsync && that.options.amsync.minPort) ? that.options.amsync.minPort : null,
-			'maxPort':	(that.options.amsync && that.options.amsync.maxPort) ? that.options.amsync.maxPort : null
+			'exchange':	exports.exchangeName + '_dataDump',
+			'host':	(exports.amsync && exports.amsync.host)	? exports.amsync.host	: null,
+			'minPort':	(exports.amsync && exports.amsync.minPort)	? exports.amsync.minPort	: null,
+			'maxPort':	(exports.amsync && exports.amsync.maxPort)	? exports.amsync.maxPort	: null
 		};
 
 	if (db.conf.host) {
