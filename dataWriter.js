@@ -32,11 +32,11 @@ function addUserDataFields(params, deliveryTag, msgUuid, cb) {
 	}
 
 	if (cb === undefined || typeof cb !== 'function') {
-		cb = function () {};
+		cb	= function () {};
 	}
 
 	if (userUuidBuffer === false) {
-		const err = new Error('Invalid userUuid');
+		const	err	= new Error('Invalid userUuid');
 		log.warn(logPrefix + err.message);
 		if (msgUuid !== false) exports.emitter.emit(msgUuid, err);
 		return cb(err);
@@ -45,7 +45,7 @@ function addUserDataFields(params, deliveryTag, msgUuid, cb) {
 	for (let key in params.fields) {
 		tasks.push(function (cb) {
 			helpers.getFieldUuid(key, function (err, fieldUuid) {
-				const fieldUuidBuffer = lUtils.uuidToBuffer(fieldUuid);
+				const	fieldUuidBuffer	= lUtils.uuidToBuffer(fieldUuid);
 
 				if (err) {
 					log.warn(logPrefix + err.message);
@@ -53,13 +53,13 @@ function addUserDataFields(params, deliveryTag, msgUuid, cb) {
 				}
 
 				if (fieldUuidBuffer === false) {
-					const e = new Error('Invalid fieldUuid');
-					log.warn(logPrefix + e.message);
-					return cb(e);
+					const	err	= new Error('Invalid fieldUuid');
+					log.warn(logPrefix + err.message);
+					return cb(err);
 				}
 
 				if (params.fields[key] === null || params.fields[key] === undefined) {
-					sql += '(?,?,NULL),';
+					sql += '(?,?,\'\'),';
 					dbValues.push(userUuidBuffer, fieldUuidBuffer);
 				} else {
 					if (Array.isArray(params.fields[key])) {
@@ -100,7 +100,7 @@ function addUserDataFields(params, deliveryTag, msgUuid, cb) {
 
 		db.query(sql, dbValues, function (err) {
 			if (err) {
-				log.warn(topLogPrefix + ' addUserDataFields() - ' + err.message);
+				log.warn(topLogPrefix + 'addUserDataFields() - ' + err.message);
 			}
 			if (msgUuid !== false) exports.emitter.emit(msgUuid, err);
 			cb(err);

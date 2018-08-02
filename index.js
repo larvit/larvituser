@@ -130,7 +130,7 @@ function create(username, password, userData, uuid, cb) {
 				log.debug(logPrefix + 'Username available: "' + username + '"');
 				cb();
 			} else {
-				const err = new Error('Trying to create user with taken username: "' + username + '"');
+				const	err	= new Error('Trying to create user with taken username: "' + username + '"');
 
 				log.info(logPrefix + err.message);
 				cb(err);

@@ -103,7 +103,7 @@ describe('User', function () {
 		it('should create a hashed password', function (done) {
 			userLib.hashPassword('foobar', function (err, hash) {
 				if (err) throw err;
-				hashedPassword = hash;
+				hashedPassword	= hash;
 				done();
 			});
 		});
@@ -129,7 +129,7 @@ describe('User', function () {
 			userLib.create('lilleman', 'foobar', {'firstname': 'migal', 'lastname': ['Arvidsson', 'Göransson']}, function (err, user) {
 				if (err) throw err;
 
-				createdUuid = user.uuid;
+				createdUuid	= user.uuid;
 
 				assert.notStrictEqual(createdUuid, false);
 				assert.strictEqual(user.fields.lastname[1], 'Göransson');
