@@ -1,13 +1,14 @@
 'use strict';
 
 const	topLogPrefix = 'larvituser: users.js ',
-	dataWriter	= require(__dirname + '/dataWriter.js'),
-	lUtils	= require('larvitutils'),
-	async	= require('async'),
-	log	= require('winston'),
-	db	= require('larvitdb');
+	lUtils	= new (require('larvitutils'))(),
+	async	= require('async');
 
-function Users() {
+function Users(options) {
+	this.options = options;
+
+	if ( ! options.log) throw new Error('Required option log not set');
+	if ( ! options.db) throw new Error('Required option db not set');
 }
 
 /**
@@ -17,9 +18,10 @@ function Users() {
  * @param func cb(err, result) - an array with values liek ['value1', 'value2']
  */
 Users.prototype.getFieldData = function (fieldName, cb) {
-	const	sql	= 'SELECT DISTINCT d.data FROM user_users_data d JOIN user_data_fields f ON d.fieldUuid = f.uuid WHERE f.name = "' + fieldName + '"';
+	const	that	= this,
+		sql	= 'SELECT DISTINCT d.data FROM user_users_data d JOIN user_data_fields f ON d.fieldUuid = f.uuid WHERE f.name = "' + fieldName + '"';
 
-	db.query(sql, function (err, rows) {
+	that.options.db.query(sql, function (err, rows) {
 		const	result	= [];
 
 		if (err) return cb(err);
@@ -41,8 +43,6 @@ Users.prototype.get = function (cb) {
 	let	sqlWhere	= '',
 		totalElements,
 		result;
-
-	tasks.push(dataWriter.ready);
 
 	// Build where-statement
 	tasks.push(function (cb) {
@@ -116,7 +116,7 @@ Users.prototype.get = function (cb) {
 			}
 		}
 
-		db.query(sql, dbFields, function (err, rows) {
+		that.options.db.query(sql, dbFields, function (err, rows) {
 			if (err) return cb(err);
 
 			result = [];
@@ -166,7 +166,7 @@ Users.prototype.get = function (cb) {
 
 						subFields.push(lUtils.uuidToBuffer(u.uuid));
 
-						db.query(sql, subFields, function (err, rows) {
+						that.options.db.query(sql, subFields, function (err, rows) {
 							if (err) return cb(err);
 
 							for (let i = 0; rows[i] !== undefined; i ++) {
@@ -196,7 +196,7 @@ Users.prototype.get = function (cb) {
 	tasks.push(function (cb) {
 		const	sql	= 'SELECT COUNT(*) AS totalElements FROM user_users WHERE 1 ' + sqlWhere;
 
-		db.query(sql, dbFields, function (err, rows) {
+		that.options.db.query(sql, dbFields, function (err, rows) {
 			if (err) return cb(err);
 
 			totalElements = rows[0].totalElements;

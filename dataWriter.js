@@ -1,24 +1,42 @@
 'use strict';
 
 const	EventEmitter	= require('events').EventEmitter,
-	eventEmitter	= new EventEmitter(),
 	topLogPrefix	= 'larvituser: dataWriter.js - ',
 	DbMigration	= require('larvitdbmigration'),
-	Intercom	= require('larvitamintercom'),
-	helpers	= require(__dirname + '/helpers.js'),
+	Helpers	= require(__dirname + '/helpers.js'),
 	uuidLib	= require('uuid'),
-	checkKey	= require('check-object-key'),
-	lUtils	= require('larvitutils'),
+	lUtils	= new (require('larvitutils'))(),
 	amsync	= require('larvitamsync'),
-	async	= require('async'),
-	log	= require('winston'),
-	db	= require('larvitdb');
+	async	= require('async');
 
-let	readyInProgress	= false,
-	isReady	= false;
+function DataWriter(options, cb) {
+	const	that	= this;
 
-function addUserDataFields(params, deliveryTag, msgUuid, cb) {
-	const	userUuidBuffer	= lUtils.uuidToBuffer(params.userUuid),
+	that.readyInProgress	= false;
+	that.isReady	= false;
+
+	for (const key of Object.keys(options)) {
+		that[key]	= options[key];
+	}
+
+	that.emitter	= new EventEmitter();
+
+	that.listenToQueue(function (err) {
+		if (err) return cb(err);
+
+		that.helpers = new Helpers({
+			'dataWriter': that,
+			'log': options.log,
+			'db': options.db
+		});
+
+		cb();
+	});
+}
+
+DataWriter.prototype.addUserDataFields = function addUserDataFields(params, deliveryTag, msgUuid, cb) {
+	const	that	= this,
+		userUuidBuffer	= lUtils.uuidToBuffer(params.userUuid),
 		logPrefix	= topLogPrefix + 'addUserDataFields() - ',
 		dbValues	= [],
 		tasks	= [];
@@ -37,24 +55,24 @@ function addUserDataFields(params, deliveryTag, msgUuid, cb) {
 
 	if (userUuidBuffer === false) {
 		const	err	= new Error('Invalid userUuid');
-		log.warn(logPrefix + err.message);
-		if (msgUuid !== false) exports.emitter.emit(msgUuid, err);
+		that.log.warn(logPrefix + err.message);
+		if (msgUuid !== false) that.emitter.emit(msgUuid, err);
 		return cb(err);
 	}
 
 	for (let key in params.fields) {
 		tasks.push(function (cb) {
-			helpers.getFieldUuid(key, function (err, fieldUuid) {
+			that.helpers.getFieldUuid(key, function (err, fieldUuid) {
 				const	fieldUuidBuffer	= lUtils.uuidToBuffer(fieldUuid);
 
 				if (err) {
-					log.warn(logPrefix + err.message);
+					that.log.warn(logPrefix + err.message);
 					return cb(err);
 				}
 
 				if (fieldUuidBuffer === false) {
 					const	err	= new Error('Invalid fieldUuid');
-					log.warn(logPrefix + err.message);
+					that.log.warn(logPrefix + err.message);
 					return cb(err);
 				}
 
@@ -80,36 +98,37 @@ function addUserDataFields(params, deliveryTag, msgUuid, cb) {
 
 	async.parallel(tasks, function (err) {
 		if (err) {
-			log.warn(logPrefix + err.message);
-			if (msgUuid !== false) exports.emitter.emit(msgUuid, err);
+			that.log.warn(logPrefix + err.message);
+			if (msgUuid !== false) that.emitter.emit(msgUuid, err);
 			return cb(err);
 		}
 
 		sql = sql.substring(0, sql.length - 1);
 
 		if (dbValues.length === 0) {
-			log.info(logPrefix + 'No fields or field data specifed');
+			that.log.info(logPrefix + 'No fields or field data specifed');
 
 			// We need to setImmediate here since a listener on the other side must be done async to obtain a msgUuid
 			setImmediate(function () {
-				if (msgUuid !== false) exports.emitter.emit(msgUuid);
+				if (msgUuid !== false) that.emitter.emit(msgUuid);
 				return cb();
 			});
 			return; // Make sure no more execution is taking place
 		}
 
-		db.query(sql, dbValues, function (err) {
+		that.db.query(sql, dbValues, function (err) {
 			if (err) {
-				log.warn(topLogPrefix + 'addUserDataFields() - ' + err.message);
+				that.log.warn(topLogPrefix + 'addUserDataFields() - ' + err.message);
 			}
-			if (msgUuid !== false) exports.emitter.emit(msgUuid, err);
+			if (msgUuid !== false) that.emitter.emit(msgUuid, err);
 			cb(err);
 		});
 	});
-}
+};
 
-function addUserField(params, deliveryTag, msgUuid, cb) {
-	const	logPrefix	= topLogPrefix + 'addUserField() - ',
+DataWriter.prototype.addUserField = function addUserField(params, deliveryTag, msgUuid, cb) {
+	const	that	= this,	
+		logPrefix	= topLogPrefix + 'addUserField() - ',
 		uuidBuffer	= lUtils.uuidToBuffer(params.uuid),
 		name	= params.name,
 		sql	= 'INSERT IGNORE INTO user_data_fields (uuid, name) VALUES(?,?)';
@@ -120,42 +139,43 @@ function addUserField(params, deliveryTag, msgUuid, cb) {
 
 	if (uuidBuffer === false) {
 		const e  = new Error('Invalid field uuid');
-		log.warn(logPrefix + e.message);
+		that.log.warn(logPrefix + e.message);
 
-		exports.emitter.emit(msgUuid, e);
-		exports.emitter.emit('addedField_' + name, e);
+		that.emitter.emit(msgUuid, e);
+		that.emitter.emit('addedField_' + name, e);
 		return cb(err);
 	}
 
-	db.query(sql, [uuidBuffer, name], function (err) {
-		if (err) log.warn(logPrefix + err.message);
+	that.db.query(sql, [uuidBuffer, name], function (err) {
+		if (err) that.log.warn(logPrefix + err.message);
 
-		exports.emitter.emit(msgUuid, err);
-		exports.emitter.emit('addedField_' + name, err);
+		that.emitter.emit(msgUuid, err);
+		that.emitter.emit('addedField_' + name, err);
 		cb(err);
 	});
-}
+};
 
-function addUserFieldReq(params, deliveryTag, msgUuid, cb) {
-	const	logPrefix	= topLogPrefix + 'addUserFieldReq() - ',
+DataWriter.prototype.addUserFieldReq = function addUserFieldReq(params, deliveryTag, msgUuid, cb) {
+	const	that	= this,
+		logPrefix	= topLogPrefix + 'addUserFieldReq() - ',
 		fieldName	= params.name;
 
 	if (typeof cb !== 'function') {
 		cb = function () {};
 	}
 
-	if (exports.mode === 'master') {
+	if (that.mode === 'master') {
 		function run() {
-			if (exports.addUserFieldReqRunning === true) {
+			if (that.addUserFieldReqRunning === true) {
 				setTimeout(run, 10);
 				return;
 			}
 
-			exports.addUserFieldReqRunning = true;
+			that.addUserFieldReqRunning = true;
 
 			// Check if this is already set in the database
-			db.query('SELECT uuid FROM user_data_fields WHERE name = ?', [fieldName], function (err, rows) {
-				const	options	= {'exchange': exports.exchangeName},
+			that.db.query('SELECT uuid FROM user_data_fields WHERE name = ?', [fieldName], function (err, rows) {
+				const	options	= {'exchange': that.exchangeName},
 					sendObj	= {};
 
 				if (err) return cb(err);
@@ -165,18 +185,18 @@ function addUserFieldReq(params, deliveryTag, msgUuid, cb) {
 				sendObj.params.name	= fieldName;
 				sendObj.params.uuid	= (rows.length) ? lUtils.formatUuid(rows[0].uuid) : uuidLib.v1();
 
-				exports.emitter.once('addedField_' + fieldName, function (err) {
+				that.emitter.once('addedField_' + fieldName, function (err) {
 					if (err) return cb(err);
-					exports.addUserFieldReqRunning = false;
+					that.addUserFieldReqRunning = false;
 				});
 
-				exports.intercom.send(sendObj, options, function (err, msgUuid2) {
+				that.intercom.send(sendObj, options, function (err, msgUuid2) {
 					if (err) return cb(err);
 
-					exports.emitter.once(msgUuid2, function (err) {
+					that.emitter.once(msgUuid2, function (err) {
 						if (err) return cb(err);
 
-						exports.emitter.emit(msgUuid, err);
+						that.emitter.emit(msgUuid, err);
 
 						cb(err);
 					});
@@ -185,12 +205,13 @@ function addUserFieldReq(params, deliveryTag, msgUuid, cb) {
 		}
 		run();
 	} else {
-		log.debug(logPrefix + 'Ignoring since we are not master');
+		that.log.debug(logPrefix + 'Ignoring since we are not master');
 	}
-}
+};
 
-function create(params, deliveryTag, msgUuid, cb) {
-	const	logPrefix	= topLogPrefix + 'create() - ',
+DataWriter.prototype.create = function create(params, deliveryTag, msgUuid, cb) {
+	const	that	= this,	
+		logPrefix	= topLogPrefix + 'create() - ',
 		dbFields	= [],
 		sql	= 'INSERT IGNORE INTO user_users (uuid, username, password) VALUES(?,?,?);',
 		uuidBuffer =	lUtils.uuidToBuffer(params.uuid);
@@ -206,43 +227,44 @@ function create(params, deliveryTag, msgUuid, cb) {
 	if (uuidBuffer === false) {
 		const	err = new Error('Invalid user uuid supplied: "' + params.uuid + '", deliveryTag: "' + deliveryTag + '", msgUuid: "' + msgUuid + '"');
 
-		log.warn(logPrefix + err.message);
-		exports.emitter.emit(msgUuid, err);
+		that.log.warn(logPrefix + err.message);
+		that.emitter.emit(msgUuid, err);
 		return cb(err);
 	}
 
-	db.query(sql, dbFields, function (err, results) {
+	that.db.query(sql, dbFields, function (err, results) {
 		const fieldsParams	= {};
 
 		if (results.affectedRows === 0) {
 			const	err	= new Error('No user created, duplicate key on uuid: "' + params.uuid + '" or username: "' + params.username + '"');
-			log.warn(logPrefix + err.message);
+			that.log.warn(logPrefix + err.message);
 			return cb(err);
 		}
 
 		if (err) {
-			log.warn(logPrefix + err.message);
-			exports.emitter.emit(msgUuid, err);
+			that.log.warn(logPrefix + err.message);
+			that.emitter.emit(msgUuid, err);
 			return cb(err);
 		}
 
 		fieldsParams.userUuid	= params.uuid;
 		fieldsParams.fields	= params.fields;
 
-		addUserDataFields(fieldsParams, function (err) {
+		that.addUserDataFields(fieldsParams, function (err) {
 			if (err) {
-				log.warn(logPrefix + err.message);
+				that.log.warn(logPrefix + err.message);
 			}
 
-			exports.emitter.emit(msgUuid, err);
+			that.emitter.emit(msgUuid, err);
 			cb(err);
 		});
 	});
-}
+};
 
-function listenToQueue(retries, cb) {
-	const	logPrefix	= topLogPrefix + 'listenToQueue() - ',
-		options	= {'exchange': exports.exchangeName},
+DataWriter.prototype.listenToQueue = function listenToQueue(retries, cb) {
+	const	that	= this,
+		logPrefix	= topLogPrefix + 'listenToQueue() - ',
+		options	= {'exchange': that.exchangeName},
 		tasks	= [];
 
 	let	listenMethod;
@@ -261,73 +283,49 @@ function listenToQueue(retries, cb) {
 	}
 
 	tasks.push(function (cb) {
-		checkKey({
-			'obj':	exports,
-			'objectKey':	'mode',
-			'validValues':	['master', 'slave', 'noSync'],
-			'default':	'master'
-		}, function (err, warning) {
-			if (warning) log.warn(logPrefix + warning);
-			cb(err);
-		});
-	});
-
-	tasks.push(function (cb) {
-		checkKey({
-			'obj':	exports,
-			'objectKey':	'intercom',
-			'default':	new Intercom('loopback interface'),
-			'defaultLabel':	'loopback interface'
-		}, function (err, warning) {
-			if (warning) log.warn(logPrefix + warning);
-			cb(err);
-		});
-	});
-
-	tasks.push(function (cb) {
-		if (exports.mode === 'master') {
+		if (that.mode === 'master') {
 			listenMethod	= 'consume';
 			options.exclusive	= true;	// It is important no other client tries to sneak
 			//		// out messages from us, and we want "consume"
 			//		// since we want the queue to persist even if this
 			//		// minion goes offline.
-		} else if (exports.mode === 'slave' || exports.mode === 'noSync') {
+		} else if (that.mode === 'slave' || that.mode === 'noSync') {
 			listenMethod = 'subscribe';
 		} else {
-			const	err	= new Error('Invalid exports.mode. Must be either "master", "slave" or "noSync"');
-			log.error(logPrefix + err.message);
+			const	err	= new Error('Invalid that.mode. Must be either "master", "slave" or "noSync"');
+			that.log.error(logPrefix + err.message);
 			return cb(err);
 		}
 
-		log.info(logPrefix + 'listenMethod: ' + listenMethod);
+		that.log.info(logPrefix + 'listenMethod: ' + listenMethod);
 		cb();
 	});
 
 	tasks.push(function (cb) {
-		exports.intercom.ready(function (err) {
+		that.intercom.ready(function (err) {
 			if (err) {
-				log.error(logPrefix + 'intercom.ready() err: ' + err.message);
+				that.log.error(logPrefix + 'intercom.ready() err: ' + err.message);
 				return;
 			}
 
-			exports.intercom[listenMethod](options, function (message, ack, deliveryTag) {
-				exports.ready(function (err) {
+			that.intercom[listenMethod](options, function (message, ack, deliveryTag) {
+				that.ready(function (err) {
 					ack(err); // Ack first, if something goes wrong we log it and handle it manually
 
 					if (err) {
-						log.error(logPrefix + 'intercom.' + listenMethod + '() - exports.ready() returned err: ' + err.message);
+						that.log.error(logPrefix + 'intercom.' + listenMethod + '() - that.ready() returned err: ' + err.message);
 						return;
 					}
 
 					if (typeof message !== 'object') {
-						log.error(logPrefix + 'intercom.' + listenMethod + '() - Invalid message received, is not an object! deliveryTag: "' + deliveryTag + '"');
+						that.log.error(logPrefix + 'intercom.' + listenMethod + '() - Invalid message received, is not an object! deliveryTag: "' + deliveryTag + '"');
 						return;
 					}
 
-					if (typeof exports[message.action] === 'function') {
-						exports[message.action](message.params, deliveryTag, message.uuid);
+					if (typeof that[message.action] === 'function') {
+						that[message.action](message.params, deliveryTag, message.uuid);
 					} else {
-						log.warn(logPrefix + 'intercom.' + listenMethod + '() - Unknown message.action received: "' + message.action + '"');
+						that.log.warn(logPrefix + 'intercom.' + listenMethod + '() - Unknown message.action received: "' + message.action + '"');
 					}
 				});
 			}, cb);
@@ -335,17 +333,18 @@ function listenToQueue(retries, cb) {
 	});
 
 	// Run the ready function
-	tasks.push(ready);
+	tasks.push(function (cb) {
+		that.ready(cb);
+	});
 
 	async.series(tasks, cb);
-}
-// Run listenToQueue as soon as all I/O is done, this makes sure the exports.mode can be set
-// by the application before listening commences
-setImmediate(listenToQueue);
+};
 
-function ready(retries, cb) {
-	const	logPrefix	= topLogPrefix + 'ready() - ',
-		tasks	= [];
+DataWriter.prototype.ready = function ready(retries, cb) {
+	const	that	= this,
+		logPrefix	= topLogPrefix + 'ready() - ';
+
+	let	dbMigration;
 
 	if (typeof retries === 'function') {
 		cb	= retries;
@@ -360,90 +359,44 @@ function ready(retries, cb) {
 		retries	= 0;
 	}
 
-	if (isReady === true) return cb();
+	if (that.isReady === true) return cb();
 
-	if (readyInProgress === true) {
-		eventEmitter.on('ready', cb);
+	if (that.readyInProgress === true) {
+		that.emitter.on('ready', cb);
 		return;
 	}
 
-	readyInProgress = true;
+	that.readyInProgress = true;
 
-	tasks.push(function (cb) {
-		checkKey({
-			'obj':	exports,
-			'objectKey':	'mode',
-			'validValues':	['master', 'slave', 'noSync'],
-			'default':	'noSync'
-		}, function (err, warning) {
-			if (warning) log.warn(logPrefix + warning);
-			cb(err);
-		});
+	that.log.debug(logPrefix + 'Waiting for dbmigration()');
+
+	dbMigration	= new DbMigration({
+		'dbType': 'mariadb',
+		'dbDriver': that.db,
+		'tableName': 'users_db_version',
+		'migrationScriptsPath': __dirname + '/dbmigration'
 	});
 
-	tasks.push(function (cb) {
-		checkKey({
-			'obj':	exports,
-			'objectKey':	'intercom',
-			'default':	new Intercom('loopback interface'),
-			'defaultLabel':	'loopback interface'
-		}, function (err, warning) {
-			if (warning) log.warn(logPrefix + warning);
-			cb(err);
-		});
-	});
+	dbMigration.run(function (err) {
+		if (err) {
+			that.log.error(logPrefix + err.message);
+			return cb(err);
+		}
 
-	tasks.push(function (cb) {
-		if (exports.mode === 'slave') {
-			log.verbose(logPrefix + 'exports.mode: "' + exports.mode + '", so read');
-			amsync.mariadb({
-				'exchange':	exports.exchangeName + '_dataDump',
-				'intercom':	exports.intercom
-			}, cb);
+		that.isReady	= true;
+		that.emitter.emit('ready');
+
+		if (that.mode === 'master') {
+			that.runDumpServer(cb);
 		} else {
 			cb();
 		}
 	});
+};
 
-	// Migrate database
-	tasks.push(function (cb) {
-		const	options	= {};
-
-		let	dbMigration;
-
-		log.debug(logPrefix + 'Waiting for dbmigration()');
-
-		options.dbType	= 'larvitdb';
-		options.dbDriver	= db;
-		options.tableName	= 'users_db_version';
-		options.migrationScriptsPath	= __dirname + '/dbmigration';
-		dbMigration	= new DbMigration(options);
-
-		dbMigration.run(function (err) {
-			if (err) {
-				log.error(logPrefix + err.message);
-			}
-
-			cb(err);
-		});
-	});
-
-	async.series(tasks, function (err) {
-		if (err) return;
-
-		isReady	= true;
-		eventEmitter.emit('ready');
-
-		if (exports.mode === 'master') {
-			runDumpServer(cb);
-		} else {
-			cb();
-		}
-	});
-}
-
-function replaceFields(params, deliveryTag, msgUuid, cb) {
-	const	fieldNamesToUuidBufs	= {},
+DataWriter.prototype.replaceFields = function replaceFields(params, deliveryTag, msgUuid, cb) {
+	const	that	= this,
+		fieldNamesToUuidBufs	= {},
 		userUuidBuf	= lUtils.uuidToBuffer(params.userUuid),
 		logPrefix	= topLogPrefix + 'replaceFields() - ',
 		tasks	= [];
@@ -455,19 +408,19 @@ function replaceFields(params, deliveryTag, msgUuid, cb) {
 	if (userUuidBuf === false) {
 		const	err = new Error('Invalid user uuid supplied: "' + params.userUuid + '", deliveryTag: "' + deliveryTag + '", msgUuid: "' + msgUuid + '"');
 
-		log.warn(logPrefix + err.message);
-		exports.emitter.emit(msgUuid, err);
+		that.log.warn(logPrefix + err.message);
+		that.emitter.emit(msgUuid, err);
 		return cb(err);
 	}
 
 	// Check so the user uuid is valid
 	tasks.push(function (cb) {
-		db.query('SELECT * FROM user_users WHERE uuid = ?', userUuidBuf, function (err, rows) {
+		that.db.query('SELECT * FROM user_users WHERE uuid = ?', userUuidBuf, function (err, rows) {
 			if (err) return cb(err);
 
 			if (rows.length === 0) {
 				const	err	= new Error('Invalid user uuid: "' + params.userUuid + '", no records found in database of this user');
-				log.warn(logPrefix + err.message);
+				that.log.warn(logPrefix + err.message);
 				return cb(err);
 			}
 
@@ -477,7 +430,7 @@ function replaceFields(params, deliveryTag, msgUuid, cb) {
 
 	// Clean out previous data
 	tasks.push(function (cb) {
-		db.query('DELETE FROM user_users_data WHERE userUuid = ?', [userUuidBuf], cb);
+		that.db.query('DELETE FROM user_users_data WHERE userUuid = ?', [userUuidBuf], cb);
 	});
 
 	// Get field uuids
@@ -486,12 +439,12 @@ function replaceFields(params, deliveryTag, msgUuid, cb) {
 
 		for (const fieldName of Object.keys(params.fields)) {
 			tasks.push(function (cb) {
-				helpers.getFieldUuid(fieldName, function (err, fieldUuid) {
+				that.helpers.getFieldUuid(fieldName, function (err, fieldUuid) {
 					fieldNamesToUuidBufs[fieldName] = lUtils.uuidToBuffer(fieldUuid);
 
 					if (fieldNamesToUuidBufs[fieldName] === false) {
 						const e = new Error('Invalid field uuid');
-						log.warn(logPrefix + e.message);
+						that.log.warn(logPrefix + e.message);
 						return cb(e);
 					}
 
@@ -530,18 +483,19 @@ function replaceFields(params, deliveryTag, msgUuid, cb) {
 
 		if (dbFields.length === 0) return cb();
 
-		db.query(sql, dbFields, cb);
+		that.db.query(sql, dbFields, cb);
 	});
 
 	async.series(tasks, function (err) {
-		if (err) log.warn(logPrefix + err.message);
-		exports.emitter.emit(msgUuid, err);
+		if (err) that.log.warn(logPrefix + err.message);
+		that.emitter.emit(msgUuid, err);
 		cb(err);
 	});
-}
+};
 
-function rmUser(params, deliveryTag, msgUuid, cb) {
-	const	logPrefix	= topLogPrefix + 'rmUser() - ',
+DataWriter.prototype.rmUser = function rmUser(params, deliveryTag, msgUuid, cb) {
+	const	that	= this,
+		logPrefix	= topLogPrefix + 'rmUser() - ',
 		tasks	= [],
 		uuidBuffer	= lUtils.uuidToBuffer(params.userUuid);
 
@@ -551,79 +505,83 @@ function rmUser(params, deliveryTag, msgUuid, cb) {
 
 	if (uuidBuffer === false) {
 		const err = new Error('Invalid user uuid');
-		log.warn(logPrefix + err.message);
-		exports.emitter.emit(msgUuid, err);
+		that.log.warn(logPrefix + err.message);
+		that.emitter.emit(msgUuid, err);
 		return cb(err);
 	}
 
 	tasks.push(function (cb) {
 		const	sql	= 'DELETE FROM user_users_data WHERE userUuid = ?;';
 
-		db.query(sql, [uuidBuffer], cb);
+		that.db.query(sql, [uuidBuffer], cb);
 	});
 
 	tasks.push(function (cb) {
 		const	sql	= 'DELETE FROM user_users WHERE uuid = ?;';
 
-		db.query(sql, [uuidBuffer], cb);
+		that.db.query(sql, [uuidBuffer], cb);
 	});
 
 	async.series(tasks, function (err) {
-		if (err) log.warn(logPrefix + err.message);
-		exports.emitter.emit(msgUuid, err);
+		if (err) that.log.warn(logPrefix + err.message);
+		that.emitter.emit(msgUuid, err);
 		cb(err);
 	});
-}
+};
 
-function rmUserField(params, deliveryTag, msgUuid, cb) {
-	const	logPrefix	= topLogPrefix + 'rmUserField() - ';
+DataWriter.prototype.rmUserField = function rmUserField(params, deliveryTag, msgUuid, cb) {
+	const	that	= this,
+		logPrefix	= topLogPrefix + 'rmUserField() - ';
 
 	if (cb === undefined || typeof cb !== 'function') {
 		cb = function () {};
 	}
 
-	helpers.getFieldUuid(params.fieldName, function (err, fieldUuid) {
+	that.helpers.getFieldUuid(params.fieldName, function (err, fieldUuid) {
 		const	userUuidBuffer = lUtils.uuidToBuffer(params.userUuid),
 			fieldUuidBuffer	= lUtils.uuidToBuffer(fieldUuid),
 			sql	= 'DELETE FROM user_users_data WHERE userUuid = ? AND fieldUuid = ?';
 
 		if (err) {
-			exports.emitter.emit(msgUuid, err);
+			that.emitter.emit(msgUuid, err);
 			return;
 		}
 
 		if (userUuidBuffer === false) {
 			const e = new Error('Invalid user uuid');
-			log.warn(logPrefix + e.message);
-			exports.emitter.emit(msgUuid, err);
+			that.log.warn(logPrefix + e.message);
+			that.emitter.emit(msgUuid, err);
 			return cb(e);
 		}
 
 		if (fieldUuidBuffer === false) {
 			const e = new Error('Invalid field uuid');
-			log.warn(logPrefix + e.message);
-			exports.emitter.emit(msgUuid, err);
+			that.log.warn(logPrefix + e.message);
+			that.emitter.emit(msgUuid, err);
 			return cb(e);
 		}
 
-		db.query(sql, [userUuidBuffer, fieldUuidBuffer], function (err) {
-			if (err) log.warn(logPrefix + err.message);
-			exports.emitter.emit(msgUuid, err);
+		that.db.query(sql, [userUuidBuffer, fieldUuidBuffer], function (err) {
+			if (err) that.log.warn(logPrefix + err.message);
+			that.emitter.emit(msgUuid, err);
 			cb(err);
 		});
 	});
-}
+};
 
-function runDumpServer(cb) {
-	const	args	= [],
+DataWriter.prototype.runDumpServer = function runDumpServer(cb) {
+	const	that	= this,
+		args	= [],
 		options	= {
-			'exchange':	exports.exchangeName + '_dataDump',
-			'host':	(exports.amsync && exports.amsync.host)	? exports.amsync.host	: null,
-			'minPort':	(exports.amsync && exports.amsync.minPort)	? exports.amsync.minPort	: null,
-			'maxPort':	(exports.amsync && exports.amsync.maxPort)	? exports.amsync.maxPort	: null
+			'exchange':	that.exchangeName + '_dataDump',
+			'host':	(that.amsync && that.amsync.host)	? that.amsync.host	: null,
+			'minPort':	(that.amsync && that.amsync.minPort)	? that.amsync.minPort	: null,
+			'maxPort':	(that.amsync && that.amsync.maxPort)	? that.amsync.maxPort	: null,
+			'intercom': that.intercom,
+			'log': that.log
 		};
 
-	if (db.conf.host) {
+	if (that.db.conf.host) {
 		args.push('-h');
 		args.push(db.conf.host);
 	}
@@ -631,7 +589,7 @@ function runDumpServer(cb) {
 	args.push('-u');
 	args.push(db.conf.user);
 
-	if (db.conf.password) {
+	if (that.db.conf.password) {
 		args.push('-p' + db.conf.password);
 	}
 
@@ -652,13 +610,14 @@ function runDumpServer(cb) {
 	};
 
 	options['Content-Type']	= 'application/sql';
-	options.intercom	= exports.intercom;
+	options.intercom	= that.intercom;
 
 	new amsync.SyncServer(options, cb);
-}
+};
 
-function setPassword(params, deliveryTag, msgUuid, cb) {
-	const	logPrefix	= topLogPrefix + 'setPassword() - ',
+DataWriter.prototype.setPassword = function setPassword(params, deliveryTag, msgUuid, cb) {
+	const	that	= this,
+		logPrefix	= topLogPrefix + 'setPassword() - ',
 		dbFields	= [],
 		userUuidBuffer = lUtils.uuidToBuffer(params.userUuid),
 		sql	= 'UPDATE user_users SET password = ? WHERE uuid = ?;';
@@ -669,8 +628,8 @@ function setPassword(params, deliveryTag, msgUuid, cb) {
 
 	if (userUuidBuffer === false) {
 		const e = new Error('Invalid user uuid');
-		log.warn(logPrefix + e.message);
-		exports.emitter.emit(msgUuid, err);
+		that.log.warn(logPrefix + e.message);
+		that.emitter.emit(msgUuid, err);
 		return cb(e);
 	}
 
@@ -681,14 +640,14 @@ function setPassword(params, deliveryTag, msgUuid, cb) {
 	}
 
 	dbFields.push(userUuidBuffer);
-	db.query(sql, dbFields, function (err) {
-		if (err) log.warn(logPrefix + err.message);
-		exports.emitter.emit(msgUuid, err);
+	that.db.query(sql, dbFields, function (err) {
+		if (err) that.log.warn(logPrefix + err.message);
+		that.emitter.emit(msgUuid, err);
 		cb(err);
 	});
-}
+};
 
-function setUsername(params, deliveryTag, msgUuid, cb) {
+DataWriter.prototype.setUsername = function setUsername(params, deliveryTag, msgUuid, cb) {
 	const	logPrefix	= topLogPrefix + 'setUsername() - ',
 		userUuidBuffer = lUtils.uuidToBuffer(params.userUuid),
 		dbFields	= [params.username, userUuidBuffer],
@@ -700,28 +659,16 @@ function setUsername(params, deliveryTag, msgUuid, cb) {
 
 	if (userUuidBuffer === false) {
 		const e = new Error('Invalid user uuid');
-		log.warn(logPrefix + e.message);
-		exports.emitter.emit(msgUuid, err);
+		that.log.warn(logPrefix + e.message);
+		that.emitter.emit(msgUuid, err);
 		return cb(e);
 	}
 
-	db.query(sql, dbFields, function (err) {
-		if (err) log.warn(logPrefix + err.message);
-		exports.emitter.emit(msgUuid, err);
+	that.db.query(sql, dbFields, function (err) {
+		if (err) that.log.warn(logPrefix + err.message);
+		that.emitter.emit(msgUuid, err);
 		cb(err);
 	});
-}
+};
 
-exports.addUserDataFields	= addUserDataFields;
-exports.addUserField	= addUserField;
-exports.addUserFieldReq	= addUserFieldReq;
-exports.create	= create;
-exports.emitter	= new EventEmitter();
-exports.exchangeName	= 'larvituser';
-exports.options	= undefined;
-exports.ready	= ready;
-exports.replaceFields	= replaceFields;
-exports.rmUser	= rmUser;
-exports.rmUserField	= rmUserField;
-exports.setPassword	= setPassword;
-exports.setUsername	= setUsername;
+exports = module.exports = DataWriter;

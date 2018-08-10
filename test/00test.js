@@ -1,29 +1,18 @@
 'use strict';
 
-const	Intercom	= require('larvitamintercom'),
-	userLib	= require('../index.js'),
+const	User	= require('../index.js'),
 	assert	= require('assert'),
-	lUtils	= require('larvitutils'),
+	lUtils	= new (require('larvitutils'))(),
 	async	= require('async'),
-	log	= require('winston'),
+	log	= new lUtils.Log('warning'),
 	db	= require('larvitdb'),
 	fs	= require('fs');
 
-log.remove(log.transports.Console);
-/**/log.add(log.transports.Console, {
-	'level':	'warn',
-	'colorize':	true,
-	'timestamp':	true,
-	'json':	false
-}); /**/
+let userLib;
 
 before(function (done) {
 	this.timeout(10000);
 	const	tasks	= [];
-
-	// Setting intercom and mode
-	userLib.dataWriter.mode	= 'master';
-	userLib.dataWriter.intercom	= new Intercom('loopback interface');
 
 	// Run DB Setup
 	tasks.push(function (cb) {
@@ -39,27 +28,49 @@ before(function (done) {
 
 		// First look for absolute path
 		fs.stat(confFile, function (err) {
+			let conf;
+
 			if (err) {
+
 				// Then look for this string in the config folder
 				confFile = __dirname + '/../config/' + confFile;
 				fs.stat(confFile, function (err) {
 					if (err) throw err;
-
 					log.verbose('DB config: ' + JSON.stringify(require(confFile)));
-					db.setup(require(confFile), cb);
+
+					conf = require(confFile);
+					conf.log = log;
+					db.setup(conf, cb);
 				});
 
 				return;
 			}
 
 			log.verbose('DB config: ' + JSON.stringify(require(confFile)));
-			db.setup(require(confFile), cb);
+			conf = require(confFile);
+			conf.log = log;
+			db.setup(conf, cb);
 		});
 	});
 
-	// Migrating user db etc
+	// Check for empty db
 	tasks.push(function (cb) {
-		userLib.ready(cb);
+		db.query('SHOW TABLES', function (err, rows) {
+			if (err) throw err;
+
+			if (rows.length) {
+				throw new Error('Database is not empty. To make a test, you must supply an empty database!');
+			}
+
+			cb();
+		});
+	});
+
+	tasks.push(function (cb) {
+		userLib = new User({
+			'log': log,
+			'db': db
+		}, cb);
 	});
 
 	async.series(tasks, done);
@@ -78,9 +89,9 @@ describe('User', function () {
 
 	describe('fields', function () {
 		let	fieldUuid;
-
+		
 		it('should return an UUID for the field we are asking for', function (done) {
-			userLib.getFieldUuid('firstname', function (err, result) {
+			userLib.helpers.getFieldUuid('firstname', function (err, result) {
 				if (err) throw err;
 				fieldUuid = result;
 				assert.notStrictEqual(lUtils.formatUuid(fieldUuid), false);
@@ -89,7 +100,7 @@ describe('User', function () {
 		});
 
 		it('shold return field name "firstname" for the UUID we created above', function (done) {
-			userLib.getFieldName(fieldUuid, function (err, fieldName) {
+			userLib.helpers.getFieldName(fieldUuid, function (err, fieldName) {
 				if (err) throw err;
 				assert.strictEqual(fieldName, 'firstname');
 				done();

@@ -1,6 +1,6 @@
 {
   "name": "larvituser",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "author": {
     "name": "Mikael 'Lilleman' Göransson",
     "email": "lilleman@larvit.se",
@@ -8,16 +8,13 @@
   },
   "contributors": [],
   "dependencies": {
-    "async": "^2.0.1",
-    "bcryptjs": "^2.3.0",
-    "check-object-key": "^0.1.2",
-    "larvitamintercom": "^0.2.0",
+    "async": "^2.6.1",
+    "bcryptjs": "^2.4.3",
+    "larvitamintercom": "^0.3.0",
     "larvitamsync": "^0.6.0",
-    "larvitdb": "^2.0.0",
-    "larvitdbmigration": "^3.0.0",
-    "larvitutils": "^1.0.4",
-    "uuid": "^3.0.0",
-    "winston": "^2.1.1"
+    "larvitdbmigration": "^4.0.1",
+    "larvitutils": "^2.0.0",
+    "uuid": "^3.3.2"
   },
   "description": "User module for node.js",
   "devDependencies": {

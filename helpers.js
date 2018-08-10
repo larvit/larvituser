@@ -1,9 +1,14 @@
 'use strict';
 
-const	lUtils	= require('larvitutils'),
-	db	= require('larvitdb');
+const	lUtils	= new (require('larvitutils'))();
 
-let	dataWriter;
+function Helpers(options) {
+	this.options = options;
+
+	if ( ! options.log) throw new Error('Required option log not set');
+	if ( ! options.dataWriter) throw new Error('Required option dataWriter not set');
+	if ( ! options.db) throw new Error('Required option db not set');
+}
 
 /**
  * Get field name by uuid
@@ -11,27 +16,26 @@ let	dataWriter;
  * @param str uuid
  * @param func cb(err, name) - name is false if no match is found
  */
-function getFieldName(uuid, cb) {
-	ready(function () {
-		const	fieldUuidBuffer = lUtils.uuidToBuffer(uuid),
-			sql	= 'SELECT name FROM user_data_fields WHERE uuid = ?';
+Helpers.prototype.getFieldName = function getFieldName(uuid, cb) {
+	const	that	= this,
+		fieldUuidBuffer = lUtils.uuidToBuffer(uuid),
+		sql	= 'SELECT name FROM user_data_fields WHERE uuid = ?';
 
-		if (fieldUuidBuffer === false) {
-			const e = new Error('Invalid field uuid');
-			return cb(e);
+	if (fieldUuidBuffer === false) {
+		const e = new Error('Invalid field uuid');
+		return cb(e);
+	}
+
+	that.options.db.query(sql, [fieldUuidBuffer], function (err, rows) {
+		if (err) { cb(err); return; }
+
+		if (rows.length) {
+			cb(null, rows[0].name);
+		} else {
+			cb(null, false);
 		}
-
-		db.query(sql, [fieldUuidBuffer], function (err, rows) {
-			if (err) { cb(err); return; }
-
-			if (rows.length) {
-				cb(null, rows[0].name);
-			} else {
-				cb(null, false);
-			}
-		});
 	});
-}
+};
 
 /**
  * Get data field uuid by field name
@@ -39,44 +43,37 @@ function getFieldName(uuid, cb) {
  * @param str fieldName
  * @param func cb(err, uuid)
  */
-function getFieldUuid(fieldName, cb) {
-	ready(function () {
-		const	dbFields	= [],
-			sql	= 'SELECT uuid FROM user_data_fields WHERE name = ?';
+Helpers.prototype.getFieldUuid = function getFieldUuid(fieldName, cb) {
+	const	that	= this,
+		dbFields	= [],
+		sql	= 'SELECT uuid FROM user_data_fields WHERE name = ?';
 
-		fieldName	= fieldName.trim();
-		dbFields.push(fieldName);
+	fieldName	= fieldName.trim();
+	dbFields.push(fieldName);
 
-		db.query(sql, dbFields, function (err, rows) {
-			if (err) { cb(err); return; }
+	that.options.db.query(sql, dbFields, function (err, rows) {
+		if (err) return cb(err);
 
-			if (rows.length) {
-				cb(null, lUtils.formatUuid(rows[0].uuid));
-			} else {
-				const	options	= {'exchange': dataWriter.exchangeName},
-					sendObj	= {};
+		if (rows.length) {
+			cb(null, lUtils.formatUuid(rows[0].uuid));
+		} else {
+			const	options	= {'exchange': that.options.dataWriter.exchangeName},
+				sendObj	= {};
 
-				sendObj.action	= 'addUserFieldReq';
-				sendObj.params 	= {};
-				sendObj.params.name = fieldName;
+			sendObj.action	= 'addUserFieldReq';
+			sendObj.params 	= {};
+			sendObj.params.name = fieldName;
 
-				dataWriter.intercom.send(sendObj, options, function (err) {
+			that.options.dataWriter.intercom.send(sendObj, options, function (err) {
+				if (err) { cb(err); return; }
+
+				that.options.dataWriter.emitter.once('addedField_' + fieldName, function (err) {
 					if (err) { cb(err); return; }
-
-					dataWriter.emitter.once('addedField_' + fieldName, function (err) {
-						if (err) { cb(err); return; }
-						getFieldUuid(fieldName, cb);
-					});
+					that.getFieldUuid(fieldName, cb);
 				});
-			}
-		});
+			});
+		}
 	});
-}
+};
 
-function ready(cb) {
-	dataWriter	= require(__dirname + '/dataWriter.js'); // We must do this here since it might not be instanciated on module load
-	dataWriter.ready(cb);
-}
-
-exports.getFieldName	= getFieldName;
-exports.getFieldUuid	= getFieldUuid;
+exports = module.exports = Helpers;
