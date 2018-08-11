@@ -89,7 +89,7 @@ describe('User', function () {
 
 	describe('fields', function () {
 		let	fieldUuid;
-		
+
 		it('should return an UUID for the field we are asking for', function (done) {
 			userLib.helpers.getFieldUuid('firstname', function (err, result) {
 				if (err) throw err;

@@ -5,49 +5,51 @@ const	topLogPrefix	= 'larvituser: index.js: ',
 	Intercom	= require('larvitamintercom'),
 	uuidLib	= require('uuid'),
 	Helpers	= require(__dirname + '/helpers.js'),
-	lUtils	= new (require('larvitutils'))(),
+	LUtils	= require('larvitutils'),
 	bcrypt	= require('bcryptjs'),
 	async	= require('async');
 
 function User(options, cb) {
-	const logPrefix = topLogPrefix + 'User() - ',
-		that = this;
+	const	logPrefix	= topLogPrefix + 'User() - ',
+		that	= this;
 
 	that.options	= options || {};
 
-	if ( ! that.options.db) {
-		throw new Error('Required option db is missing');
-	}
-	that.db	= that.options.db;
-
-	if ( ! that.options.log) {
-		that.log	= new lUtils.Log();
-	} else {
-		that.log	= options.log;
+	if ( ! options.log) {
+		const	tmpLUtils	= new LUtils();
+		options.log	= new tmpLUtils.Log();
 	}
 
-	if ( ! that.options.exchangeName) {
-		that.exchangeName	= 'larvituser';
-	} else {
-		that.exchangeName	= that.options.exchangeName;
+	that.options	= options;
+
+	for (const key of Object.keys(options)) {
+		that[key]	= options[key];
 	}
 
-	if ( ! that.options.mode) {
-		that.log.info(logPrefix + 'No "mode" option given, defaulting to "noSync"');
-		that.mode	= 'noSync';
-	} else if (['noSync', 'master', 'slave'].indexOf(that.options.mode) === - 1) {
-		const	err	= new Error('Invalid "mode" option given: "' + that.options.mode + '"');
+	that.lUtils	= new LUtils({'log': that.log});
+
+	if ( ! that.db) {
+		const	err	= new Error('Required option db is missing');
 		that.log.error(logPrefix + err.message);
 		throw err;
-	} else {
-		that.mode = that.options.mode;
 	}
 
-	if ( ! that.options.intercom) {
+	if ( ! that.exchangeName) {
+		that.exchangeName	= 'larvituser';
+	}
+
+	if ( ! that.mode) {
+		that.log.info(logPrefix + 'No "mode" option given, defaulting to "noSync"');
+		that.mode	= 'noSync';
+	} else if (['noSync', 'master', 'slave'].indexOf(that.mode) === - 1) {
+		const	err	= new Error('Invalid "mode" option given: "' + that.mode + '"');
+		that.log.error(logPrefix + err.message);
+		throw err;
+	}
+
+	if ( ! that.intercom) {
 		that.log.info(logPrefix + 'No "intercom" option given, defaulting to "loopback interface"');
 		that.intercom	= new Intercom('loopback interface');
-	} else {
-		that.intercom = that.options.intercom;
 	}
 
 	that.dataWriter	= new DataWriter({
@@ -63,11 +65,11 @@ function User(options, cb) {
 		if (err) return cb(err);
 
 		that.helpers = new Helpers({
-			'dataWriter': that.dataWriter,
-			'log': that.log,
-			'db': that.db
+			'dataWriter':	that.dataWriter,
+			'log':	that.log,
+			'db':	that.db
 		});
-		
+
 		cb();
 	});
 };
@@ -84,7 +86,7 @@ User.prototype.addUserDataField = function addUserDataField(userUuid, fieldName,
 	const	fields	= {},
 		that	= this;
 
-	fields[fieldName] = fieldValue;
+	fields[fieldName]	= fieldValue;
 
 	that.addUserDataFields(userUuid, fields, cb);
 };
@@ -97,9 +99,9 @@ User.prototype.addUserDataField = function addUserDataField(userUuid, fieldName,
  * @param func cb(err)
  */
 User.prototype.addUserDataFields = function addUserDataFields(userUuid, fields, cb) {
-	const	that	= this,
-		options	= {'exchange': that.exchangeName},
-		sendObj	= {};
+	const	options	= {'exchange': that.exchangeName},
+		sendObj	= {},
+		that	= this;
 
 	// do not want to broadcast msg on queue for no reason
 	if ( ! fields || Object.keys(fields).length === 0) return cb();
@@ -126,7 +128,7 @@ User.prototype.checkPassword = function checkPassword(password, hash, cb) {
 	const	logPrefix	= topLogPrefix + 'checkPassword() - ',
 		that	= this;
 
-	password = password.trim();
+	password	= password.trim();
 
 	bcrypt.compare(password, hash, function (err, result) {
 		if (err) {
@@ -148,8 +150,8 @@ User.prototype.checkPassword = function checkPassword(password, hash, cb) {
  */
 User.prototype.create = function create(username, password, userData, uuid, cb) {
 	const	logPrefix	= topLogPrefix + 'create() - ',
-		that	= this,
-		tasks	= [];
+		tasks	= [],
+		that	= this;
 
 	let	hashedPassword;
 
@@ -157,9 +159,9 @@ User.prototype.create = function create(username, password, userData, uuid, cb) 
 		cb	= uuid;
 		uuid	= uuidLib.v1();
 	} else if (typeof userData === 'function') {
-		cb	= userData;
 		userData	= undefined;
 		uuid	= uuidLib.v1();
+		cb	= userData;
 	}
 
 	if (cb === undefined) {
@@ -167,18 +169,18 @@ User.prototype.create = function create(username, password, userData, uuid, cb) 
 	}
 
 	if (uuid === undefined) {
-		uuid = uuidLib.v1();
+		uuid	= uuidLib.v1();
 	}
 
-	username = username.trim();
+	username	= username.trim();
 
 	if (password) {
-		password = password.trim();
+		password	= password.trim();
 	}
 
 	if (username.length === 0) {
 		const	err = new Error('Trying to create user with empty username');
-		log.warn(logPrefix + err.message);
+		that.log.warn(logPrefix + err.message);
 		return cb(err);
 	}
 
@@ -253,7 +255,7 @@ User.prototype.create = function create(username, password, userData, uuid, cb) 
 
 		that.fromUuid(uuid, function (err, user) {
 			if (err) {
-				log.error(logPrefix + err.message);
+				that.log.error(logPrefix + err.message);
 				return cb(err);
 			}
 
@@ -271,8 +273,8 @@ User.prototype.create = function create(username, password, userData, uuid, cb) 
  * @param func cb(err, user) - "user" being a new user object or boolean false on failed search
  */
 User.prototype.fromField = function fromField(fieldName, fieldValue, cb) {
-	const	that	= this,
-		dbFields	=	[fieldName.trim(), fieldValue.trim()],
+	const	dbFields	=	[fieldName.trim(), fieldValue.trim()],
+		that	= this,
 		sql	=	'SELECT uud.userUuid\n' +
 				'FROM user_users_data uud\n' +
 				'	JOIN user_data_fields udf ON udf.uuid = uud.fieldUuid\n' +
@@ -282,10 +284,7 @@ User.prototype.fromField = function fromField(fieldName, fieldValue, cb) {
 	that.db.query(sql, dbFields, function (err, rows) {
 		if (err) return cb(err);
 
-		if (rows.length === 0) {
-			cb(null, false);
-			return;
-		}
+		if (rows.length === 0) return cb(null, false);
 
 		that.fromUuid(lUtils.formatUuid(rows[0].userUuid), cb);
 	});
@@ -299,8 +298,8 @@ User.prototype.fromField = function fromField(fieldName, fieldValue, cb) {
  * @param func cb(err, user) - "user" being a new user object or boolean false on failed search
  */
 User.prototype.fromFields = function fromFields(fields, cb) {
-	const	that	= this,	
-		dbFields	= [];
+	const	dbFields	= [],
+		that	= this;
 
 	let	sql	= 'SELECT uuid FROM user_users u\nWHERE\n		1 + 1\n';
 
@@ -315,10 +314,7 @@ User.prototype.fromFields = function fromFields(fields, cb) {
 	that.db.query(sql, dbFields, function (err, rows) {
 		if (err) return cb(err);
 
-		if (rows.length === 0) {
-			cb(null, false);
-			return;
-		}
+		if (rows.length === 0) return cb(null, false);
 
 		that.fromUuid(lUtils.formatUuid(rows[0].uuid), cb);
 	});
@@ -332,9 +328,9 @@ User.prototype.fromFields = function fromFields(fields, cb) {
  * @param func cb(err, user) - "user" being a new user object or boolean false on failed login
  */
 User.prototype.fromUserAndPass = function fromUserAndPass(username, password, cb) {
-	const	that	= this,
-		logPrefix	= topLogPrefix + 'fromUserAndPass() - ',
-		tasks	= [];
+	const	logPrefix	= topLogPrefix + 'fromUserAndPass() - ',
+		tasks	= [],
+		that	= this;
 
 	let	hashedPassword,
 		userUuid,
@@ -352,8 +348,7 @@ User.prototype.fromUserAndPass = function fromUserAndPass(username, password, cb
 
 			if (rows.length === 0) {
 				userObj = false;
-				cb();
-				return;
+				return cb();
 			}
 
 			hashedPassword	= rows[0].password;
@@ -363,10 +358,7 @@ User.prototype.fromUserAndPass = function fromUserAndPass(username, password, cb
 	});
 
 	tasks.push(function (cb) {
-		if ( ! hashedPassword) {
-			cb();
-			return;
-		}
+		if ( ! hashedPassword) return cb();
 
 		that.checkPassword(password, hashedPassword, function (err, res) {
 			if (err) {
@@ -375,14 +367,13 @@ User.prototype.fromUserAndPass = function fromUserAndPass(username, password, cb
 			}
 
 			if (res === false) {
-				userObj = false;
-				cb();
-				return;
+				userObj	= false;
+				return cb();
 			}
 
 			that.fromUuid(lUtils.formatUuid(userUuid), function (err, result) {
-				userObj = result;
-				if (err) userObj = false;
+				userObj	= result;
+				if (err) userObj	= false;
 				cb(err);
 			});
 		});
@@ -400,9 +391,9 @@ User.prototype.fromUserAndPass = function fromUserAndPass(username, password, cb
  * @param func cb(err, user) - "user" being a new user object
  */
 User.prototype.fromUsername = function fromUsername(username, cb) {
-	const	that	= this,
-		logPrefix	= topLogPrefix + 'fromUsername() - ',
+	const	logPrefix	= topLogPrefix + 'fromUsername() - ',
 		dbFields	= [],
+		that	= this,
 		sql	= 'SELECT uuid FROM user_users WHERE username = ?';
 
 	username	= username.trim();
@@ -413,8 +404,7 @@ User.prototype.fromUsername = function fromUsername(username, cb) {
 
 		if (rows.length === 0) {
 			that.log.debug(logPrefix + 'No user found for username: "' + username + '"');
-			cb(null, false);
-			return;
+			return cb(null, false);
 		}
 
 		// Use fromUuid() to get the user instance
@@ -429,13 +419,13 @@ User.prototype.fromUsername = function fromUsername(username, cb) {
  * @param func cb(err, userObj) - userObj will be false if no user is found
  */
 User.prototype.fromUuid = function fromUuid(userUuid, cb) {
-	const	that	= this,
-		userUuidBuf	= lUtils.uuidToBuffer(userUuid),
+	const	userUuidBuf	= this.lUtils.uuidToBuffer(userUuid),
 		logPrefix	= topLogPrefix + 'fromUuid() - ',
 		returnObj	= userBase(),
 		dbFields	= [userUuidBuf],
 		fields	= returnObj.fields,
-		sql	= 'SELECT\n' +
+		that	= this,
+		sql = 'SELECT\n' +
 			'	u.uuid,\n' +
 			'	u.username,\n' +
 			'	u.password,\n' +
@@ -460,19 +450,18 @@ User.prototype.fromUuid = function fromUuid(userUuid, cb) {
 		if (err) return cb(err);
 
 		if (rows.length === 0) {
-			const	err = new Error('No user found for userUuid: "' + userUuid + '"');
+			const	err	= new Error('No user found for userUuid: "' + userUuid + '"');
 			that.log.debug(logPrefix + err.message);
-			cb(null, false);
-			return;
+			return cb(null, false);
 		}
 
 		returnObj.uuid	= lUtils.formatUuid(rows[0].uuid);
 		returnObj.username	= rows[0].username;
 
 		if (rows[0].password === '') {
-			returnObj.passwordIsFalse = true;
+			returnObj.passwordIsFalse	= true;
 		} else {
-			returnObj.passwordIsFalse = false;
+			returnObj.passwordIsFalse	= false;
 		}
 
 		for (let i = 0; rows[i] !== undefined; i ++) {
@@ -499,24 +488,27 @@ User.prototype.fromUuid = function fromUuid(userUuid, cb) {
  * @param func cb(err, data) - data is always an array of data (or empty array)
  */
 User.prototype.getFieldData = function getFieldData(userUuid, fieldName, cb) {
-	const that = this;
+	const	logPrefix	= topLogPrefix + 'getFieldData() - ',
+		that	= this;
 
 	that.helpers.getFieldUuid(fieldName, function (err, fieldUuid) {
-		const	userUuidBuffer	= lUtils.uuidToBuffer(userUuid),
-			fieldUuidBuffer	= lUtils.uuidToBuffer(fieldUuid),
+		const	userUuidBuffer	= that.lUtils.uuidToBuffer(userUuid),
+			fieldUuidBuffer	= that.lUtils.uuidToBuffer(fieldUuid),
 			dbFields	= [userUuidBuffer, fieldUuidBuffer],
 			sql	= 'SELECT data FROM user_users_data WHERE userUuid = ? AND fieldUuid = ?';
 
 		if (err) return cb(err);
 
 		if (userUuidBuffer === false) {
-			const e = new Error('Invalid user uuid');
-			return cb(e);
+			const	err	= new Error('Invalid user uuid');
+			that.log.verbose(logPrefix + err.message);
+			return cb(err);
 		}
 
 		if (fieldUuidBuffer === false) {
-			const e = new Error('Invalid field uuid');
-			return cb(e);
+			const	err	= new Error('Invalid field uuid');
+			that.log.verbose(logPrefix + err.message);
+			return cb(err);
 		}
 
 		that.db.query(sql, dbFields, function (err, rows) {
@@ -540,14 +532,14 @@ User.prototype.getFieldData = function getFieldData(userUuid, fieldName, cb) {
  * @param func cb(err, hash)
  */
 User.prototype.hashPassword = function hashPassword(password, cb) {
-	const	that	= this,	
-		logPrefix	= topLogPrefix + 'hashPassword() - ';
+	const	logPrefix	= topLogPrefix + 'hashPassword() - ',
+		that	= this;
 
 	if ( ! password) {
-		password = '';
+		password	= '';
 	}
 
-	password = password.trim();
+	password	= password.trim();
 
 	bcrypt.hash(password, 10, function (err, hash) {
 		if (err) {
@@ -567,9 +559,9 @@ User.prototype.hashPassword = function hashPassword(password, cb) {
  * @param func cb(err)
  */
 User.prototype.replaceUserFields = function replaceUserFields(uuid, fields, cb) {
-	const	that	= this,
-		options	= {'exchange': that.exchangeName},
-		sendObj	= {};
+	const	options	= {'exchange': this.exchangeName},
+		sendObj	= {},
+		that	= this;
 
 	that.fromUuid(uuid, function (err, user) {
 		if (err) return cb(err);
@@ -595,9 +587,9 @@ User.prototype.replaceUserFields = function replaceUserFields(uuid, fields, cb) 
  * @param func cb(err)
  */
 User.prototype.rmUser = function rmUser(userUuid, cb) {
-	const	that	= this,	
-		options	= {'exchange': that.exchangeName},
-		sendObj	= {};
+	const	options	= {'exchange': this.dataWriter.exchangeName},
+		sendObj	= {},
+		that	= this;
 
 	sendObj.action	= 'rmUser';
 	sendObj.params	= {};
@@ -618,9 +610,9 @@ User.prototype.rmUser = function rmUser(userUuid, cb) {
  * @param func cb(err)
  */
 User.prototype.rmUserField = function rmUserField(userUuid, fieldName, cb) {
-	const	that	= this,
-		options	= {'exchange': dataWriter.exchangeName},
-		sendObj	= {};
+	const	options	= {'exchange': this.dataWriter.exchangeName},
+		sendObj	= {},
+		that	= this;
 
 	sendObj.action	= 'rmUserField';
 	sendObj.params	= {};
@@ -642,25 +634,25 @@ User.prototype.rmUserField = function rmUserField(userUuid, fieldName, cb) {
  * @param func cb(err)
  */
 User.prototype.setPassword = function setPassword(userUuid, newPassword, cb) {
-	const	that	= this,
-		tasks	= [];
+	const	tasks	= [],
+		that	= this;
 
 	let	hashedPassword;
 
 	tasks.push(function (cb) {
 		if (newPassword) {
 			that.hashPassword(newPassword.trim(), function (err, hash) {
-				hashedPassword = hash;
+				hashedPassword	= hash;
 				cb(err);
 			});
 		} else {
-			hashedPassword = false;
+			hashedPassword	= false;
 			cb();
 		}
 	});
 
 	tasks.push(function (cb) {
-		const	options	= {'exchange': that.exchangeName},
+		const	options	= {'exchange': that.dataWriter.exchangeName},
 			sendObj	= {};
 
 		sendObj.action	= 'setPassword';
@@ -686,11 +678,11 @@ User.prototype.setPassword = function setPassword(userUuid, newPassword, cb) {
  * @param fucn cb(err)
  */
 User.prototype.setUsername = function setUsername(userUuid, newUsername, cb) {
-	const	that	= this,
-		userUuidBuf	= lUtils.uuidToBuffer(userUuid),
-		logPrefix	= topLogPrefix + 'setUsername() - ';
+	const	userUuidBuf	= lUtils.uuidToBuffer(userUuid),
+		logPrefix	= topLogPrefix + 'setUsername() - ',
+		that	= this;
 
-	newUsername = newUsername.trim();
+	newUsername	= newUsername.trim();
 
 	if ( ! newUsername) {
 		const	err	= new Error('No new username supplied');
@@ -705,12 +697,12 @@ User.prototype.setUsername = function setUsername(userUuid, newUsername, cb) {
 	}
 
 	that.db.query('SELECT uuid FROM user_users WHERE username = ? AND uuid != ?', [newUsername, userUuidBuf], function (err, rows) {
-		const	options	= {'exchange': that.exchangeName},
+		const	options	= {'exchange': that.dataWriter.exchangeName},
 			sendObj	= {};
 
 		if (err) return cb(err);
 
-		if (rows.length && lUtils.formatUuid(rows[0].uuid) !== userUuid) {
+		if (rows.length && that.lUtils.formatUuid(rows[0].uuid) !== userUuid) {
 			const	err = new Error('Username is already taken');
 			return cb(err);
 		}
@@ -729,7 +721,7 @@ User.prototype.setUsername = function setUsername(userUuid, newUsername, cb) {
 };
 
 function userBase() {
-	const	returnObj = {'fields': {}};
+	const	returnObj	= {'fields': {}};
 
 	/**
 	 * Add a field with value
@@ -740,7 +732,7 @@ function userBase() {
 	 */
 	returnObj.addField = function addField(name, value, cb) {
 		if (returnObj.uuid === undefined) {
-			const	err = new Error('Cannot add field; no user loaded');
+			const	err	= new Error('Cannot add field; no user loaded');
 			return cb(err);
 		}
 
@@ -884,15 +876,15 @@ User.prototype.usernameAvailable = function usernameAvailable(username, cb) {
 
 	let	isAvailable;
 
-	username = username.trim();
+	username	= username.trim();
 
 	that.db.query('SELECT uuid FROM user_users WHERE username = ?', [username], function (err, rows) {
 		if (err) return cb(err);
 
 		if (rows.length === 0) {
-			isAvailable = true;
+			isAvailable	= true;
 		} else {
-			isAvailable = false;
+			isAvailable	= false;
 		}
 
 		cb(null, isAvailable);

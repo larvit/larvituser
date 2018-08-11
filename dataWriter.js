@@ -5,7 +5,7 @@ const	EventEmitter	= require('events').EventEmitter,
 	DbMigration	= require('larvitdbmigration'),
 	Helpers	= require(__dirname + '/helpers.js'),
 	uuidLib	= require('uuid'),
-	lUtils	= new (require('larvitutils'))(),
+	LUtils	= require('larvitutils'),
 	amsync	= require('larvitamsync'),
 	async	= require('async');
 
@@ -15,9 +15,18 @@ function DataWriter(options, cb) {
 	that.readyInProgress	= false;
 	that.isReady	= false;
 
+	if ( ! options.log) {
+		const	tmpLUtils	= new LUtils();
+		options.log	= new tmpLUtils.Log();
+	}
+
+	that.options	= options;
+
 	for (const key of Object.keys(options)) {
 		that[key]	= options[key];
 	}
+
+	that.lUtils	= new LUtils({'log': that.log});
 
 	that.emitter	= new EventEmitter();
 
@@ -25,9 +34,9 @@ function DataWriter(options, cb) {
 		if (err) return cb(err);
 
 		that.helpers = new Helpers({
-			'dataWriter': that,
-			'log': options.log,
-			'db': options.db
+			'dataWriter':	that,
+			'log':	that.log,
+			'db':	that.db
 		});
 
 		cb();
@@ -35,13 +44,13 @@ function DataWriter(options, cb) {
 }
 
 DataWriter.prototype.addUserDataFields = function addUserDataFields(params, deliveryTag, msgUuid, cb) {
-	const	that	= this,
-		userUuidBuffer	= lUtils.uuidToBuffer(params.userUuid),
+	const	userUuidBuffer	= this.lUtils.uuidToBuffer(params.userUuid),
 		logPrefix	= topLogPrefix + 'addUserDataFields() - ',
 		dbValues	= [],
-		tasks	= [];
+		tasks	= [],
+		that	= this;
 
-	let sql	= 'INSERT INTO user_users_data (userUuid, fieldUuid, data) VALUES';
+	let	sql	= 'INSERT INTO user_users_data (userUuid, fieldUuid, data) VALUES';
 
 	if (typeof deliveryTag === 'function') {
 		cb	= deliveryTag;
@@ -63,7 +72,7 @@ DataWriter.prototype.addUserDataFields = function addUserDataFields(params, deli
 	for (let key in params.fields) {
 		tasks.push(function (cb) {
 			that.helpers.getFieldUuid(key, function (err, fieldUuid) {
-				const	fieldUuidBuffer	= lUtils.uuidToBuffer(fieldUuid);
+				const	fieldUuidBuffer	= that.lUtils.uuidToBuffer(fieldUuid);
 
 				if (err) {
 					that.log.warn(logPrefix + err.message);
@@ -103,7 +112,7 @@ DataWriter.prototype.addUserDataFields = function addUserDataFields(params, deli
 			return cb(err);
 		}
 
-		sql = sql.substring(0, sql.length - 1);
+		sql	= sql.substring(0, sql.length - 1);
 
 		if (dbValues.length === 0) {
 			that.log.info(logPrefix + 'No fields or field data specifed');
@@ -127,22 +136,22 @@ DataWriter.prototype.addUserDataFields = function addUserDataFields(params, deli
 };
 
 DataWriter.prototype.addUserField = function addUserField(params, deliveryTag, msgUuid, cb) {
-	const	that	= this,	
+	const	uuidBuffer	= this.lUtils.uuidToBuffer(params.uuid),
 		logPrefix	= topLogPrefix + 'addUserField() - ',
-		uuidBuffer	= lUtils.uuidToBuffer(params.uuid),
+		that	= this,
 		name	= params.name,
 		sql	= 'INSERT IGNORE INTO user_data_fields (uuid, name) VALUES(?,?)';
 
 	if (typeof cb !== 'function') {
-		cb = function () {};
+		cb	= function () {};
 	}
 
 	if (uuidBuffer === false) {
-		const e  = new Error('Invalid field uuid');
-		that.log.warn(logPrefix + e.message);
+		const	err	= new Error('Invalid field uuid');
+		that.log.warn(logPrefix + err.message);
 
-		that.emitter.emit(msgUuid, e);
-		that.emitter.emit('addedField_' + name, e);
+		that.emitter.emit(msgUuid, err);
+		that.emitter.emit('addedField_' + name, err);
 		return cb(err);
 	}
 
@@ -156,12 +165,12 @@ DataWriter.prototype.addUserField = function addUserField(params, deliveryTag, m
 };
 
 DataWriter.prototype.addUserFieldReq = function addUserFieldReq(params, deliveryTag, msgUuid, cb) {
-	const	that	= this,
-		logPrefix	= topLogPrefix + 'addUserFieldReq() - ',
-		fieldName	= params.name;
+	const	logPrefix	= topLogPrefix + 'addUserFieldReq() - ',
+		fieldName	= params.name,
+		that	= this;
 
 	if (typeof cb !== 'function') {
-		cb = function () {};
+		cb	= function () {};
 	}
 
 	if (that.mode === 'master') {
@@ -171,7 +180,7 @@ DataWriter.prototype.addUserFieldReq = function addUserFieldReq(params, delivery
 				return;
 			}
 
-			that.addUserFieldReqRunning = true;
+			that.addUserFieldReqRunning	= true;
 
 			// Check if this is already set in the database
 			that.db.query('SELECT uuid FROM user_data_fields WHERE name = ?', [fieldName], function (err, rows) {
@@ -210,14 +219,14 @@ DataWriter.prototype.addUserFieldReq = function addUserFieldReq(params, delivery
 };
 
 DataWriter.prototype.create = function create(params, deliveryTag, msgUuid, cb) {
-	const	that	= this,	
+	const	uuidBuffer =	this.lUtils.uuidToBuffer(params.uuid),
 		logPrefix	= topLogPrefix + 'create() - ',
 		dbFields	= [],
-		sql	= 'INSERT IGNORE INTO user_users (uuid, username, password) VALUES(?,?,?);',
-		uuidBuffer =	lUtils.uuidToBuffer(params.uuid);
+		that	= this,
+		sql	= 'INSERT IGNORE INTO user_users (uuid, username, password) VALUES(?,?,?);';
 
 	if (cb === undefined || typeof cb !== 'function') {
-		cb = function () {};
+		cb	= function () {};
 	}
 
 	dbFields.push(uuidBuffer);
@@ -225,7 +234,7 @@ DataWriter.prototype.create = function create(params, deliveryTag, msgUuid, cb) 
 	dbFields.push(params.password);
 
 	if (uuidBuffer === false) {
-		const	err = new Error('Invalid user uuid supplied: "' + params.uuid + '", deliveryTag: "' + deliveryTag + '", msgUuid: "' + msgUuid + '"');
+		const	err	= new Error('Invalid user uuid supplied: "' + params.uuid + '", deliveryTag: "' + deliveryTag + '", msgUuid: "' + msgUuid + '"');
 
 		that.log.warn(logPrefix + err.message);
 		that.emitter.emit(msgUuid, err);
@@ -233,7 +242,7 @@ DataWriter.prototype.create = function create(params, deliveryTag, msgUuid, cb) 
 	}
 
 	that.db.query(sql, dbFields, function (err, results) {
-		const fieldsParams	= {};
+		const	fieldsParams	= {};
 
 		if (results.affectedRows === 0) {
 			const	err	= new Error('No user created, duplicate key on uuid: "' + params.uuid + '" or username: "' + params.username + '"');
@@ -261,25 +270,16 @@ DataWriter.prototype.create = function create(params, deliveryTag, msgUuid, cb) 
 	});
 };
 
-DataWriter.prototype.listenToQueue = function listenToQueue(retries, cb) {
-	const	that	= this,
-		logPrefix	= topLogPrefix + 'listenToQueue() - ',
-		options	= {'exchange': that.exchangeName},
-		tasks	= [];
+DataWriter.prototype.listenToQueue = function listenToQueue(cb) {
+	const	logPrefix	= topLogPrefix + 'listenToQueue() - ',
+		options	= {'exchange': this.exchangeName},
+		tasks	= [],
+		that	= this;
 
 	let	listenMethod;
 
-	if (typeof retries === 'function') {
-		cb	= retries;
-		retries	= 0;
-	}
-
 	if (typeof cb !== 'function') {
 		cb	= function () {};
-	}
-
-	if (retries === undefined) {
-		retries = 0;
 	}
 
 	tasks.push(function (cb) {
@@ -290,7 +290,7 @@ DataWriter.prototype.listenToQueue = function listenToQueue(retries, cb) {
 			//		// since we want the queue to persist even if this
 			//		// minion goes offline.
 		} else if (that.mode === 'slave' || that.mode === 'noSync') {
-			listenMethod = 'subscribe';
+			listenMethod	= 'subscribe';
 		} else {
 			const	err	= new Error('Invalid that.mode. Must be either "master", "slave" or "noSync"');
 			that.log.error(logPrefix + err.message);
@@ -340,23 +340,14 @@ DataWriter.prototype.listenToQueue = function listenToQueue(retries, cb) {
 	async.series(tasks, cb);
 };
 
-DataWriter.prototype.ready = function ready(retries, cb) {
+DataWriter.prototype.ready = function ready(cb) {
 	const	that	= this,
 		logPrefix	= topLogPrefix + 'ready() - ';
 
 	let	dbMigration;
 
-	if (typeof retries === 'function') {
-		cb	= retries;
-		retries	= 0;
-	}
-
 	if (typeof cb !== 'function') {
 		cb	= function () {};
-	}
-
-	if (retries === undefined) {
-		retries	= 0;
 	}
 
 	if (that.isReady === true) return cb();
@@ -366,15 +357,16 @@ DataWriter.prototype.ready = function ready(retries, cb) {
 		return;
 	}
 
-	that.readyInProgress = true;
+	that.readyInProgress	= true;
 
 	that.log.debug(logPrefix + 'Waiting for dbmigration()');
 
 	dbMigration	= new DbMigration({
-		'dbType': 'mariadb',
-		'dbDriver': that.db,
-		'tableName': 'users_db_version',
-		'migrationScriptsPath': __dirname + '/dbmigration'
+		'log': that.log,
+		'dbType':	'mariadb',
+		'dbDriver':	that.db,
+		'tableName':	'users_db_version',
+		'migrationScriptsPath':	__dirname + '/dbmigration'
 	});
 
 	dbMigration.run(function (err) {
@@ -395,14 +387,14 @@ DataWriter.prototype.ready = function ready(retries, cb) {
 };
 
 DataWriter.prototype.replaceFields = function replaceFields(params, deliveryTag, msgUuid, cb) {
-	const	that	= this,
-		fieldNamesToUuidBufs	= {},
-		userUuidBuf	= lUtils.uuidToBuffer(params.userUuid),
+	const	fieldNamesToUuidBufs	= {},
+		userUuidBuf	= this.lUtils.uuidToBuffer(params.userUuid),
 		logPrefix	= topLogPrefix + 'replaceFields() - ',
-		tasks	= [];
+		tasks	= [],
+		that	= this;
 
 	if (cb === undefined || typeof cb !== 'function') {
-		cb = function () {};
+		cb	= function () {};
 	}
 
 	if (userUuidBuf === false) {
@@ -440,12 +432,12 @@ DataWriter.prototype.replaceFields = function replaceFields(params, deliveryTag,
 		for (const fieldName of Object.keys(params.fields)) {
 			tasks.push(function (cb) {
 				that.helpers.getFieldUuid(fieldName, function (err, fieldUuid) {
-					fieldNamesToUuidBufs[fieldName] = lUtils.uuidToBuffer(fieldUuid);
+					fieldNamesToUuidBufs[fieldName]	= lUtils.uuidToBuffer(fieldUuid);
 
 					if (fieldNamesToUuidBufs[fieldName] === false) {
-						const e = new Error('Invalid field uuid');
-						that.log.warn(logPrefix + e.message);
-						return cb(e);
+						const	err	= new Error('Invalid field uuid');
+						that.log.warn(logPrefix + err.message);
+						return cb(err);
 					}
 
 					cb(err);
@@ -460,13 +452,13 @@ DataWriter.prototype.replaceFields = function replaceFields(params, deliveryTag,
 	tasks.push(function (cb) {
 		const	dbFields	= [];
 
-		let	sql = 'INSERT INTO user_users_data (userUuid, fieldUuid, data) VALUES';
+		let	sql	= 'INSERT INTO user_users_data (userUuid, fieldUuid, data) VALUES';
 
 		if ( ! params.fields) return cb();
 
 		for (const fieldName of Object.keys(params.fields)) {
 			if ( ! (params.fields[fieldName] instanceof Array)) {
-				params.fields[fieldName] = [params.fields[fieldName]];
+				params.fields[fieldName]	= [params.fields[fieldName]];
 			}
 
 			for (let i = 0; params.fields[fieldName][i] !== undefined; i ++) {
@@ -479,7 +471,7 @@ DataWriter.prototype.replaceFields = function replaceFields(params, deliveryTag,
 			}
 		}
 
-		sql = sql.substring(0, sql.length - 1) + ';';
+		sql	= sql.substring(0, sql.length - 1) + ';';
 
 		if (dbFields.length === 0) return cb();
 
@@ -494,17 +486,17 @@ DataWriter.prototype.replaceFields = function replaceFields(params, deliveryTag,
 };
 
 DataWriter.prototype.rmUser = function rmUser(params, deliveryTag, msgUuid, cb) {
-	const	that	= this,
+	const	uuidBuffer	= this.lUtils.uuidToBuffer(params.userUuid),
 		logPrefix	= topLogPrefix + 'rmUser() - ',
 		tasks	= [],
-		uuidBuffer	= lUtils.uuidToBuffer(params.userUuid);
+		that	= this;
 
 	if (cb === undefined || typeof cb !== 'function') {
-		cb = function () {};
+		cb	= function () {};
 	}
 
 	if (uuidBuffer === false) {
-		const err = new Error('Invalid user uuid');
+		const	err	= new Error('Invalid user uuid');
 		that.log.warn(logPrefix + err.message);
 		that.emitter.emit(msgUuid, err);
 		return cb(err);
@@ -530,15 +522,15 @@ DataWriter.prototype.rmUser = function rmUser(params, deliveryTag, msgUuid, cb) 
 };
 
 DataWriter.prototype.rmUserField = function rmUserField(params, deliveryTag, msgUuid, cb) {
-	const	that	= this,
-		logPrefix	= topLogPrefix + 'rmUserField() - ';
+	const	logPrefix	= topLogPrefix + 'rmUserField() - ',
+		that	= this;
 
 	if (cb === undefined || typeof cb !== 'function') {
-		cb = function () {};
+		cb	= function () {};
 	}
 
 	that.helpers.getFieldUuid(params.fieldName, function (err, fieldUuid) {
-		const	userUuidBuffer = lUtils.uuidToBuffer(params.userUuid),
+		const	userUuidBuffer	= lUtils.uuidToBuffer(params.userUuid),
 			fieldUuidBuffer	= lUtils.uuidToBuffer(fieldUuid),
 			sql	= 'DELETE FROM user_users_data WHERE userUuid = ? AND fieldUuid = ?';
 
@@ -548,17 +540,17 @@ DataWriter.prototype.rmUserField = function rmUserField(params, deliveryTag, msg
 		}
 
 		if (userUuidBuffer === false) {
-			const e = new Error('Invalid user uuid');
-			that.log.warn(logPrefix + e.message);
+			const	err	= new Error('Invalid user uuid');
+			that.log.warn(logPrefix + err.message);
 			that.emitter.emit(msgUuid, err);
-			return cb(e);
+			return cb(err);
 		}
 
 		if (fieldUuidBuffer === false) {
-			const e = new Error('Invalid field uuid');
-			that.log.warn(logPrefix + e.message);
+			const	err	= new Error('Invalid field uuid');
+			that.log.warn(logPrefix + err.message);
 			that.emitter.emit(msgUuid, err);
-			return cb(e);
+			return cb(err);
 		}
 
 		that.db.query(sql, [userUuidBuffer, fieldUuidBuffer], function (err) {
@@ -572,30 +564,31 @@ DataWriter.prototype.rmUserField = function rmUserField(params, deliveryTag, msg
 DataWriter.prototype.runDumpServer = function runDumpServer(cb) {
 	const	that	= this,
 		args	= [],
-		options	= {
+		options = {
+			'Content-Type':	'application/sql',
 			'exchange':	that.exchangeName + '_dataDump',
-			'host':	(that.amsync && that.amsync.host)	? that.amsync.host	: null,
+			'intercom':	that.intercom,
 			'minPort':	(that.amsync && that.amsync.minPort)	? that.amsync.minPort	: null,
 			'maxPort':	(that.amsync && that.amsync.maxPort)	? that.amsync.maxPort	: null,
-			'intercom': that.intercom,
-			'log': that.log
+			'host':	(that.amsync && that.amsync.host)	? that.amsync.host	: null,
+			'log':	that.log,
 		};
 
 	if (that.db.conf.host) {
 		args.push('-h');
-		args.push(db.conf.host);
+		args.push(that.db.conf.host);
 	}
 
 	args.push('-u');
-	args.push(db.conf.user);
+	args.push(that.db.conf.user);
 
 	if (that.db.conf.password) {
-		args.push('-p' + db.conf.password);
+		args.push('-p' + that.db.conf.password);
 	}
 
 	args.push('--single-transaction');
 	args.push('--hex-blob');
-	args.push(db.conf.database);
+	args.push(that.db.conf.database);
 
 	// Tables
 	args.push('users_db_version');
@@ -609,28 +602,25 @@ DataWriter.prototype.runDumpServer = function runDumpServer(cb) {
 		'args':	args,
 	};
 
-	options['Content-Type']	= 'application/sql';
-	options.intercom	= that.intercom;
-
 	new amsync.SyncServer(options, cb);
 };
 
 DataWriter.prototype.setPassword = function setPassword(params, deliveryTag, msgUuid, cb) {
-	const	that	= this,
-		logPrefix	= topLogPrefix + 'setPassword() - ',
+	const	logPrefix	= topLogPrefix + 'setPassword() - ',
 		dbFields	= [],
-		userUuidBuffer = lUtils.uuidToBuffer(params.userUuid),
+		userUuidBuffer = this.lUtils.uuidToBuffer(params.userUuid),
+		that	= this,
 		sql	= 'UPDATE user_users SET password = ? WHERE uuid = ?;';
 
 	if (cb === undefined || typeof cb !== 'function') {
-		cb = function () {};
+		cb	= function () {};
 	}
 
 	if (userUuidBuffer === false) {
-		const e = new Error('Invalid user uuid');
-		that.log.warn(logPrefix + e.message);
+		const	err	= new Error('Invalid user uuid');
+		that.log.warn(logPrefix + err.message);
 		that.emitter.emit(msgUuid, err);
-		return cb(e);
+		return cb(err);
 	}
 
 	if (params.password === false) {
@@ -649,19 +639,19 @@ DataWriter.prototype.setPassword = function setPassword(params, deliveryTag, msg
 
 DataWriter.prototype.setUsername = function setUsername(params, deliveryTag, msgUuid, cb) {
 	const	logPrefix	= topLogPrefix + 'setUsername() - ',
-		userUuidBuffer = lUtils.uuidToBuffer(params.userUuid),
+		userUuidBuffer = this.lUtils.uuidToBuffer(params.userUuid),
 		dbFields	= [params.username, userUuidBuffer],
 		sql	= 'UPDATE user_users SET username = ? WHERE uuid = ?;';
 
 	if (cb === undefined || typeof cb !== 'function') {
-		cb = function () {};
+		cb	= function () {};
 	}
 
 	if (userUuidBuffer === false) {
-		const e = new Error('Invalid user uuid');
-		that.log.warn(logPrefix + e.message);
+		const	err	= new Error('Invalid user uuid');
+		that.log.warn(logPrefix + err.message);
 		that.emitter.emit(msgUuid, err);
-		return cb(e);
+		return cb(err);
 	}
 
 	that.db.query(sql, dbFields, function (err) {

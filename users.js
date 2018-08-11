@@ -1,14 +1,33 @@
 'use strict';
 
 const	topLogPrefix = 'larvituser: users.js ',
-	lUtils	= new (require('larvitutils'))(),
+	LUtils	= require('larvitutils'),
 	async	= require('async');
 
 function Users(options) {
-	this.options = options;
+	const	logPrefix	= topLogPrefix + 'Users() - ',
+		that	= this;
 
-	if ( ! options.log) throw new Error('Required option log not set');
-	if ( ! options.db) throw new Error('Required option db not set');
+	that.options	= options || {};
+
+	if ( ! options.log) {
+		const	tmpLUtils	= new LUtils();
+		options.log	= new tmpLUtils.Log();
+	}
+
+	that.options	= options;
+
+	for (const key of Object.keys(options)) {
+		that[key]	= options[key];
+	}
+
+	that.lUtils	= new LUtils({'log': that.log});
+
+	if ( ! that.db) {
+		const	err	= new Error('Required option db is missing');
+		that.log.error(logPrefix + err.message);
+		throw err;
+	}
 }
 
 /**
@@ -21,7 +40,7 @@ Users.prototype.getFieldData = function (fieldName, cb) {
 	const	that	= this,
 		sql	= 'SELECT DISTINCT d.data FROM user_users_data d JOIN user_data_fields f ON d.fieldUuid = f.uuid WHERE f.name = "' + fieldName + '"';
 
-	that.options.db.query(sql, function (err, rows) {
+	that.db.query(sql, function (err, rows) {
 		const	result	= [];
 
 		if (err) return cb(err);
@@ -35,10 +54,10 @@ Users.prototype.getFieldData = function (fieldName, cb) {
 };
 
 Users.prototype.get = function (cb) {
-	const	dbFields	= [],
+	const	logPrefix = topLogPrefix + ' get() - ',
+		dbFields	= [],
 		tasks	= [],
-		that	= this,
-		logPrefix = topLogPrefix + ' get() - ';
+		that	= this;
 
 	let	sqlWhere	= '',
 		totalElements,
@@ -56,7 +75,7 @@ Users.prototype.get = function (cb) {
 				dbFields.push(that.matchExistingFields[i]);
 			}
 
-			sqlWhere = sqlWhere.substring(0, sqlWhere.length - 4) + '))\n';
+			sqlWhere	= sqlWhere.substring(0, sqlWhere.length - 4) + '))\n';
 		}
 
 		if (that.matchAllFields !== undefined) {
@@ -91,7 +110,7 @@ Users.prototype.get = function (cb) {
 
 			for (let i = 0; that.uuids[i] !== undefined; i ++) {
 				if (lUtils.uuidToBuffer(that.uuids[i]) === false) {
-					log.warn(logPrefix  + 'Invalid field uuid, skipping');
+					that.log.warn(logPrefix  + 'Invalid field uuid, skipping');
 					continue;
 				}
 
@@ -116,10 +135,10 @@ Users.prototype.get = function (cb) {
 			}
 		}
 
-		that.options.db.query(sql, dbFields, function (err, rows) {
+		that.db.query(sql, dbFields, function (err, rows) {
 			if (err) return cb(err);
 
-			result = [];
+			result	= [];
 
 			for (let i = 0; rows[i] !== undefined; i ++) {
 				const	user	= {};
@@ -140,7 +159,7 @@ Users.prototype.get = function (cb) {
 
 				for (let u of result) {
 					subTasks.push(function (cb) {
-						let subFields = [],
+						let	subFields	= [],
 							sql = 'SELECT uf.uuid AS fieldUuid,\n' +
 							'uf.name AS fieldName,\n' +
 							'ud.data AS fieldData,\n' +
@@ -155,18 +174,18 @@ Users.prototype.get = function (cb) {
 							subFields.push(fn);
 						}
 
-						sql = sql.substring(0, sql.length - 1);
+						sql	= sql.substring(0, sql.length - 1);
 
 						sql += ') AND ud.userUuid = ?';
 
 						if (lUtils.uuidToBuffer(u.uuid) === false) {
-							log.warn(logPrefix + 'Inavlid user uuid, skipping');
+							that.log.warn(logPrefix + 'Inavlid user uuid, skipping');
 							return cb();
 						}
 
 						subFields.push(lUtils.uuidToBuffer(u.uuid));
 
-						that.options.db.query(sql, subFields, function (err, rows) {
+						that.db.query(sql, subFields, function (err, rows) {
 							if (err) return cb(err);
 
 							for (let i = 0; rows[i] !== undefined; i ++) {
@@ -196,10 +215,10 @@ Users.prototype.get = function (cb) {
 	tasks.push(function (cb) {
 		const	sql	= 'SELECT COUNT(*) AS totalElements FROM user_users WHERE 1 ' + sqlWhere;
 
-		that.options.db.query(sql, dbFields, function (err, rows) {
+		that.db.query(sql, dbFields, function (err, rows) {
 			if (err) return cb(err);
 
-			totalElements = rows[0].totalElements;
+			totalElements	= rows[0].totalElements;
 
 			cb(err);
 		});
