@@ -10,7 +10,7 @@ function Users(options) {
 
 	that.options	= options || {};
 
-	if ( ! options.log) {
+	if ( ! that.options.log) {
 		const	tmpLUtils	= new LUtils();
 		options.log	= new tmpLUtils.Log();
 	}
@@ -109,13 +109,13 @@ Users.prototype.get = function (cb) {
 			sqlWhere += ' AND uuid IN (';
 
 			for (let i = 0; that.uuids[i] !== undefined; i ++) {
-				if (lUtils.uuidToBuffer(that.uuids[i]) === false) {
+				if (that.lUtils.uuidToBuffer(that.uuids[i]) === false) {
 					that.log.warn(logPrefix  + 'Invalid field uuid, skipping');
 					continue;
 				}
 
 				sqlWhere += '?,';
-				dbFields.push(lUtils.uuidToBuffer(that.uuids[i]));
+				dbFields.push(that.lUtils.uuidToBuffer(that.uuids[i]));
 			}
 
 			sqlWhere = sqlWhere.substring(0, sqlWhere.length - 1) + ')\n';
@@ -143,7 +143,7 @@ Users.prototype.get = function (cb) {
 			for (let i = 0; rows[i] !== undefined; i ++) {
 				const	user	= {};
 
-				user.uuid	= lUtils.formatUuid(rows[i].uuid);
+				user.uuid	= that.lUtils.formatUuid(rows[i].uuid);
 				user.username	= rows[i].username;
 
 				result.push(user);
@@ -178,12 +178,12 @@ Users.prototype.get = function (cb) {
 
 						sql += ') AND ud.userUuid = ?';
 
-						if (lUtils.uuidToBuffer(u.uuid) === false) {
+						if (that.lUtils.uuidToBuffer(u.uuid) === false) {
 							that.log.warn(logPrefix + 'Inavlid user uuid, skipping');
 							return cb();
 						}
 
-						subFields.push(lUtils.uuidToBuffer(u.uuid));
+						subFields.push(that.lUtils.uuidToBuffer(u.uuid));
 
 						that.db.query(sql, subFields, function (err, rows) {
 							if (err) return cb(err);

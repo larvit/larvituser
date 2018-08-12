@@ -99,7 +99,7 @@ User.prototype.addUserDataField = function addUserDataField(userUuid, fieldName,
  * @param func cb(err)
  */
 User.prototype.addUserDataFields = function addUserDataFields(userUuid, fields, cb) {
-	const	options	= {'exchange': that.exchangeName},
+	const	options	= {'exchange': this.exchangeName},
 		sendObj	= {},
 		that	= this;
 
@@ -286,7 +286,7 @@ User.prototype.fromField = function fromField(fieldName, fieldValue, cb) {
 
 		if (rows.length === 0) return cb(null, false);
 
-		that.fromUuid(lUtils.formatUuid(rows[0].userUuid), cb);
+		that.fromUuid(that.lUtils.formatUuid(rows[0].userUuid), cb);
 	});
 };
 
@@ -316,7 +316,7 @@ User.prototype.fromFields = function fromFields(fields, cb) {
 
 		if (rows.length === 0) return cb(null, false);
 
-		that.fromUuid(lUtils.formatUuid(rows[0].uuid), cb);
+		that.fromUuid(that.lUtils.formatUuid(rows[0].uuid), cb);
 	});
 };
 
@@ -371,7 +371,7 @@ User.prototype.fromUserAndPass = function fromUserAndPass(username, password, cb
 				return cb();
 			}
 
-			that.fromUuid(lUtils.formatUuid(userUuid), function (err, result) {
+			that.fromUuid(that.lUtils.formatUuid(userUuid), function (err, result) {
 				userObj	= result;
 				if (err) userObj	= false;
 				cb(err);
@@ -408,7 +408,7 @@ User.prototype.fromUsername = function fromUsername(username, cb) {
 		}
 
 		// Use fromUuid() to get the user instance
-		that.fromUuid(lUtils.formatUuid(rows[0].uuid), cb);
+		that.fromUuid(that.lUtils.formatUuid(rows[0].uuid), cb);
 	});
 };
 
@@ -421,9 +421,8 @@ User.prototype.fromUsername = function fromUsername(username, cb) {
 User.prototype.fromUuid = function fromUuid(userUuid, cb) {
 	const	userUuidBuf	= this.lUtils.uuidToBuffer(userUuid),
 		logPrefix	= topLogPrefix + 'fromUuid() - ',
-		returnObj	= userBase(),
+		returnObj	= new UserBase(this),
 		dbFields	= [userUuidBuf],
-		fields	= returnObj.fields,
 		that	= this,
 		sql = 'SELECT\n' +
 			'	u.uuid,\n' +
@@ -444,8 +443,6 @@ User.prototype.fromUuid = function fromUuid(userUuid, cb) {
 		return cb(err);
 	}
 
-	if (err) return cb(err);
-
 	that.db.query(sql, dbFields, function (err, rows) {
 		if (err) return cb(err);
 
@@ -455,7 +452,7 @@ User.prototype.fromUuid = function fromUuid(userUuid, cb) {
 			return cb(null, false);
 		}
 
-		returnObj.uuid	= lUtils.formatUuid(rows[0].uuid);
+		returnObj.uuid	= that.lUtils.formatUuid(rows[0].uuid);
 		returnObj.username	= rows[0].username;
 
 		if (rows[0].password === '') {
@@ -468,11 +465,11 @@ User.prototype.fromUuid = function fromUuid(userUuid, cb) {
 			const	row	= rows[i];
 
 			if (row.fieldUuid) {
-				if (fields[row.fieldName] === undefined) {
-					fields[row.fieldName] = [];
+				if (returnObj.fields[row.fieldName] === undefined) {
+					returnObj.fields[row.fieldName] = [];
 				}
 
-				fields[row.fieldName].push(row.fieldData);
+				returnObj.fields[row.fieldName].push(row.fieldData);
 			}
 		}
 
@@ -559,7 +556,7 @@ User.prototype.hashPassword = function hashPassword(password, cb) {
  * @param func cb(err)
  */
 User.prototype.replaceUserFields = function replaceUserFields(uuid, fields, cb) {
-	const	options	= {'exchange': this.exchangeName},
+	const	options	= {'exchange': this.dataWriter.exchangeName},
 		sendObj	= {},
 		that	= this;
 
@@ -678,7 +675,7 @@ User.prototype.setPassword = function setPassword(userUuid, newPassword, cb) {
  * @param fucn cb(err)
  */
 User.prototype.setUsername = function setUsername(userUuid, newUsername, cb) {
-	const	userUuidBuf	= lUtils.uuidToBuffer(userUuid),
+	const	userUuidBuf	= this.lUtils.uuidToBuffer(userUuid),
 		logPrefix	= topLogPrefix + 'setUsername() - ',
 		that	= this;
 
@@ -720,151 +717,6 @@ User.prototype.setUsername = function setUsername(userUuid, newUsername, cb) {
 	});
 };
 
-function userBase() {
-	const	returnObj	= {'fields': {}};
-
-	/**
-	 * Add a field with value
-	 *
-	 * @param str name
-	 * @param str value
-	 * @param func cb(err)
-	 */
-	returnObj.addField = function addField(name, value, cb) {
-		if (returnObj.uuid === undefined) {
-			const	err	= new Error('Cannot add field; no user loaded');
-			return cb(err);
-		}
-
-		addUserDataField(returnObj.uuid, name, value, function (err) {
-			if (err) return cb(err);
-
-			if (returnObj.fields[name] === undefined) {
-				returnObj.fields[name] = [];
-			}
-
-			returnObj.fields[name].push(value);
-			cb();
-		});
-	};
-
-	/**
-	 * Adds one or more fields with values to the user object. Does not overwrite existing values. It is possible to add the same value multiple times
-	 *
-	 * @param obj fields - field name as key, field values as array to that key - ex: {'role': ['admin','user']}
-	 * @param func cb(err)
-	 */
-	returnObj.addFields = function addFields(fields, cb) {
-		if (returnObj.uuid === undefined) {
-			const	err = new Error('Cannot add field; no user loaded');
-			return cb(err);
-		}
-
-		addUserDataFields(returnObj.uuid, fields, function (err) {
-			if (err) return cb(err);
-
-			for (let key in fields) {
-				if (returnObj.fields[key] === undefined) {
-					returnObj[key] = fields[key];
-				} else {
-					for (let value of fields[key]) {
-						returnObj.fields[key].push(value);
-					}
-				}
-			}
-
-			cb();
-		});
-	};
-
-	/**
-	 * Replace all fields
-	 * IMPORTANT!!! Will clear all data not given in the fields parameter
-	 *
-	 * @param obj fields - field name as key, field values as array to that key - ex: {'role': ['admin','user']}
-	 * @param func cb(err)
-	 */
-	returnObj.replaceFields = function replaceFields(fields, cb) {
-		if (returnObj.uuid === undefined) {
-			const	err	= new Error('Cannot replace fields; no user loaded');
-			return cb(err);
-		}
-
-		replaceUserFields(returnObj.uuid, fields, function (err) {
-			if (err) return cb(err);
-
-			// Reload everything
-			fromUuid(returnObj.uuid, function (err, user) {
-				if (err) return cb(err);
-
-				returnObj.fields = user.fields;
-				cb();
-			});
-		});
-	};
-
-	returnObj.rm = function rm(cb) {
-		if (returnObj.uuid === undefined) {
-			const	err	= new Error('Cannot remove field; no user loaded');
-			return cb(err);
-		}
-
-		rmUser(returnObj.uuid, function (err) {
-			if (err) return cb(err);
-
-			delete returnObj.uuid;
-			delete returnObj.fields;
-			delete returnObj.username;
-
-			cb();
-		});
-	};
-
-	/**
-	 * Remove a field from this user
-	 *
-	 * @param str name
-	 * @param func cb(err)
-	 */
-	returnObj.rmField = function rmField(name, cb) {
-		if (returnObj.uuid === undefined) {
-			const	err	= new Error('Cannot remove field; no user loaded');
-			return cb(err);
-		}
-
-		rmUserField(returnObj.uuid, name, function (err) {
-			if (err) return cb(err);
-
-			delete returnObj.fields[name];
-			cb();
-		});
-	};
-
-	returnObj.setPassword = function (newPassword, cb) {
-		if (returnObj.uuid === undefined) {
-			const	err	= new Error('Cannot set password; no user loaded');
-			return cb(err);
-		}
-
-		setPassword(returnObj.uuid, newPassword, cb);
-	};
-
-	returnObj.setUsername = function (newUsername, cb) {
-		if (returnObj.uuid === undefined) {
-			const	err	= new Error('Cannot set username; no user loaded');
-			return cb(err);
-		}
-
-		setUsername(returnObj.uuid, newUsername, function (err) {
-			if (err) return cb(err);
-			returnObj.username	= newUsername;
-			cb();
-		});
-	};
-
-	return returnObj;
-}
-
 /**
  * Checks if a unsername is available
  *
@@ -888,6 +740,183 @@ User.prototype.usernameAvailable = function usernameAvailable(username, cb) {
 		}
 
 		cb(null, isAvailable);
+	});
+};
+
+function UserBase(userInstance) {
+	const	that	= this;
+
+	that.fields	= {};
+
+	that.userInstance	= userInstance;
+	that.log	= that.userInstance.log;
+}
+
+/**
+ * Add a field with value
+ *
+ * @param str name
+ * @param str value
+ * @param func cb(err)
+ */
+UserBase.prototype.addField = function addField(name, value, cb) {
+	const	logPrefix	= topLogPrefix + 'UserBase.addField() - ',
+		that	= this;
+
+	if (that.uuid === undefined) {
+		const	err	= new Error('Cannot add field; no user loaded');
+		that.log.verbose(logPrefix + err.message);
+		return cb(err);
+	}
+
+	that.userInstance.addUserDataField(that.uuid, name, value, function (err) {
+		if (err) return cb(err);
+
+		if (that.fields[name] === undefined) {
+			that.fields[name] = [];
+		}
+
+		that.fields[name].push(value);
+		cb();
+	});
+};
+
+/**
+ * Adds one or more fields with values to the user object. Does not overwrite existing values. It is possible to add the same value multiple times
+ *
+ * @param obj fields - field name as key, field values as array to that key - ex: {'role': ['admin','user']}
+ * @param func cb(err)
+ */
+UserBase.prototype.addFields = function addFields(fields, cb) {
+	const	logPrefix	= topLogPrefix + 'UserBase.addFields() - ',
+		that	= this;
+
+	if (that.uuid === undefined) {
+		const	err = new Error('Cannot add field; no user loaded');
+		that.log.verbose(logPrefix + err.message);
+		return cb(err);
+	}
+
+	that.userInstance.addUserDataFields(that.uuid, fields, function (err) {
+		if (err) return cb(err);
+
+		for (let key in fields) {
+			if (that.fields[key] === undefined) {
+				that[key]	= fields[key];
+			} else {
+				for (let value of fields[key]) {
+					that.fields[key].push(value);
+				}
+			}
+		}
+
+		cb();
+	});
+};
+
+/**
+ * Replace all fields
+ * IMPORTANT!!! Will clear all data not given in the fields parameter
+ *
+ * @param obj fields - field name as key, field values as array to that key - ex: {'role': ['admin','user']}
+ * @param func cb(err)
+ */
+UserBase.prototype.replaceFields = function replaceFields(fields, cb) {
+	const	logPrefix	= topLogPrefix + 'UserBase.replaceFields() - ',
+		that	= this;
+
+	if (that.uuid === undefined) {
+		const	err	= new Error('Cannot replace fields; no user loaded');
+		that.log.verbose(logPrefix + err.message);
+		return cb(err);
+	}
+
+	that.userInstance.replaceUserFields(that.uuid, fields, function (err) {
+		if (err) return cb(err);
+
+		// Reload everything
+		that.userInstance.fromUuid(that.uuid, function (err, user) {
+			if (err) return cb(err);
+
+			that.fields	= user.fields;
+			cb();
+		});
+	});
+};
+
+UserBase.prototype.rm = function rm(cb) {
+	const	logPrefix	= topLogPrefix + 'UserBase.rm() - ',
+		that	= this;
+
+	if (that.uuid === undefined) {
+		const	err	= new Error('Cannot remove field; no user loaded');
+		that.log.verbose(logPrefix + err.message);
+		return cb(err);
+	}
+
+	that.userInstance.rmUser(that.uuid, function (err) {
+		if (err) return cb(err);
+
+		delete that.uuid;
+		delete that.username;
+
+		that.fields	= {};
+
+		cb();
+	});
+};
+
+/**
+ * Remove a field from this user
+ *
+ * @param str name
+ * @param func cb(err)
+ */
+UserBase.prototype.rmField = function rmField(name, cb) {
+	const	logPrefix	= topLogPrefix + 'UserBase.rmField() - ',
+		that	= this;
+
+	if (that.uuid === undefined) {
+		const	err	= new Error('Cannot remove field; no user loaded');
+		that.log.verbose(logPrefix + err.message);
+		return cb(err);
+	}
+
+	that.userInstance.rmUserField(that.uuid, name, function (err) {
+		if (err) return cb(err);
+
+		delete that.fields[name];
+		cb();
+	});
+};
+
+UserBase.prototype.setPassword = function (newPassword, cb) {
+	const	logPrefix	= topLogPrefix + 'UserBase.setPassword() - ',
+		that	= this;
+
+	if (that.uuid === undefined) {
+		const	err	= new Error('Cannot set password; no user loaded');
+		that.log.verbose(logPrefix + err.message);
+		return cb(err);
+	}
+
+	that.userInstance.setPassword(that.uuid, newPassword, cb);
+};
+
+UserBase.prototype.setUsername = function (newUsername, cb) {
+	const	logPrefix	= topLogPrefix + 'UserBase.setUsername() - ',
+		that	= this;
+
+	if (that.uuid === undefined) {
+		const	err	= new Error('Cannot set username; no user loaded');
+		that.log.verbose(logPrefix + err.message);
+		return cb(err);
+	}
+
+	that.setUsername(that.uuid, newUsername, function (err) {
+		if (err) return cb(err);
+		that.username	= newUsername;
+		cb();
 	});
 };
 

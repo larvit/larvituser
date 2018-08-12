@@ -1,6 +1,6 @@
 'use strict';
 
-const	User	= require('../index.js'),
+const	UserLib	= require('../index.js'),
 	assert	= require('assert'),
 	lUtils	= new (require('larvitutils'))(),
 	async	= require('async'),
@@ -8,7 +8,7 @@ const	User	= require('../index.js'),
 	db	= require('larvitdb'),
 	fs	= require('fs');
 
-let userLib;
+let	userLib;
 
 before(function (done) {
 	this.timeout(10000);
@@ -16,19 +16,19 @@ before(function (done) {
 
 	// Run DB Setup
 	tasks.push(function (cb) {
-		let confFile;
+		let	confFile;
 
 		if (process.env.DBCONFFILE === undefined) {
-			confFile = __dirname + '/../config/db_test.json';
+			confFile	= __dirname + '/../config/db_test.json';
 		} else {
-			confFile = process.env.DBCONFFILE;
+			confFile	= process.env.DBCONFFILE;
 		}
 
 		log.verbose('DB config file: "' + confFile + '"');
 
 		// First look for absolute path
 		fs.stat(confFile, function (err) {
-			let conf;
+			let	conf;
 
 			if (err) {
 
@@ -38,8 +38,8 @@ before(function (done) {
 					if (err) throw err;
 					log.verbose('DB config: ' + JSON.stringify(require(confFile)));
 
-					conf = require(confFile);
-					conf.log = log;
+					conf	= require(confFile);
+					conf.log	= log;
 					db.setup(conf, cb);
 				});
 
@@ -47,8 +47,8 @@ before(function (done) {
 			}
 
 			log.verbose('DB config: ' + JSON.stringify(require(confFile)));
-			conf = require(confFile);
-			conf.log = log;
+			conf	= require(confFile);
+			conf.log	= log;
 			db.setup(conf, cb);
 		});
 	});
@@ -67,9 +67,9 @@ before(function (done) {
 	});
 
 	tasks.push(function (cb) {
-		userLib = new User({
-			'log': log,
-			'db': db
+		userLib = new UserLib({
+			'log':	log,
+			'db':	db
 		}, cb);
 	});
 
@@ -93,7 +93,7 @@ describe('User', function () {
 		it('should return an UUID for the field we are asking for', function (done) {
 			userLib.helpers.getFieldUuid('firstname', function (err, result) {
 				if (err) throw err;
-				fieldUuid = result;
+				fieldUuid	= result;
 				assert.notStrictEqual(lUtils.formatUuid(fieldUuid), false);
 				done();
 			});
@@ -466,26 +466,28 @@ describe('User', function () {
 			});
 
 			tasks.push(function (cb) {
-				let u = new userLib.Users();
+				let	users	= new UserLib.Users({'db': db, 'log': log});
 
-				u.get(function (err, userList) {
+				users.get(function (err, userList) {
+					let	foundUser1	= false,
+						foundUser2	= false;
+
 					if (err) throw err;
-					assert(userList.length >= 2, '2 or more users should exist in database');
 
-					let foundUser1 = false, foundUser2 = false;
+					assert(userList.length >= 2,	'2 or more users should exist in database');
 
 					for (let i = 0; i < userList.length; i ++) {
 						if (userList[i].uuid === uuids[0]) {
-							foundUser1 = true;
+							foundUser1	= true;
 						}
 
 						if (userList[i].uuid === uuids[1]) {
-							foundUser2 = true;
+							foundUser2	= true;
 						}
 					}
 
-					assert.strictEqual(foundUser1, true, 'user1 not found');
-					assert.strictEqual(foundUser2, true, 'user2 not found');
+					assert.strictEqual(foundUser1,	true,	'user1 not found');
+					assert.strictEqual(foundUser2,	true,	'user2 not found');
 
 					cb();
 				});
@@ -495,50 +497,50 @@ describe('User', function () {
 		});
 
 		it('Get list of users with matching fields', function (done) {
-			const users = new userLib.Users();
+			const	users	= new UserLib.Users({'db': db, 'log': log});
 
-			users.matchAllFields = { 'role': ['customer']};
-			users.returnFields = [];
+			users.matchAllFields	= { 'role': ['customer']};
+			users.returnFields	= [];
 
 			users.get(function (err, userList, totalElements) {
 				if (err) throw err;
-				assert.strictEqual(totalElements, 1);
-				assert.strictEqual(userList.length, 1);
-				assert.strictEqual(userList[0].username, 'user1');
+				assert.strictEqual(totalElements,	1);
+				assert.strictEqual(userList.length,	1);
+				assert.strictEqual(userList[0].username,	'user1');
 
 				done();
 			});
 		});
 
 		it('Get list of data values for field', function (done) {
-			const users = new userLib.Users();
+			const	users	= new UserLib.Users({'db': db, 'log': log});
 
 			users.getFieldData('lastname', function (err, result) {
 				if (err) throw err;
-				assert.strictEqual(result.length, 3);
+				assert.strictEqual(result.length,	3);
 
-				assert.strictEqual(result.indexOf('biff') > - 1, true);
-				assert.strictEqual(result.indexOf('baff') > - 1, true);
-				assert.strictEqual(result.indexOf('bonk') > - 1, true);
+				assert.strictEqual(result.indexOf('biff') > - 1,	true);
+				assert.strictEqual(result.indexOf('baff') > - 1,	true);
+				assert.strictEqual(result.indexOf('bonk') > - 1,	true);
 				done();
 			});
 		});
 
 		it('Get list of users with requested field data', function (done) {
-			const users = new userLib.Users();
+			const	users	= new UserLib.Users({'db': db, 'log': log});
 
-			users.returnFields = ['lastname'];
+			users.returnFields	= ['lastname'];
 
 			users.get(function (err, result) {
-				if (err) throw err;
-				assert.notStrictEqual(result, undefined);
-				assert.strictEqual(result.length, 4);
-
 				const expectedFields = ['uuid', 'username', 'lastname'];
+
+				if (err) throw err;
+				assert.notStrictEqual(result,	undefined);
+				assert.strictEqual(result.length,	4);
 
 				for (let r of result) {
 					for (let key in r) {
-						assert.strictEqual(expectedFields.indexOf(key) > - 1, true);
+						assert.strictEqual(expectedFields.indexOf(key) > - 1,	true);
 					}
 				}
 
@@ -547,7 +549,7 @@ describe('User', function () {
 		});
 
 		it('Get list of users where fieldData exists', function (done) {
-			const	users	= new userLib.Users();
+			const	users	= new UserLib.Users({'db': db, 'log': log});
 
 			users.matchExistingFields	= ['veryUnique'];
 
@@ -563,7 +565,7 @@ describe('User', function () {
 		});
 
 		it('Get users by uuid', function (done) {
-			const	users	= new userLib.Users();
+			const	users	= new UserLib.Users({'db': db, 'log': log});
 
 			users.uuids	= [uuids[1]];
 

@@ -9,17 +9,28 @@ User module for node.js
 First fire up the library connections like this:
 
 ```javascript
-const	userLib = require('larvituser');
+const	UserLib	= require('larvituser'),
+	Intercom	= require('larvitamintercom'),
+	winston	= require('winston'),
+	log	= winston.createLogger({'transports': [new winston.transports.Console()]}),
+	userLib = new UserLib({
+		'db':	require('larvitdb'),
 
-userLib.dataWriter.mode = 'master'; // Used for standalone use. If multiple applications connect via rabbitMQ the other should be "slave"
+		// Optional parameters
+		'mode':	'noSync', // Other options are "master" or "slave"
+		'intercom':	new Intercom({'conStr': 'loopback interface', 'log': log}),
+		'log':	log
+	});
+
+db.setup(...); // See https://github.com/larvit/larvitdb for configuration details
 ```
 
 Create a new user in the database, do like this:
 
 ```javascript
 const userData = {
-	'firstname': 'Nisse',
-	'lastname': 'Nilsson',
+	'firstname':	'Nisse',
+	'lastname':	'Nilsson',
 	'role': [
 		'user',
 		'subscriber'
@@ -50,7 +61,7 @@ userLib.fromUserAndPass('myUsername', 'myPassword', function (err, user) {
 List multiple users
 
 ```javascript
-const	users	= new userLib.Users();
+const	users	= new UserLib.Users({'db': db, 'log': log});
 
 users.get(function (err, userList) {
 	if (err) throw err;
@@ -62,7 +73,7 @@ users.get(function (err, userList) {
 Get distinct values for field from all users
 
 ```javascript
-const	users	= new userLib.Users();
+const	users	= new UserLib.Users({'db': db, 'log': log});
 
 users.getFieldData('fieldName', function (err, result) {
 	if (err) throw err;

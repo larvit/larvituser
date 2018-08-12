@@ -173,7 +173,7 @@ DataWriter.prototype.addUserFieldReq = function addUserFieldReq(params, delivery
 		cb	= function () {};
 	}
 
-	if (that.mode === 'master') {
+	if (that.mode === 'master' || that.mode === 'noSync') {
 		function run() {
 			if (that.addUserFieldReqRunning === true) {
 				setTimeout(run, 10);
@@ -192,7 +192,7 @@ DataWriter.prototype.addUserFieldReq = function addUserFieldReq(params, delivery
 				sendObj.action	= 'addUserField';
 				sendObj.params 	= {};
 				sendObj.params.name	= fieldName;
-				sendObj.params.uuid	= (rows.length) ? lUtils.formatUuid(rows[0].uuid) : uuidLib.v1();
+				sendObj.params.uuid	= (rows.length) ? that.lUtils.formatUuid(rows[0].uuid) : uuidLib.v1();
 
 				that.emitter.once('addedField_' + fieldName, function (err) {
 					if (err) return cb(err);
@@ -214,7 +214,7 @@ DataWriter.prototype.addUserFieldReq = function addUserFieldReq(params, delivery
 		}
 		run();
 	} else {
-		that.log.debug(logPrefix + 'Ignoring since we are not master');
+		that.log.debug(logPrefix + 'Ignoring since we are not master or noSync');
 	}
 };
 
@@ -432,7 +432,7 @@ DataWriter.prototype.replaceFields = function replaceFields(params, deliveryTag,
 		for (const fieldName of Object.keys(params.fields)) {
 			tasks.push(function (cb) {
 				that.helpers.getFieldUuid(fieldName, function (err, fieldUuid) {
-					fieldNamesToUuidBufs[fieldName]	= lUtils.uuidToBuffer(fieldUuid);
+					fieldNamesToUuidBufs[fieldName]	= that.lUtils.uuidToBuffer(fieldUuid);
 
 					if (fieldNamesToUuidBufs[fieldName] === false) {
 						const	err	= new Error('Invalid field uuid');
@@ -530,8 +530,8 @@ DataWriter.prototype.rmUserField = function rmUserField(params, deliveryTag, msg
 	}
 
 	that.helpers.getFieldUuid(params.fieldName, function (err, fieldUuid) {
-		const	userUuidBuffer	= lUtils.uuidToBuffer(params.userUuid),
-			fieldUuidBuffer	= lUtils.uuidToBuffer(fieldUuid),
+		const	userUuidBuffer	= that.lUtils.uuidToBuffer(params.userUuid),
+			fieldUuidBuffer	= that.lUtils.uuidToBuffer(fieldUuid),
 			sql	= 'DELETE FROM user_users_data WHERE userUuid = ? AND fieldUuid = ?';
 
 		if (err) {
@@ -641,6 +641,7 @@ DataWriter.prototype.setUsername = function setUsername(params, deliveryTag, msg
 	const	logPrefix	= topLogPrefix + 'setUsername() - ',
 		userUuidBuffer = this.lUtils.uuidToBuffer(params.userUuid),
 		dbFields	= [params.username, userUuidBuffer],
+		that	= this,
 		sql	= 'UPDATE user_users SET username = ? WHERE uuid = ?;';
 
 	if (cb === undefined || typeof cb !== 'function') {

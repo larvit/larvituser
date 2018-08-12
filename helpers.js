@@ -92,14 +92,14 @@ Helpers.prototype.getFieldUuid = function getFieldUuid(fieldName, cb) {
 				sendObj	= {};
 
 			sendObj.action	= 'addUserFieldReq';
-			sendObj.params 	= {};
-			sendObj.params.name = fieldName;
+			sendObj.params	= {};
+			sendObj.params.name	= fieldName;
 
 			that.dataWriter.intercom.send(sendObj, options, function (err) {
-				if (err) { cb(err); return; }
+				if (err) return cb(err);
 
 				that.dataWriter.emitter.once('addedField_' + fieldName, function (err) {
-					if (err) { cb(err); return; }
+					if (err) return cb(err);
 					that.getFieldUuid(fieldName, cb);
 				});
 			});
