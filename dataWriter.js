@@ -342,9 +342,8 @@ DataWriter.prototype.listenToQueue = function listenToQueue(cb) {
 
 DataWriter.prototype.ready = function ready(cb) {
 	const	that	= this,
-		logPrefix	= topLogPrefix + 'ready() - ';
-
-	let	dbMigration;
+		logPrefix	= topLogPrefix + 'ready() - ',
+		tasks	= [];
 
 	if (typeof cb !== 'function') {
 		cb	= function () {};
@@ -358,27 +357,47 @@ DataWriter.prototype.ready = function ready(cb) {
 	}
 
 	that.readyInProgress	= true;
-
-	that.log.debug(logPrefix + 'Waiting for dbmigration()');
-
-	dbMigration	= new DbMigration({
-		'log': that.log,
-		'dbType':	'mariadb',
-		'dbDriver':	that.db,
-		'tableName':	'users_db_version',
-		'migrationScriptsPath':	__dirname + '/dbmigration'
+	
+	tasks.push(function (cb) {
+		if (that.mode === 'slave') {
+			that.log.verbose(logPrefix + 'that.mode: "' + that.mode + '", so read');
+			new amsync.SyncClient({
+				'exchange':	that.exchangeName + '_dataDump',
+				'intercom':	that.intercom
+			}, cb);
+		} else {
+			cb();
+		}
 	});
 
-	dbMigration.run(function (err) {
-		if (err) {
-			that.log.error(logPrefix + err.message);
-			return cb(err);
-		}
+	// Migrate database
+	tasks.push(function (cb) {
+		const	options	= {};
+
+		let	dbMigration;
+
+		options.dbType	= 'mariadb';
+		options.dbDriver	= that.db;
+		options.tableName	= 'larvituser_db_version';
+		options.migrationScriptsPath	= __dirname + '/dbmigration';
+		dbMigration	= new DbMigration(options);
+
+		dbMigration.run(function (err) {
+			if (err) {
+				that.log.error(logPrefix + 'Database error: ' + err.message);
+			}
+
+			cb(err);
+		});
+	});
+
+	async.series(tasks, function (err) {
+		if (err) return;
 
 		that.isReady	= true;
 		that.emitter.emit('ready');
 
-		if (that.mode === 'master') {
+		if (that.mode === 'both' || that.mode === 'master') {
 			that.runDumpServer(cb);
 		} else {
 			cb();
