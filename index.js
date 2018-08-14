@@ -13,6 +13,10 @@ function User(options, cb) {
 	const	logPrefix	= topLogPrefix + 'User() - ',
 		that	= this;
 
+	if (typeof cb !== 'function') {
+		cb	= function () {};
+	}
+
 	that.options	= options || {};
 
 	if ( ! options.log) {
@@ -281,12 +285,15 @@ User.prototype.fromField = function fromField(fieldName, fieldValue, cb) {
 				'WHERE udf.name = ? AND uud.data = ?\n' +
 				'LIMIT 1';
 
-	that.db.query(sql, dbFields, function (err, rows) {
+	that.dataWriter.ready(function (err) {
 		if (err) return cb(err);
+		that.db.query(sql, dbFields, function (err, rows) {
+			if (err) return cb(err);
 
-		if (rows.length === 0) return cb(null, false);
+			if (rows.length === 0) return cb(null, false);
 
-		that.fromUuid(that.lUtils.formatUuid(rows[0].userUuid), cb);
+			that.fromUuid(that.lUtils.formatUuid(rows[0].userUuid), cb);
+		});
 	});
 };
 
@@ -311,12 +318,15 @@ User.prototype.fromFields = function fromFields(fields, cb) {
 
 	sql += 'LIMIT 1';
 
-	that.db.query(sql, dbFields, function (err, rows) {
+	that.dataWriter.ready(function (err) {
 		if (err) return cb(err);
+		that.db.query(sql, dbFields, function (err, rows) {
+			if (err) return cb(err);
 
-		if (rows.length === 0) return cb(null, false);
+			if (rows.length === 0) return cb(null, false);
 
-		that.fromUuid(that.lUtils.formatUuid(rows[0].uuid), cb);
+			that.fromUuid(that.lUtils.formatUuid(rows[0].uuid), cb);
+		});
 	});
 };
 
@@ -338,6 +348,10 @@ User.prototype.fromUserAndPass = function fromUserAndPass(username, password, cb
 
 	username	= username.trim();
 	password	= password.trim();
+
+	tasks.push(function (cb) {
+		that.dataWriter.ready(cb);
+	});
 
 	tasks.push(function (cb) {
 		const	dbFields	= [username],
@@ -399,16 +413,20 @@ User.prototype.fromUsername = function fromUsername(username, cb) {
 	username	= username.trim();
 	dbFields.push(username);
 
-	that.db.query(sql, dbFields, function (err, rows) {
+	that.dataWriter.ready(function (err) {
 		if (err) return cb(err);
 
-		if (rows.length === 0) {
-			that.log.debug(logPrefix + 'No user found for username: "' + username + '"');
-			return cb(null, false);
-		}
+		that.db.query(sql, dbFields, function (err, rows) {
+			if (err) return cb(err);
 
-		// Use fromUuid() to get the user instance
-		that.fromUuid(that.lUtils.formatUuid(rows[0].uuid), cb);
+			if (rows.length === 0) {
+				that.log.debug(logPrefix + 'No user found for username: "' + username + '"');
+				return cb(null, false);
+			}
+
+			// Use fromUuid() to get the user instance
+			that.fromUuid(that.lUtils.formatUuid(rows[0].uuid), cb);
+		});
 	});
 };
 
@@ -443,37 +461,41 @@ User.prototype.fromUuid = function fromUuid(userUuid, cb) {
 		return cb(err);
 	}
 
-	that.db.query(sql, dbFields, function (err, rows) {
+	that.dataWriter.ready(function (err) {
 		if (err) return cb(err);
 
-		if (rows.length === 0) {
-			const	err	= new Error('No user found for userUuid: "' + userUuid + '"');
-			that.log.debug(logPrefix + err.message);
-			return cb(null, false);
-		}
+		that.db.query(sql, dbFields, function (err, rows) {
+			if (err) return cb(err);
 
-		returnObj.uuid	= that.lUtils.formatUuid(rows[0].uuid);
-		returnObj.username	= rows[0].username;
-
-		if (rows[0].password === '') {
-			returnObj.passwordIsFalse	= true;
-		} else {
-			returnObj.passwordIsFalse	= false;
-		}
-
-		for (let i = 0; rows[i] !== undefined; i ++) {
-			const	row	= rows[i];
-
-			if (row.fieldUuid) {
-				if (returnObj.fields[row.fieldName] === undefined) {
-					returnObj.fields[row.fieldName] = [];
-				}
-
-				returnObj.fields[row.fieldName].push(row.fieldData);
+			if (rows.length === 0) {
+				const	err	= new Error('No user found for userUuid: "' + userUuid + '"');
+				that.log.debug(logPrefix + err.message);
+				return cb(null, false);
 			}
-		}
 
-		cb(null, returnObj);
+			returnObj.uuid	= that.lUtils.formatUuid(rows[0].uuid);
+			returnObj.username	= rows[0].username;
+
+			if (rows[0].password === '') {
+				returnObj.passwordIsFalse	= true;
+			} else {
+				returnObj.passwordIsFalse	= false;
+			}
+
+			for (let i = 0; rows[i] !== undefined; i ++) {
+				const	row	= rows[i];
+
+				if (row.fieldUuid) {
+					if (returnObj.fields[row.fieldName] === undefined) {
+						returnObj.fields[row.fieldName] = [];
+					}
+
+					returnObj.fields[row.fieldName].push(row.fieldData);
+				}
+			}
+
+			cb(null, returnObj);
+		});
 	});
 };
 
@@ -693,26 +715,30 @@ User.prototype.setUsername = function setUsername(userUuid, newUsername, cb) {
 		return cb(err);
 	}
 
-	that.db.query('SELECT uuid FROM user_users WHERE username = ? AND uuid != ?', [newUsername, userUuidBuf], function (err, rows) {
-		const	options	= {'exchange': that.dataWriter.exchangeName},
-			sendObj	= {};
-
+	that.dataWriter.ready(function (err) {
 		if (err) return cb(err);
 
-		if (rows.length && that.lUtils.formatUuid(rows[0].uuid) !== userUuid) {
-			const	err = new Error('Username is already taken');
-			return cb(err);
-		}
+		that.db.query('SELECT uuid FROM user_users WHERE username = ? AND uuid != ?', [newUsername, userUuidBuf], function (err, rows) {
+			const	options	= {'exchange': that.dataWriter.exchangeName},
+				sendObj	= {};
 
-		sendObj.action	= 'setUsername';
-		sendObj.params	= {};
-		sendObj.params.userUuid	= userUuid;
-		sendObj.params.username	= newUsername;
-
-		that.intercom.send(sendObj, options, function (err, msgUuid) {
 			if (err) return cb(err);
 
-			that.dataWriter.emitter.once(msgUuid, cb);
+			if (rows.length && that.lUtils.formatUuid(rows[0].uuid) !== userUuid) {
+				const	err = new Error('Username is already taken');
+				return cb(err);
+			}
+
+			sendObj.action	= 'setUsername';
+			sendObj.params	= {};
+			sendObj.params.userUuid	= userUuid;
+			sendObj.params.username	= newUsername;
+
+			that.intercom.send(sendObj, options, function (err, msgUuid) {
+				if (err) return cb(err);
+
+				that.dataWriter.emitter.once(msgUuid, cb);
+			});
 		});
 	});
 };
@@ -730,16 +756,20 @@ User.prototype.usernameAvailable = function usernameAvailable(username, cb) {
 
 	username	= username.trim();
 
-	that.db.query('SELECT uuid FROM user_users WHERE username = ?', [username], function (err, rows) {
+	that.dataWriter.ready(function (err) {
 		if (err) return cb(err);
 
-		if (rows.length === 0) {
-			isAvailable	= true;
-		} else {
-			isAvailable	= false;
-		}
+		that.db.query('SELECT uuid FROM user_users WHERE username = ?', [username], function (err, rows) {
+			if (err) return cb(err);
 
-		cb(null, isAvailable);
+			if (rows.length === 0) {
+				isAvailable	= true;
+			} else {
+				isAvailable	= false;
+			}
+
+			cb(null, isAvailable);
+		});
 	});
 };
 
