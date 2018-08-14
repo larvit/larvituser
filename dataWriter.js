@@ -357,7 +357,7 @@ DataWriter.prototype.ready = function ready(cb) {
 	}
 
 	that.readyInProgress	= true;
-	
+
 	tasks.push(function (cb) {
 		if (that.mode === 'slave') {
 			that.log.verbose(logPrefix + 'that.mode: "' + that.mode + '", so read');
@@ -380,6 +380,7 @@ DataWriter.prototype.ready = function ready(cb) {
 		options.dbDriver	= that.db;
 		options.tableName	= 'larvituser_db_version';
 		options.migrationScriptsPath	= __dirname + '/dbmigration';
+		options.log	= that.log;
 		dbMigration	= new DbMigration(options);
 
 		dbMigration.run(function (err) {
