@@ -943,11 +943,7 @@ UserBase.prototype.setUsername = function (newUsername, cb) {
 		return cb(err);
 	}
 
-	that.setUsername(that.uuid, newUsername, function (err) {
-		if (err) return cb(err);
-		that.username	= newUsername;
-		cb();
-	});
+	that.userInstance.setUsername(that.uuid, newUsername, cb);
 };
 
 exports = module.exports = User;
