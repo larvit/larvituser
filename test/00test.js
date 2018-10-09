@@ -396,6 +396,19 @@ describe('User', function () {
 				});
 			});
 		});
+
+		it('should refresh read the new value back on the user object', function (done) {
+			userLib.create('böb', false, {}, function (err, user) {
+				if (err) throw err;
+
+				user.setUsername('untz-lord-69', function (err) {
+					if (err) throw err;
+
+					assert.strictEqual(user.username, 'untz-lord-69');
+					done();
+				});
+			});
+		});
 	});
 
 	describe('set new password', function () {
@@ -536,7 +549,7 @@ describe('User', function () {
 
 				if (err) throw err;
 				assert.notStrictEqual(result,	undefined);
-				assert.strictEqual(result.length,	4);
+				assert.strictEqual(result.length,	5);
 
 				for (let r of result) {
 					for (let key in r) {
