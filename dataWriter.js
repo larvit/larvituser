@@ -379,7 +379,7 @@ DataWriter.prototype.ready = function ready(cb) {
 
 		options.dbType	= 'mariadb';
 		options.dbDriver	= that.db;
-		options.tableName	= 'larvituser_db_version';
+		options.tableName	= 'users_db_version';
 		options.migrationScriptsPath	= __dirname + '/dbmigration';
 		options.log	= that.log;
 		dbMigration	= new DbMigration(options);
