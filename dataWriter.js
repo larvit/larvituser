@@ -363,7 +363,8 @@ DataWriter.prototype.ready = function ready(cb) {
 			that.log.verbose(logPrefix + 'that.mode: "' + that.mode + '", so read');
 			new amsync.SyncClient({
 				'exchange':	that.exchangeName + '_dataDump',
-				'intercom':	that.intercom
+				'intercom':	that.intercom,
+				'log': that.log
 			}, cb);
 		} else {
 			cb();
@@ -620,6 +621,7 @@ DataWriter.prototype.runDumpServer = function runDumpServer(cb) {
 	options.dataDumpCmd = {
 		'command':	'mysqldump',
 		'args':	args,
+		'log': that.log
 	};
 
 	new amsync.SyncServer(options, cb);
