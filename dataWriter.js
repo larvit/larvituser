@@ -371,6 +371,23 @@ DataWriter.prototype.ready = function ready(cb) {
 		}
 	});
 
+	// Change tablename from larvituser_db_version to users_db_version
+	// In case larvituser_db_version exists, that is.
+	// This is due to a breaking change in 0.17.0 and this was added as
+	// a patch in 0.17.1 to make applications not crash
+	tasks.push(function (cb) {
+		that.db.query('SHOW TABLES LIKE \'larvituser_db_version\'', function (err, rows) {
+			if (err) return cb(err);
+
+			if (rows.length) {
+				db.query('RENAME TABLE larvituser_db_version users_db_version', cb);
+				return;
+			}
+
+			cb();
+		});
+	});
+
 	// Migrate database
 	tasks.push(function (cb) {
 		const	options	= {};
