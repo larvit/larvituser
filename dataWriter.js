@@ -380,7 +380,7 @@ DataWriter.prototype.ready = function ready(cb) {
 			if (err) return cb(err);
 
 			if (rows.length) {
-				db.query('RENAME TABLE larvituser_db_version users_db_version', cb);
+				that.db.query('RENAME TABLE larvituser_db_version users_db_version', cb);
 				return;
 			}
 
