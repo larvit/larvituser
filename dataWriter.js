@@ -359,12 +359,23 @@ DataWriter.prototype.ready = function ready(cb) {
 	that.readyInProgress	= true;
 
 	tasks.push(function (cb) {
+		that.log.debug(logPrefix + 'Waiting for intercom.ready()');
+		that.intercom.ready(cb);
+	});
+
+	tasks.push(function (cb) {
+		that.log.debug(logPrefix + 'Waiting for db.ready()');
+		that.db.ready(cb);
+	});
+
+	tasks.push(function (cb) {
 		if (that.mode === 'slave') {
 			that.log.verbose(logPrefix + 'that.mode: "' + that.mode + '", so read');
-			new amsync.SyncClient({
+			amsync.mariadb({
 				'exchange':	that.exchangeName + '_dataDump',
 				'intercom':	that.intercom,
-				'log': that.log
+				'log': that.log,
+				'db': that.db
 			}, cb);
 		} else {
 			cb();
