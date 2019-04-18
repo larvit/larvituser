@@ -42,6 +42,26 @@ userLib.create('myUsername', 'myPassword', userData, function (err, user) {
 });
 ```
 
+When creating a new user you can also give the user a uuid of your choice:
+
+```javascript
+
+const uuidLib	= require('uuid');
+const uuid = uuidLib.v1();
+const userData = {
+	'firstname':	'Nisse',
+	'lastname':	'Nilsson',
+	'role': [
+		'user',
+		'subscriber'
+	]
+}
+
+userLib.create('myUsername', 'myPassword', userData, uuid, function (err, user) {
+	console.log('New user UUID: ' + user.uuid);
+});
+```
+
 To fetch a user from database based on username and password, do like this:
 
 ```javascript
