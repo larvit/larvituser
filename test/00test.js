@@ -525,6 +525,58 @@ describe('User', function () {
 			});
 		});
 
+		it('Get list of users with query match on a specific field', function (done) {
+			const tasks = [];
+
+			// Create test user that should match
+			tasks.push(function (cb) {
+				userLib.create('match1', 'somepassword', { 'code' : ['abc999'] }, function (err, user) {
+					uuids.push(user.uuid);
+					if (err) throw err;
+					cb();
+				});
+			});
+
+			// Create another test user that should match
+			tasks.push(function (cb) {
+				userLib.create('match2', 'somepassword', { 'code' : ['code_abc'] }, function (err, user) {
+					uuids.push(user.uuid);
+					if (err) throw err;
+					cb();
+				});
+			});
+
+			// Create test user that shouldn't match
+			tasks.push(function (cb) {
+				userLib.create('noMatch', 'somepassword', { 'code' : ['def123'] }, function (err, user) {
+					uuids.push(user.uuid);
+					if (err) throw err;
+					cb();
+				});
+			});
+
+			// Match anywhere in string
+			tasks.push(function (cb) {
+				const users = new UserLib.Users({'db': db, 'log': log});
+
+				users.matchExistingFields = ['code'];
+				users.q = 'abc';
+				users.returnFields = [];
+
+				users.get(function (err, userList, totalElements) {
+					if (err) throw err;
+					assert.strictEqual(totalElements, 2);
+					assert.strictEqual(userList.length, 2);
+
+					assert.ok(userList.find((user) => user.username === 'match1'));
+					assert.ok(userList.find((user) => user.username === 'match2'));
+					cb();
+				});
+			});
+
+			async.series(tasks, done);
+		});
+
 		it('Get list of data values for field', function (done) {
 			const	users	= new UserLib.Users({'db': db, 'log': log});
 
@@ -549,7 +601,7 @@ describe('User', function () {
 
 				if (err) throw err;
 				assert.notStrictEqual(result,	undefined);
-				assert.strictEqual(result.length,	5);
+				assert.strictEqual(result.length, 8);
 
 				for (let r of result) {
 					for (let key in r) {
