@@ -530,7 +530,7 @@ describe('User', function () {
 
 			// Create test user that should match
 			tasks.push(function (cb) {
-				userLib.create('match1', 'somepassword', { 'code' : ['abc999'] }, function (err, user) {
+				userLib.create('match1', 'somepassword', { 'code' : ['abc999'], 'code2': 'hej' }, function (err, user) {
 					uuids.push(user.uuid);
 					if (err) throw err;
 					cb();
@@ -539,7 +539,7 @@ describe('User', function () {
 
 			// Create another test user that should match
 			tasks.push(function (cb) {
-				userLib.create('match2', 'somepassword', { 'code' : ['code_abc'] }, function (err, user) {
+				userLib.create('match2', 'somepassword', { 'code' : ['code_abc'], 'code2': 'jeh' }, function (err, user) {
 					uuids.push(user.uuid);
 					if (err) throw err;
 					cb();
@@ -548,19 +548,18 @@ describe('User', function () {
 
 			// Create test user that shouldn't match
 			tasks.push(function (cb) {
-				userLib.create('noMatch', 'somepassword', { 'code' : ['def123'] }, function (err, user) {
+				userLib.create('noMatch', 'somepassword', { 'code' : ['def123'], 'code2': 'abc' }, function (err, user) {
 					uuids.push(user.uuid);
 					if (err) throw err;
 					cb();
 				});
 			});
 
-			// Match anywhere in string
+			// Match on specific field
 			tasks.push(function (cb) {
 				const users = new UserLib.Users({'db': db, 'log': log});
 
-				users.matchExistingFields = ['code'];
-				users.q = 'abc';
+				users.matchAllFieldsQ = { 'code': 'abc' };
 				users.returnFields = [];
 
 				users.get(function (err, userList, totalElements) {
@@ -570,6 +569,23 @@ describe('User', function () {
 
 					assert.ok(userList.find((user) => user.username === 'match1'));
 					assert.ok(userList.find((user) => user.username === 'match2'));
+					cb();
+				});
+			});
+
+			// Match on specific fields
+			tasks.push(function (cb) {
+				const users = new UserLib.Users({'db': db, 'log': log});
+
+				users.matchAllFieldsQ = { 'code': 'abc', 'code2': 'he' };
+				users.returnFields = [];
+
+				users.get(function (err, userList, totalElements) {
+					if (err) throw err;
+					assert.strictEqual(totalElements, 1);
+					assert.strictEqual(userList.length, 1);
+
+					assert.ok(userList.find((user) => user.username === 'match1'));
 					cb();
 				});
 			});

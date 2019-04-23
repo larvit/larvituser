@@ -87,6 +87,15 @@ Users.prototype.get = function (cb) {
 			}
 		}
 
+		if (that.matchAllFieldsQ !== undefined) {
+			for (const field in that.matchAllFieldsQ) {
+				sqlWhere	+= 'AND uuid IN (SELECT userUuid FROM user_users_data WHERE data LIKE ?\n'
+					+	' AND fieldUuid = (SELECT uuid FROM user_data_fields WHERE name = ?))';
+				dbFields.push('%' + that.matchAllFieldsQ[field] + '%');
+				dbFields.push(field);
+			}
+		}
+
 		if (that.q !== undefined) {
 			sqlWhere += ' AND (\n';
 			sqlWhere += '   uuid IN (SELECT userUuid FROM user_users_data WHERE data LIKE ?)\n';
