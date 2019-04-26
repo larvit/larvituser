@@ -645,6 +645,190 @@ describe('User', function () {
 			});
 		});
 
+		it('Get list of users sorted on username with ascending order', function (done) {
+			const	users	= new UserLib.Users({'db': db, 'log': log});
+
+			users.order = {
+				'by': 'username',
+				'direction': 'asc'
+			};
+
+			users.get(function (err, userList, totalElements) {
+				if (err) throw err;
+
+				assert.strictEqual(totalElements,	8);
+				assert.strictEqual(userList[0].username, 'blambadam');
+				done();
+			});
+		});
+
+		it('Get list of users sorted on username with descending order', function (done) {
+			const	users	= new UserLib.Users({'db': db, 'log': log});
+
+			users.order = {
+				'by': 'username',
+				'direction': 'desc'
+			};
+
+			users.get(function (err, userList, totalElements) {
+				if (err) throw err;
+
+				assert.strictEqual(totalElements,	8);
+				assert.strictEqual(userList[0].username, 'user2');
+
+				done();
+			});
+		});
+
+		it('Get list of users with sorted on a data field', function (done) {
+			const tasks = [];
+
+			// Get users and add sortable data
+			tasks.push(function (cb) {
+				const users	= new UserLib.Users({'db': db, 'log': log}),
+					subtasks = [];
+
+				users.get(function (err, userList) {
+					if (err) throw err;
+
+					for (let i = 0; userList[i] !== undefined; i ++) {
+						subtasks.push(function (cb) {
+							userLib.addUserDataField(userList[i].uuid, 'sortable', 'sortvalue' + i, cb);
+						});
+					}
+
+					async.series(subtasks, cb);
+				});
+			});
+
+			// Get the same userlist with users sorted by "sortable" as ascending
+			tasks.push(function (cb) {
+				const users	= new UserLib.Users({'db': db, 'log': log});
+
+				users.returnFields = ['sortable'];
+
+				users.order = {
+					'by': 'sortable',
+					'direction': 'asc'
+				};
+
+				users.get(function (err, userList, totalElements) {
+					if (err) throw err;
+
+					assert.strictEqual(totalElements,	8);
+					assert.deepStrictEqual(userList[0].sortable, ['sortvalue0']);
+					cb();
+				});
+			});
+
+			// Get the same userlist with users sorted by "sortable" as descending
+			tasks.push(function (cb) {
+				const users	= new UserLib.Users({'db': db, 'log': log});
+
+				users.returnFields = ['sortable'];
+
+				users.order = {
+					'by': 'sortable',
+					'direction': 'desc'
+				};
+
+				users.get(function (err, userList, totalElements) {
+					if (err) throw err;
+
+					assert.strictEqual(totalElements,	8);
+					assert.deepStrictEqual(userList[0].sortable, ['sortvalue7']);
+					cb();
+				});
+			});
+
+			async.series(tasks, function (err) {
+				if (err) throw err;
+
+				done();
+			});
+		});
+
+		it('Should not be able to sort on a field value thats not added to returnFields', function (done) {
+			const users	= new UserLib.Users({'db': db, 'log': log});
+
+			users.order = {
+				'by': 'sortable',
+				'direction': 'asc'
+			};
+
+			users.get(function (err) {
+				assert.notEqual(err, null);
+				done();
+			});
+		});
+
+		it('Should sort and concat fields with several values', function (done) {
+			const tasks = [];
+
+			// Get users and add sortable data
+			tasks.push(function (cb) {
+				const users	= new UserLib.Users({'db': db, 'log': log}),
+					subtasks = [];
+
+				users.get(function (err, userList) {
+					if (err) throw err;
+
+					for (let i = 0; userList[i] !== undefined; i ++) {
+						subtasks.push(function (cb) {
+							userLib.addUserDataField(userList[i].uuid, 'sortable', 'other value', cb);
+						});
+					}
+
+					async.series(subtasks, cb);
+				});
+			});
+
+			// Get the same userlist with users sorted by "sortable" as ascending
+			tasks.push(function (cb) {
+				const users	= new UserLib.Users({'db': db, 'log': log});
+
+				users.returnFields = ['sortable'];
+
+				users.order = {
+					'by': 'sortable',
+					'direction': 'asc'
+				};
+
+				users.get(function (err, userList, totalElements) {
+					if (err) throw err;
+
+					assert.strictEqual(totalElements,	8);
+					assert.deepStrictEqual(userList[0].sortable, ['sortvalue0', 'other value']);
+					cb();
+				});
+			});
+
+			// Get the same userlist with users sorted by "sortable" as descending
+			tasks.push(function (cb) {
+				const users	= new UserLib.Users({'db': db, 'log': log});
+
+				users.returnFields = ['sortable'];
+
+				users.order = {
+					'by': 'sortable',
+					'direction': 'desc'
+				};
+
+				users.get(function (err, userList, totalElements) {
+					if (err) throw err;
+
+					assert.strictEqual(totalElements,	8);
+					assert.deepStrictEqual(userList[0].sortable, ['sortvalue7', 'other value']);
+					cb();
+				});
+			});
+
+			async.series(tasks, function (err) {
+				if (err) throw err;
+				done();
+			});
+		});
+
 		it('Get users by uuid', function (done) {
 			const	users	= new UserLib.Users({'db': db, 'log': log});
 
