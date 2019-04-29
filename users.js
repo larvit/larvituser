@@ -138,18 +138,23 @@ Users.prototype.get = function (cb) {
 		let	sql = 'SELECT user_users.uuid as uuid, user_users.username as username',
 			allowedSortables = ['uuid', 'username'];
 
+		if (that.returnFields !== undefined && ! Array.isArray(that.returnFields)) {
+			that.returnFields = [that.returnFields];
+		}
+
 		// SORT ORDERING
 		if (that.order !== undefined && typeof that.order === 'object') {
+
 			if (Array.isArray(that.returnFields)) allowedSortables = allowedSortables.concat(that.returnFields);
 
 			if (that.order.by !== undefined && allowedSortables.includes(that.order.by)) {
 				if (that.order.by !== 'uuid' && that.order.by !== 'username')  {
 					sql += ', group_concat(user_users_data.data) as ' + that.order.by + ' FROM user_users ';
 					sql += 'LEFT JOIN user_users_data on (user_users_data.fieldUuid = (SELECT uuid FROM user_data_fields WHERE name = ?) AND user_users_data.userUuid = user_users.uuid) ';
-					sql += 'WHERE 1';
+					sql += 'WHERE 1 ';
 					dbFields.push(that.order.by);
 				} else {
-					sql += ' FROM user_users WHERE 1';
+					sql += ' FROM user_users WHERE 1 ';
 				}
 
 				sql += sqlWhere;
@@ -190,10 +195,6 @@ Users.prototype.get = function (cb) {
 				user.username	= rows[i].username;
 
 				result.push(user);
-			}
-
-			if (that.returnFields !== undefined && ! Array.isArray(that.returnFields)) {
-				that.returnFields = [that.returnFields];
 			}
 
 			// Fetch field data for users, if requested
