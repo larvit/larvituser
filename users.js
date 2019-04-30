@@ -152,7 +152,7 @@ Users.prototype.get = function (cb) {
 					sql += ', group_concat(user_users_data.data) as ' + that.order.by + ' FROM user_users ';
 					sql += 'LEFT JOIN user_users_data on (user_users_data.fieldUuid = (SELECT uuid FROM user_data_fields WHERE name = ?) AND user_users_data.userUuid = user_users.uuid) ';
 					sql += 'WHERE 1 ';
-					dbFields.push(that.order.by);
+					dbFields.unshift(that.order.by);
 				} else {
 					sql += ' FROM user_users WHERE 1 ';
 				}
