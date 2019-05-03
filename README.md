@@ -102,6 +102,23 @@ users.getFieldData('fieldName', function (err, result) {
 });
 ```
 
+List multiple users ordered by field
+
+```javascript
+const	users	= new UserLib.Users({'db': db, 'log': log});
+
+users.order = {
+	by: 'username', // Sorting by something else than uuid or username the field needs to be included in "returnFields"
+	direction: 'desc' // "asc" is default
+}
+
+users.get(function (err, userList) {
+	if (err) throw err;
+
+	console.log(userList); // An array of objects
+});
+```
+
 ### Advanced usage
 
 #### Add data to a user
