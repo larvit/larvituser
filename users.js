@@ -134,125 +134,129 @@ Users.prototype.get = function (cb) {
 	});
 
 	tasks.push(function (cb) {
-
-		let	sql = 'SELECT user_users.uuid as uuid, user_users.username as username',
-			allowedSortables = ['uuid', 'username'];
-
-		if (that.returnFields !== undefined && ! Array.isArray(that.returnFields)) {
-			that.returnFields = [that.returnFields];
-		}
-
-		// SORT ORDERING
-		if (that.order !== undefined && typeof that.order === 'object') {
-
-			if (Array.isArray(that.returnFields)) allowedSortables = allowedSortables.concat(that.returnFields);
-
-			if (that.order.by !== undefined && allowedSortables.includes(that.order.by)) {
-				if (that.order.by !== 'uuid' && that.order.by !== 'username')  {
-					sql += ', group_concat(user_users_data.data) as ' + that.order.by + ' FROM user_users ';
-					sql += 'LEFT JOIN user_users_data on (user_users_data.fieldUuid = (SELECT uuid FROM user_data_fields WHERE name = ?) AND user_users_data.userUuid = user_users.uuid) ';
-					sql += 'WHERE 1 ';
-					dbFields.unshift(that.order.by);
-				} else {
-					sql += ' FROM user_users WHERE 1 ';
-				}
-
-				sql += sqlWhere;
-				sql += ' GROUP BY uuid';
-				sql += ' ORDER BY ' + that.order.by;
-
-				if (that.order.direction === undefined ||
-					that.order.direction !== undefined &&
-					that.order.direction.toUpperCase() !== 'DESC') {
-					sql += ' ASC';
-				} else {
-					sql += ' DESC';
-				}
-			} else {
-				return cb(new Error('The sorting column did not exist in the \'returnFields\' array'));
-			}
-		} else {
-			sql += ' FROM user_users WHERE 1 ' + sqlWhere;
-		}
-
-		if (that.limit !== undefined && ! isNaN(parseInt(that.limit))) {
-			sql += ' LIMIT ' + parseInt(that.limit);
-
-			if (that.offset !== undefined && ! isNaN(parseInt(that.offset))) {
-				sql += ' OFFSET ' + parseInt(that.offset);
-			}
-		}
-
-		that.db.query(sql, dbFields, function (err, rows) {
+		that.db.pool.getConnection(function (err, dbCon) {
 			if (err) return cb(err);
 
-			result	= [];
+			let	sql = 'SELECT user_users.uuid as uuid, user_users.username as username',
+				allowedSortables = ['uuid', 'username'];
 
-			for (let i = 0; rows[i] !== undefined; i ++) {
-				const	user	= {};
-
-				user.uuid	= that.lUtils.formatUuid(rows[i].uuid);
-				user.username	= rows[i].username;
-
-				result.push(user);
+			if (that.returnFields !== undefined && ! Array.isArray(that.returnFields)) {
+				that.returnFields = [that.returnFields];
 			}
 
-			// Fetch field data for users, if requested
-			if (that.returnFields !== undefined && that.returnFields.length > 0) {
-				const subTasks = [];
+			// SORT ORDERING
+			if (that.order !== undefined && typeof that.order === 'object') {
 
-				for (let u of result) {
-					subTasks.push(function (cb) {
-						let	subFields	= [],
-							sql = 'SELECT uf.uuid AS fieldUuid,\n' +
-							'uf.name AS fieldName,\n' +
-							'ud.data AS fieldData,\n' +
-							'ud.userUuid AS userUuid\n' +
-							'FROM\n' +
-								'user_data_fields uf\n' +
-									'LEFT JOIN user_users_data ud ON ud.fieldUuid = uf.uuid\n' +
-								'WHERE uf.name IN (';
+				if (Array.isArray(that.returnFields)) allowedSortables = allowedSortables.concat(that.returnFields);
 
-						for (let fn of that.returnFields) {
-							sql += '?,';
-							subFields.push(fn);
-						}
+				if (that.order.by !== undefined && allowedSortables.includes(that.order.by)) {
+					if (that.order.by !== 'uuid' && that.order.by !== 'username')  {
+						sql += ', group_concat(user_users_data.data) as ' + dbCon.escapeId(that.order.by) + ' FROM user_users ';
+						sql += 'LEFT JOIN user_users_data on (user_users_data.fieldUuid = (SELECT uuid FROM user_data_fields WHERE name = ?) AND user_users_data.userUuid = user_users.uuid) ';
+						sql += 'WHERE 1 ';
+						dbFields.unshift(that.order.by);
+					} else {
+						sql += ' FROM user_users WHERE 1 ';
+					}
 
-						sql	= sql.substring(0, sql.length - 1);
+					sql += sqlWhere;
+					sql += ' GROUP BY uuid';
+					sql += ' ORDER BY ' + dbCon.escapeId(that.order.by);
 
-						sql += ') AND ud.userUuid = ?';
+					if (that.order.direction === undefined ||
+						that.order.direction !== undefined &&
+						that.order.direction.toUpperCase() !== 'DESC') {
+						sql += ' ASC';
+					} else {
+						sql += ' DESC';
+					}
+				} else {
+					return cb(new Error('The sorting column did not exist in the \'returnFields\' array'));
+				}
+			} else {
+				sql += ' FROM user_users WHERE 1 ' + sqlWhere;
+			}
 
-						if (that.lUtils.uuidToBuffer(u.uuid) === false) {
-							that.log.warn(logPrefix + 'Inavlid user uuid, skipping');
-							return cb();
-						}
+			if (that.limit !== undefined && ! isNaN(parseInt(that.limit))) {
+				sql += ' LIMIT ' + parseInt(that.limit);
 
-						subFields.push(that.lUtils.uuidToBuffer(u.uuid));
+				if (that.offset !== undefined && ! isNaN(parseInt(that.offset))) {
+					sql += ' OFFSET ' + parseInt(that.offset);
+				}
+			}
 
-						that.db.query(sql, subFields, function (err, rows) {
-							if (err) return cb(err);
+			dbCon.query(sql, dbFields, function (err, rows) {
+				dbCon.release();
+				if (err) return cb(err);
 
-							for (let i = 0; rows[i] !== undefined; i ++) {
-								const	row	= rows[i];
+				result	= [];
 
-								if (row.fieldUuid) {
-									if (u[row.fieldName] === undefined) {
-										u[row.fieldName] = [];
-									}
+				for (let i = 0; rows[i] !== undefined; i ++) {
+					const	user	= {};
 
-									u[row.fieldName].push(row.fieldData);
-								}
-							}
+					user.uuid	= that.lUtils.formatUuid(rows[i].uuid);
+					user.username	= rows[i].username;
 
-							cb();
-						});
-					});
+					result.push(user);
 				}
 
-				async.parallel(subTasks, cb);
-			} else {
-				cb(err);
-			}
+				// Fetch field data for users, if requested
+				if (that.returnFields !== undefined && that.returnFields.length > 0) {
+					const subTasks = [];
+
+					for (let u of result) {
+						subTasks.push(function (cb) {
+							let	subFields	= [],
+								sql = 'SELECT uf.uuid AS fieldUuid,\n' +
+								'uf.name AS fieldName,\n' +
+								'ud.data AS fieldData,\n' +
+								'ud.userUuid AS userUuid\n' +
+								'FROM\n' +
+									'user_data_fields uf\n' +
+										'LEFT JOIN user_users_data ud ON ud.fieldUuid = uf.uuid\n' +
+									'WHERE uf.name IN (';
+
+							for (let fn of that.returnFields) {
+								sql += '?,';
+								subFields.push(fn);
+							}
+
+							sql	= sql.substring(0, sql.length - 1);
+
+							sql += ') AND ud.userUuid = ?';
+
+							if (that.lUtils.uuidToBuffer(u.uuid) === false) {
+								that.log.warn(logPrefix + 'Inavlid user uuid, skipping');
+								return cb();
+							}
+
+							subFields.push(that.lUtils.uuidToBuffer(u.uuid));
+
+							that.db.query(sql, subFields, function (err, rows) {
+								if (err) return cb(err);
+
+								for (let i = 0; rows[i] !== undefined; i ++) {
+									const	row	= rows[i];
+
+									if (row.fieldUuid) {
+										if (u[row.fieldName] === undefined) {
+											u[row.fieldName] = [];
+										}
+
+										u[row.fieldName].push(row.fieldData);
+									}
+								}
+
+								cb();
+							});
+						});
+					}
+
+					async.parallel(subTasks, cb);
+				} else {
+					cb(err);
+				}
+			});
 		});
 	});
 
