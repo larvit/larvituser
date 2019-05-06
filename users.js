@@ -138,7 +138,9 @@ Users.prototype.get = function (cb) {
 			if (err) return cb(err);
 
 			let	sql = 'SELECT user_users.uuid as uuid, user_users.username as username',
-				allowedSortables = ['uuid', 'username'];
+				allowedSortables = ['uuid', 'username'],
+				mainDbFields = dbFields.slice(0);
+
 
 			if (that.returnFields !== undefined && ! Array.isArray(that.returnFields)) {
 				that.returnFields = [that.returnFields];
@@ -154,7 +156,7 @@ Users.prototype.get = function (cb) {
 						sql += ', group_concat(user_users_data.data) as ' + dbCon.escapeId(that.order.by) + ' FROM user_users ';
 						sql += 'LEFT JOIN user_users_data on (user_users_data.fieldUuid = (SELECT uuid FROM user_data_fields WHERE name = ?) AND user_users_data.userUuid = user_users.uuid) ';
 						sql += 'WHERE 1 ';
-						dbFields.unshift(that.order.by);
+						mainDbFields.unshift(that.order.by);
 					} else {
 						sql += ' FROM user_users WHERE 1 ';
 					}
@@ -185,7 +187,7 @@ Users.prototype.get = function (cb) {
 				}
 			}
 
-			dbCon.query(sql, dbFields, function (err, rows) {
+			dbCon.query(sql, mainDbFields, function (err, rows) {
 				dbCon.release();
 				if (err) return cb(err);
 
@@ -267,7 +269,6 @@ Users.prototype.get = function (cb) {
 			if (err) return cb(err);
 
 			totalElements	= rows[0].totalElements;
-
 			cb(err);
 		});
 	});
