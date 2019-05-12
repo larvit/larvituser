@@ -1,6 +1,6 @@
 {
   "name": "larvituser",
-  "version": "0.18.1",
+  "version": "1.0.0",
   "author": {
     "name": "Mikael 'Lilleman' Göransson",
     "email": "lilleman@larvit.se",
@@ -10,20 +10,16 @@
   "dependencies": {
     "async": "^2.6.1",
     "bcryptjs": "^2.4.3",
-    "larvitamintercom": "^0.3.0",
-    "larvitamsync": "^0.7.0",
     "larvitdbmigration": "^4.0.1",
     "larvitutils": "^2.0.0",
     "uuid": "^3.3.2"
   },
-  "description": "User module for node.js",
+  "description": "Store and modify users (for example username/password users to your admin GUI, customers to your webbshop or something entirely different).",
   "devDependencies": {
-    "freeport": "1.0.5",
-    "mocha": "6.1.4",
-    "mocha-eslint": "5.0.0"
+    "freeport": "1.0.5"
   },
   "scripts": {
-    "test": "mocha --exit"
+    "test": "tape test/*"
   },
   "keywords": [
     "auth",

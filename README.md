@@ -2,9 +2,23 @@
 
 # larvituser
 
-User module for node.js
+Store and modify users (for example username/password users to your admin GUI, customers to your webbshop or something entirely different).
 
-## Basic usage
+Exposes a http API **Without authentification! Never have this public to the internet!** or to be used as an npm module
+
+## Use as http API
+
+### Docker
+
+To start the API and expose it on port 3000
+
+    docker run -d -p 3000:80 larvit/larvituser
+
+### node.js
+
+## Use as npm module
+
+### Basic usage
 
 First fire up the library connections like this:
 
