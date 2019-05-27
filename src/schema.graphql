@@ -1,0 +1,49 @@
+type Query {
+	users(uuids: [ID], usernames: [String], q_or: [String], q_and: [String]): [User]
+	user(uuid: ID, username: String, password: String): User
+}
+
+type Mutation {
+	createUser(
+		uuid: ID,
+		username: String!,
+		password: String,
+		fields: [input_UserField]!
+	): User
+
+	replaceUser(
+		uuid: ID!,
+		username: String!,
+		password: String,
+		fields: [input_UserField]!
+	): User
+
+	updateUser(
+		uuid: ID!,
+		username: String,
+		password: String,
+		fields: [input_UserField]
+	): User
+
+	replaceUserField(userUuid: ID!, fieldName: String!, fieldValues: [String!]!): User
+
+	addUserField(userUuid: ID!, fieldName: String!, fieldvalues: [String!]!): User
+
+	rmUserField(userUuid: ID!, fieldName: String!): User
+}
+
+input input_UserField {
+	name: String!,
+	value: [String]
+}
+
+type User {
+	uuid: ID,
+	username: String,
+	fields(fieldNames: [String]): [UserField]
+}
+
+type UserField {
+	name: String!,
+	value: [String]
+}

@@ -4,15 +4,20 @@
 
 Store and modify users (for example username/password users to your admin GUI, customers to your webbshop or something entirely different).
 
-Exposes a http API **Without authentification! Never have this public to the internet!** or to be used as an npm module
+Exposes a GraphQL API **Without authentification! Never have this public to the internet!** or to be used as an npm module
 
-## Use as http API
+## Use as GraphQL API
 
 ### Docker
 
 To start the API and expose it on port 3000
 
-    docker run -d -p 3000:80 larvit/larvituser
+    docker run -d -p 3000:3000 larvit/larvituser
+
+#### Environment variables
+
+LOG_LVL="silly|debug|verbose|info|warn|error" - defaults to "verbose"
+PORT=Number - defaults to 3000
 
 ### node.js
 
