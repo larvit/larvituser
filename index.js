@@ -62,9 +62,7 @@ function User(options, cb) {
 		'mode':	that.mode,
 		'log':	that.log,
 		'db':	that.db,
-		'amsync_host':	that.options.amsync_host || null,
-		'amsync_minPort':	that.options.amsync_minPort || null,
-		'amsync_maxPort':	that.options.amsync_maxPort || null
+		'amsync': that.options.amsync,
 	}, function (err) {
 		if (err) return cb(err);
 
