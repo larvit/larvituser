@@ -7,7 +7,7 @@ const express = require('express');
 const fs = require('fs');
 const expressGraphQL = require('express-graphql');
 const {buildSchema} = require('graphql');
-const {users, user, createUser, replaceUser, updateUser, replaceUserField, addUserField, rmUserField} = require('./functions');
+const Datastore = require('./datastore');
 
 /**
  * Run the http server
@@ -28,6 +28,7 @@ async function server(options) {
 		options.log.verbose(logPrefix + 'No log object provided, defaulting to "verbose" level');
 	}
 
+	// Start or not start GraphiQL, that is the question
 	if (options.graphiql === undefined) {
 		if (process.env.NODE_ENV === 'production') {
 			options.log.verbose(logPrefix + 'No graphiql option given and NODE_ENV is "production", setting graphiql to false');
@@ -44,10 +45,16 @@ async function server(options) {
 	// Spread options
 	const {log, port, graphiql} = options;
 
-	// Available "routes"
-	const rootValue = {users, user, createUser, replaceUser, updateUser, replaceUserField, addUserField, rmUserField};
+	// Available "routes", pointed to the datastore
+	const datastore = new Datastore({log, dbConf: {
+		host: process.env.DB_HOST,
+		user: process.env.DB_USER,
+		password: process.env.DB_PASS,
+		database: process.env.DB_DATABASE,
+		log
+	}});
 
-	app.use('/', expressGraphQL({schema, rootValue, graphiql}));
+	app.use('/', expressGraphQL({schema, rootValue: datastore, graphiql}));
 
 	return new Promise((resolve, reject) => {
 		const listener = app.listen(port, err => {

@@ -18,6 +18,11 @@ To start the API and expose it on port 3000
 
 LOG_LVL="silly|debug|verbose|info|warn|error" - defaults to "verbose"
 PORT=Number - defaults to 3000
+NODE_ENV="develop|production" - if "production" is set, no graphiql GUI is started
+DB_HOST="IP or hostname"
+DB_USER="database username"
+DB_PASS="database password"
+DB_DATABASE="database name"
 
 ### node.js
 

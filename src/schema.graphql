@@ -1,5 +1,12 @@
 type Query {
-	users(uuids: [ID], usernames: [String], q_or: [String], q_and: [String]): [User]
+	users(
+		uuids: [ID],
+		usernames: [String],
+		q_or: [String],
+		q_and: [String],
+		limit: Number,
+		offset: Number
+	): [User]
 	user(uuid: ID, username: String, password: String): User
 }
 
@@ -8,14 +15,14 @@ type Mutation {
 		uuid: ID,
 		username: String!,
 		password: String,
-		fields: [input_UserField]!
+		fields: [input_UserField]
 	): User
 
 	replaceUser(
 		uuid: ID!,
 		username: String!,
 		password: String,
-		fields: [input_UserField]!
+		fields: [input_UserField]
 	): User
 
 	updateUser(
