@@ -1,5 +1,5 @@
-<%= _.render('inc/head', obj) %>
-<%= _.render('inc/pageTop', obj) %>
+<%- include('inc/head', data) %>
+<%- include('inc/pageTop', data) %>
 <form method="post">
 	<table>
 		<thead>
@@ -9,7 +9,7 @@
 			</tr>
 		</thead>
 		<tbody>
-			<% _.forEach(obj.users, function (user) { %>
+			<% _.forEach(data.users, function (user) { %>
 				<tr>
 					<td><a href="/adminUsers/edit?uuid=<%= user.uuid %>"><%= user.uuid %></a></td>
 					<td><%= user.username %></td>
@@ -18,5 +18,5 @@
 		</tbody>
 	</table>
 </form>
-<%= _.render('inc/pagination', obj.pagination) %>
-<%= _.render('inc/pageBottom', obj) %>
+<%- include('inc/pagination', data.pagination) %>
+<%- include('inc/pageBottom', data) %>

@@ -1,16 +1,17 @@
 'use strict';
 
-const	userLib	= require(__dirname + '/../../index.js'),
-	async	= require('async');
+const Users = require(__dirname + '/../../index.js').Users,
+	async = require('async');
 
-exports.run = function (req, res, cb) {
-	const	tasks	= [],
-		data	= {'global': res.globalData};
+function run(req, res, cb) {
+	res.data = {'global': res.globalData};
+	const data = res.data,
+		tasks = [];
 
 	// Make sure the user have the correct rights
 	// This is set in larvitadmingui controllerGlobal
 	if ( ! res.adminRights) {
-		cb(new Error('Invalid rights'), req, res, {});
+		cb(new Error('Invalid rights'));
 		return;
 	}
 
@@ -20,7 +21,7 @@ exports.run = function (req, res, cb) {
 	data.pagination.elementsPerPage	= 100;
 
 	tasks.push(function (cb) {
-		const	users	= new userLib.Users();
+		const	users	= new Users({'db': req.userLib.db});
 
 		//users.returnFields	= ['firstname', 'lastname'];
 		users.limit	= data.pagination.elementsPerPage;
@@ -42,6 +43,9 @@ exports.run = function (req, res, cb) {
 	});
 
 	async.series(tasks, function (err) {
-		cb(err, req, res, data);
+		cb(err);
 	});
 };
+
+module.exports = run;
+module.exports.run = run;

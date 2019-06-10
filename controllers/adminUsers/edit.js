@@ -1,11 +1,11 @@
 'use strict';
 
-const	userLib	= require('larvituser'),
-	async	= require('async');
+const async = require('async');
 
-exports.run = function (req, res, cb) {
-	const	tasks	= [],
-		data	= {'global': res.globalData};
+function run(req, res, cb) {
+	res.data = {'global': res.globalData};
+	const data = res.data,
+		tasks = [];
 
 	data.global.errors = [];
 
@@ -49,7 +49,7 @@ exports.run = function (req, res, cb) {
 
 			// Check so username is not taken
 			tasks.push(function (cb) {
-				userLib.usernameAvailable(data.global.formFields.username.trim(), function (err, result) {
+				req.userLib.usernameAvailable(data.global.formFields.username.trim(), function (err, result) {
 					if (err) return cb(err);
 
 					if (result !== true) {
@@ -66,14 +66,14 @@ exports.run = function (req, res, cb) {
 			tasks.push(function (cb) {
 				if (data.global.errors.length) return cb();
 
-				userLib.create(data.global.formFields.username, newPassword, userFields, function (err, result) {
+				req.userLib.create(data.global.formFields.username, newPassword, userFields, function (err, result) {
 					user = result;
 					cb(err);
 				});
 			});
 		} else {
 			tasks.push(function (cb) {
-				userLib.fromUuid(data.global.urlParsed.query.uuid, function (err, result) {
+				req.userLib.fromUuid(data.global.urlParsed.query.uuid, function (err, result) {
 					user = result;
 					cb(err);
 				});
@@ -90,7 +90,7 @@ exports.run = function (req, res, cb) {
 
 			if (data.global.formFields.username === user.username) return cb();
 
-			userLib.usernameAvailable(data.global.formFields.username, function (err, result) {
+			req.userLib.usernameAvailable(data.global.formFields.username, function (err, result) {
 				if (err) return cb(err);
 
 				if (result !== true) {
@@ -142,7 +142,7 @@ exports.run = function (req, res, cb) {
 
 	if (data.global.formFields.rmUser !== undefined) {
 		tasks.push(function (cb) {
-			userLib.rmUser(data.global.urlParsed.query.uuid, function (err) {
+			req.userLib.rmUser(data.global.urlParsed.query.uuid, function (err) {
 				if (err) return cb(err);
 
 				req.session.data.nextCallData = {'global': {'messages': ['User "' + data.global.urlParsed.query.uuid + '" erased']}};
@@ -155,7 +155,7 @@ exports.run = function (req, res, cb) {
 
 	if (data.global.urlParsed.query.uuid !== undefined) {
 		tasks.push(function (cb) {
-			userLib.fromUuid(data.global.urlParsed.query.uuid, function (err, user) {
+			req.userLib.fromUuid(data.global.urlParsed.query.uuid, function (err, user) {
 				if (err) return cb(err);
 
 				data.user = {
@@ -172,9 +172,12 @@ exports.run = function (req, res, cb) {
 
 	async.series(tasks, function (err) {
 		if (err && ! data.global.errors) {
-			cb(err, req, res, data);
+			cb(err);
 		} else {
-			cb(null, req, res, data);
+			cb(null);
 		}
 	});
 };
+
+module.exports = run;
+module.exports.run = run;

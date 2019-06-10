@@ -1,16 +1,16 @@
-<%= _.render('inc/head', obj) %>
-<%= _.render('inc/pageTop', obj) %>
+<%- include('inc/head', data) %>
+<%- include('inc/pageTop', data) %>
 <form method="post">
 
 	<div class="row">
 		<div class="six columns">
 			<label for="uuid">Uuid</label>
-			<input class="u-full-width" type="text" name="uuid" placeholder="auto generated" readonly="readonly" value="<%= obj.global.urlParsed.query.uuid %>" />
+			<input class="u-full-width" type="text" name="uuid" placeholder="auto generated" readonly="readonly" value="<%= data.global.urlParsed.query.uuid %>" />
 		</div>
 
 		<div class="six columns">
 			<label for="disableLogin">
-				<input id="disableLogin" name="disableLogin" type="checkbox" value="yes" <% if (obj.user && obj.user.passwordIsFalse === true) { print('checked="checked"');} %> />
+				<input id="disableLogin" name="disableLogin" type="checkbox" value="yes" <% if (data.user && data.user.passwordIsFalse === true) { print('checked="checked"');} %> />
 				<span class="label-body">Disable login (will erase the password)</span>
 			</label>
 		</div>
@@ -19,7 +19,7 @@
 	<div class="row">
 		<div class="six columns">
 			<label for="username">Username</label>
-			<input class="u-full-width" type="text" name="username" value="<%= obj.user ? obj.user.username : '' %>" />
+			<input class="u-full-width" type="text" name="username" value="<%= data.user ? data.user.username : '' %>" />
 		</div>
 
 		<div class="six columns">
@@ -29,8 +29,8 @@
 	</div>
 
 	<h2>Fields</h2>
-	<% if (obj.user) { %>
-		<% _.forEach(obj.user.fields, function (fieldValues, fieldName) { %>
+	<% if (data.user) { %>
+		<% _.forEach(data.user.fields, function (fieldValues, fieldName) { %>
 			<% if ( ! (fieldValues instanceof Array)) { fieldValues = [fieldValues]; } %>
 			<% for (var i = 0; fieldValues[i] !== undefined; i ++) { %>
 				<div class="row">
@@ -68,4 +68,4 @@
 		<% } %>
 	</div>
 </form>
-<%= _.render('inc/pageBottom', obj) %>
+<%- include('inc/pageBottom', data) %>
