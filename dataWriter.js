@@ -247,6 +247,7 @@ DataWriter.prototype.create = function create(params, deliveryTag, msgUuid, cb) 
 		if (results.affectedRows === 0) {
 			const	err	= new Error('No user created, duplicate key on uuid: "' + params.uuid + '" or username: "' + params.username + '"');
 			that.log.warn(logPrefix + err.message);
+			that.emitter.emit(msgUuid, err);
 			return cb(err);
 		}
 
