@@ -12,7 +12,7 @@
     "bcryptjs": "^2.4.3",
     "larvitamintercom": "^0.3.0",
     "larvitamsync": "^0.7.0",
-    "larvitdbmigration": "^4.0.1",
+    "larvitdbmigration": "^5.0.0",
     "larvitutils": "^2.0.0",
     "uuid": "^3.3.2"
   },
