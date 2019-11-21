@@ -8,7 +8,7 @@
   },
   "contributors": [],
   "dependencies": {
-    "async": "^2.6.1",
+    "async": "^3.0.0",
     "bcryptjs": "^2.4.3",
     "larvitamintercom": "^0.3.0",
     "larvitamsync": "^0.7.0",
