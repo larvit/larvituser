@@ -19,7 +19,7 @@
   "description": "User module for node.js",
   "devDependencies": {
     "freeport": "1.0.5",
-    "mocha": "6.2.2",
+    "mocha": "7.1.2",
     "mocha-eslint": "5.0.0"
   },
   "scripts": {
