@@ -20,7 +20,7 @@
   "devDependencies": {
     "freeport": "1.0.5",
     "mocha": "6.2.2",
-    "mocha-eslint": "5.0.0"
+    "mocha-eslint": "7.0.0"
   },
   "scripts": {
     "test": "mocha --exit"
