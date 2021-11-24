@@ -53,6 +53,11 @@ before(function (done) {
 		});
 	});
 
+	// Clear DB
+	tasks.push(function (cb) {
+		db.removeAllTables(cb);
+	});
+
 	// Check for empty db
 	tasks.push(function (cb) {
 		db.query('SHOW TABLES', function (err, rows) {
@@ -197,6 +202,23 @@ describe('User', function () {
 		it('should fail to log in a non existing user by username and password', function (done) {
 			userLib.fromUserAndPass('does_not_exist', 'foobar', function (err, user) {
 				if (err) throw err;
+				assert(user === false, 'user should be false');
+				done();
+			});
+		});
+
+		it('should fail to log in user if username is an array', function (done) {
+			userLib.fromUserAndPass(['lill', 'eman'], 'foobar', function (err, user) {
+				assert(err.message === 'Username must be a string', 'Error should be "Username must be a string"');
+				assert(user === false, 'user should be false');
+				done();
+			});
+		});
+
+
+		it('should fail to log in user if password is an array', function (done) {
+			userLib.fromUserAndPass('lilleman', ['foo', 'bar'], function (err, user) {
+				assert(err.message === 'Password must be a string', 'Error should be "Password must be a string"');
 				assert(user === false, 'user should be false');
 				done();
 			});

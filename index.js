@@ -344,6 +344,9 @@ User.prototype.fromUserAndPass = function fromUserAndPass(username, password, cb
 		userUuid,
 		userObj;
 
+	if (typeof username !== 'string') return cb(new Error('Username must be a string'), false);
+	if (typeof password !== 'string') return cb(new Error('Password must be a string'), false);
+
 	username	= username.trim();
 	password	= password.trim();
 
