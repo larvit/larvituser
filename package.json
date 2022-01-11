@@ -1,6 +1,6 @@
 {
   "name": "larvituser",
-  "version": "0.19.1",
+  "version": "0.20.0",
   "author": {
     "name": "Mikael 'Lilleman' Göransson",
     "email": "lilleman@larvit.se",
@@ -8,28 +8,43 @@
   },
   "contributors": [],
   "dependencies": {
-    "async": "^2.6.1",
-    "bcryptjs": "^2.4.3",
-    "larvitamintercom": "^0.3.0",
-    "larvitamsync": "^0.7.0",
-    "larvitdbmigration": "^4.0.1",
-    "larvitutils": "^2.0.0",
-    "uuid": "^3.3.2"
+    "bcryptjs": "2.4.3",
+    "larvitdbmigration": "6.0.0",
+    "larvitutils": "5.0.0",
+    "uuid": "8.3.2"
   },
   "description": "User module for node.js",
   "devDependencies": {
+    "@istanbuljs/nyc-config-typescript": "1.0.2",
+    "@types/bcryptjs": "2.4.2",
+    "@types/mocha": "9.0.0",
+    "@types/node": "17.0.8",
+    "@types/uuid": "8.3.4",
+    "@typescript-eslint/eslint-plugin": "5.9.1",
+    "@typescript-eslint/parser": "5.9.1",
+    "eslint": "8.6.0",
     "freeport": "1.0.5",
-    "mocha": "6.2.2",
-    "mocha-eslint": "5.0.0"
+    "larvitdb": "3.2.0",
+    "mocha": "9.1.3",
+    "mocha-eslint": "7.0.0",
+    "nyc": "15.1.0",
+    "ts-node": "10.4.0",
+    "typescript": "4.5.4"
   },
   "scripts": {
-    "test": "mocha --exit"
+    "build": "rm -rf dist/* && tsc",
+    "lint": "eslint src/*.ts test/*.ts",
+    "test": "npm run lint && npm run test:unit",
+    "test:unit": "nyc mocha --exit --bail -r ts-node/register 'test/**/*.ts'"
   },
   "keywords": [
     "auth",
     "user"
   ],
-  "main": "index.js",
+  "main": "dist/index.js",
+  "files": [
+    "/dist"
+  ],
   "repository": {
     "url": "https://github.com/larvit/larvituser",
     "type": "git"
