@@ -127,20 +127,39 @@ export class DataWriter {
 		const logPrefix = `${topLogPrefix} replaceFields() -`;
 
 		const userUuidBuf = helpers.valueOrThrow(lUtils.uuidToBuffer(userUuid), logPrefix, `Invalid user uuid supplied: "${userUuid}`);
+		const dbConn = await this.db.getConnection();
+
+		async function commitAndRelease(dbConn: any): Promise<void> {
+			try {
+				await dbConn.commit();
+				await dbConn.release();
+			} catch (err) {
+				await dbConn.rollback();
+				await dbConn.release();
+				throw err;
+			}
+		}
 
 		// Check so the user uuid is valid
-		const { rows } = await this.db.query('SELECT * FROM user_users WHERE uuid = ?', userUuidBuf);
+		const { rows } = await dbConn.query('SELECT * FROM user_users WHERE uuid = ?', userUuidBuf);
 		if (!rows.length) {
 			const err = new Error(`Invalid user uuid: "${userUuid}", no records found in database of this user`);
 			this.log.warn(`${logPrefix} ${err.message}`);
 			throw err;
 		}
 
+		// Begin transaction
+		await dbConn.beginTransaction();
+
 		// Clean out previous data
-		await this.db.query('DELETE FROM user_users_data WHERE userUuid = ?', [userUuidBuf]);
+		await dbConn.query('DELETE FROM user_users_data WHERE userUuid = ?', [userUuidBuf]);
 
 		// Get field uuids
-		if (!fields) return;
+		if (!fields) {
+			await commitAndRelease(dbConn);
+
+			return;
+		}
 
 		const fieldNamesToUuidBufs: Record<string, Buffer> = {};
 		for (const fieldName of Object.keys(fields)) {
@@ -167,9 +186,14 @@ export class DataWriter {
 
 		sql = sql.substring(0, sql.length - 1) + ';';
 
-		if (!dbFields.length) return;
+		if (!dbFields.length) {
+			await commitAndRelease(dbConn);
 
-		await this.db.query(sql, dbFields);
+			return;
+		}
+
+		await dbConn.query(sql, dbFields);
+		await commitAndRelease(dbConn);
 	}
 
 	async rmUser(userUuid: string): Promise<void> {
