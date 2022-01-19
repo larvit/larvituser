@@ -45,7 +45,7 @@ export class DataWriter {
 			dbType: 'mariadb',
 			dbDriver: this.db,
 			tableName: 'users_db_version',
-			migrationScriptPath: scriptPath ?? `${__dirname}/dbmigration`,
+			migrationScriptPath: scriptPath ?? `${__dirname}/../dbmigration`,
 			log: this.log,
 		});
 
