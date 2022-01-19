@@ -4,3 +4,4 @@ config/db_test.json
 node_modules
 .vscode/
 dist/
+.nyc_output/
