@@ -62,14 +62,15 @@ export class Helpers {
 		return rows[0].name;
 	}
 
-	async getFieldUuid(fieldName: string): Promise<string | boolean> {
+	async getFieldUuid(fieldName: string, dbConn?: any): Promise<string | boolean> {
 		const dbFields = [];
 		const sql = 'SELECT uuid FROM user_data_fields WHERE name = ?';
 
 		fieldName = fieldName.trim();
 		dbFields.push(fieldName);
 
-		const { rows } = await this.db.query(sql, dbFields);
+		const db = dbConn || this.db;
+		const { rows } = await db.query(sql, dbFields);
 
 		if (!rows.length) {
 			await this.dataWriter.addUserField(fieldName);

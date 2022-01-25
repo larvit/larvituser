@@ -130,14 +130,8 @@ export class DataWriter {
 		const dbConn = await this.db.getConnection();
 
 		async function commitAndRelease(dbConn: any): Promise<void> {
-			try {
-				await dbConn.commit();
-				await dbConn.release();
-			} catch (err) {
-				await dbConn.rollback();
-				await dbConn.release();
-				throw err;
-			}
+			await dbConn.commit();
+			await dbConn.release();
 		}
 
 		// Check so the user uuid is valid
@@ -145,55 +139,59 @@ export class DataWriter {
 		if (!rows.length) {
 			const err = new Error(`Invalid user uuid: "${userUuid}", no records found in database of this user`);
 			this.log.warn(`${logPrefix} ${err.message}`);
+			await dbConn.release();
 			throw err;
 		}
 
 		// Begin transaction
 		await dbConn.beginTransaction();
 
-		// Clean out previous data
-		await dbConn.query('DELETE FROM user_users_data WHERE userUuid = ?', [userUuidBuf]);
+		try {
+			// Clean out previous data
+			await dbConn.query('DELETE FROM user_users_data WHERE userUuid = ?', [userUuidBuf]);
 
-		// Get field uuids
-		if (!fields) {
-			await commitAndRelease(dbConn);
+			// Get field uuids
+			if (!fields) {
+				await commitAndRelease(dbConn);
 
-			return;
-		}
-
-		const fieldNamesToUuidBufs: Record<string, Buffer> = {};
-		for (const fieldName of Object.keys(fields)) {
-			const fieldUuid = helpers.valueOrThrow(await helpers.getFieldUuid(fieldName), logPrefix, `Invalid field uuid for field: ${fieldName}`);
-			const asBuffer = helpers.valueOrThrow(lUtils.uuidToBuffer(fieldUuid), logPrefix, `Failed to convert field uuid to buffer, uuid: ${fieldUuid}`);
-
-			fieldNamesToUuidBufs[fieldName] = asBuffer;
-		}
-
-		// Add new data
-		const dbFields = [];
-		let sql = 'INSERT INTO user_users_data (userUuid, fieldUuid, data) VALUES';
-
-		for (const fieldName of Object.keys(fields)) {
-			const fieldValues = arrayify(fields[fieldName]);
-
-			for (const fieldValue of fieldValues) {
-				sql += '(?,?,?),';
-				dbFields.push(userUuidBuf);
-				dbFields.push(fieldNamesToUuidBufs[fieldName]);
-				dbFields.push(fieldValue);
+				return;
 			}
-		}
 
-		sql = sql.substring(0, sql.length - 1) + ';';
+			const fieldNamesToUuidBufs: Record<string, Buffer> = {};
+			for (const fieldName of Object.keys(fields)) {
+				const fieldUuid = helpers.valueOrThrow(await helpers.getFieldUuid(fieldName, dbConn), logPrefix, `Invalid field uuid for field: ${fieldName}`);
+				const asBuffer = helpers.valueOrThrow(lUtils.uuidToBuffer(fieldUuid), logPrefix, `Failed to convert field uuid to buffer, uuid: ${fieldUuid}`);
 
-		if (!dbFields.length) {
+				fieldNamesToUuidBufs[fieldName] = asBuffer;
+			}
+
+			// Add new data
+			const dbFields = [];
+			let sql = 'INSERT INTO user_users_data (userUuid, fieldUuid, data) VALUES';
+
+			for (const fieldName of Object.keys(fields)) {
+				const fieldValues = arrayify(fields[fieldName]);
+
+				for (const fieldValue of fieldValues) {
+					sql += '(?,?,?),';
+					dbFields.push(userUuidBuf);
+					dbFields.push(fieldNamesToUuidBufs[fieldName]);
+					dbFields.push(fieldValue);
+				}
+			}
+
+			sql = sql.substring(0, sql.length - 1) + ';';
+
+			if (dbFields.length) {
+				await dbConn.query(sql, dbFields);
+			}
+
 			await commitAndRelease(dbConn);
-
-			return;
+		} catch (_err) {
+			await dbConn.rollback();
+			await dbConn.release();
+			throw _err;
 		}
-
-		await dbConn.query(sql, dbFields);
-		await commitAndRelease(dbConn);
 	}
 
 	async rmUser(userUuid: string): Promise<void> {
