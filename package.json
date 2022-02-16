@@ -9,7 +9,7 @@
   "contributors": [],
   "dependencies": {
     "bcryptjs": "2.4.3",
-    "larvitdbmigration": "6.0.0",
+    "larvitdbmigration": "6.1.0",
     "larvitutils": "5.0.0",
     "uuid": "8.3.2"
   },
