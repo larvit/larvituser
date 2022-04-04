@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/larvit/larvituser.svg?branch=master)](https://travis-ci.org/larvit/larvituser) [![Dependencies](https://david-dm.org/larvit/larvituser.svg)](https://david-dm.org/larvit/larvituser.svg)
+[![Build Status](https://github.com/larvit/larvituser/actions/workflows/ci.yml/badge.svg)](https://github.com/larvit/larvituser/actions)
 
 # larvituser
 
