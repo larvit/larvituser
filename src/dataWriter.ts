@@ -79,7 +79,9 @@ export class DataWriter {
 
 		sql = sql.substring(0, sql.length - 1) + ';';
 
-		await this.db.query(sql, dbValues);
+		if (dbValues.length) {
+			await this.db.query(sql, dbValues);
+		}
 	}
 
 	async addUserField(name: string): Promise<void> {
@@ -170,7 +172,7 @@ export class DataWriter {
 			let sql = 'INSERT INTO user_users_data (userUuid, fieldUuid, data) VALUES';
 
 			for (const fieldName of Object.keys(fields)) {
-				const fieldValues = arrayify(fields[fieldName]);
+				const fieldValues = arrayify(fields[fieldName] ?? '');
 
 				for (const fieldValue of fieldValues) {
 					sql += '(?,?,?),';

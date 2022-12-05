@@ -266,6 +266,16 @@ describe('User', () => {
 			assert.deepStrictEqual(loadedUser.fields.newField, ['value1', 'value2']);
 		});
 
+		it('should add a field on a user using addUserDataField with undefined values as empty strings', async () => {
+			const user = await userLib.create('nisse', '', { firstname: 'korv', lastname: 'tolv' });
+
+			await userLib.addUserDataField(user.uuid, 'newField', undefined as unknown as string);
+
+			const loadedUser = await userLib.fromUsername('nisse');
+			assert(typeof loadedUser !== 'boolean', 'user should not be a boolean');
+			assert.deepStrictEqual(loadedUser.fields.newField, ['']);
+		});
+
 		it('should replace and add fields on a user', async () => {
 			await userLib.create('nisse', '', { firstname: 'korv', lastname: 'tolv' });
 
@@ -290,6 +300,18 @@ describe('User', () => {
 			assert.strictEqual(loadedUser.fields.firstname.length, 2);
 			assert.strictEqual(loadedUser.fields.firstname[0], 'korv');
 			assert.strictEqual(loadedUser.fields.firstname[1], 'bert');
+		});
+
+		it('should replace fields and handle undefined values as empty strings', async () => {
+			const user = await userLib.create('user1', '', { firstname: 'korv', lastname: 'tolv' });
+
+			// NOTE: This is tested due to a bug found in real js code (hence the brutal type casting)
+			await user.replaceFields({ firstname: undefined as unknown as string, lastname: '' });
+			const loadedUser = await userLib.fromUsername('user1');
+			assert(typeof loadedUser !== 'boolean', 'user should not be a boolean');
+			assert.strictEqual(Object.keys(loadedUser.fields).length, 2);
+			assert.deepStrictEqual(loadedUser.fields.firstname, ['']);
+			assert.deepStrictEqual(loadedUser.fields.lastname, ['']);
 		});
 
 		it('should get field data from user', async () => {
