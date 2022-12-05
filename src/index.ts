@@ -95,14 +95,13 @@ export class UserLib {
 	 * @param {string} uuid - if not supplied a random will be generated
 	 * @returns {Promise<UserBase>} - The newly created user
 	 */
-	async create(username: string, password: string, userFields?: Record<string, string | string[]>, uuid?: string)
+	async create(username: string, password: string | boolean, userFields?: Record<string, string | string[]>, uuid?: string)
 		: Promise<UserBase> {
 		const logPrefix = `${topLogPrefix} create() -`;
 
 		userFields ??= {};
 		uuid ??= uuidLib.v1();
 		username = username.trim();
-		password = password?.trim();
 
 		if (!username.length) {
 			const err = new Error('Trying to create user with empty username');
@@ -122,11 +121,11 @@ export class UserLib {
 
 		// Hash Password
 		let hashedPassword = '';
-		if (!password) {
-			this.log.debug(`${logPrefix} Password set to empty string for no-login, username: "${username}"`);
+		if (typeof password === 'boolean' || !password) {
+			this.log.debug(`${logPrefix} Password set to empty string/false for no-login, username: "${username}"`);
 			hashedPassword = '';
 		} else {
-			hashedPassword = await this.hashPassword(password);
+			hashedPassword = await this.hashPassword(password.trim());
 			this.log.debug(`${logPrefix} Password hashed, username: "${username}"`);
 		}
 

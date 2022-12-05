@@ -149,6 +149,13 @@ describe('User', () => {
 			await userLib.create('user1', '', {}, uuid);
 			await assertThrows(async () => await userLib.create('user2', '', {}, uuid), `No user created, duplicate key on uuid: "${uuid}" or username: "user2"`);
 		});
+
+		it('should create a user with password set to false to disallow logins', async () => {
+			await userLib.create('korv', false, {});
+			const user = await userLib.fromUserAndPass('korv', '');
+			assert(typeof user === 'boolean', 'user should be boolean');
+			assert.strictEqual(user, false);
+		});
 	});
 
 	describe('logins', async () => {
