@@ -202,6 +202,7 @@ export class UserLib {
 			dbFields.push(fieldName.trim());
 		}
 
+		sql += ' AND (inactive IS NULL OR inactive = 0)\n';
 		sql += 'LIMIT 1';
 
 		const { rows } = await this.options.db.query(sql, dbFields);
@@ -230,7 +231,7 @@ export class UserLib {
 		if (password) password = password.trim();
 
 		const dbFields = [username];
-		const sql = 'SELECT uuid, password FROM user_users WHERE username = ?';
+		const sql = 'SELECT uuid, password FROM user_users WHERE username = ? AND (inactive IS NULL OR inactive = 0)';
 		const { rows } = await this.options.db.query(sql, dbFields);
 		if (!rows.length) return false;
 
@@ -258,7 +259,7 @@ export class UserLib {
 	async fromUsername(username: string): Promise<UserBase | boolean> {
 		const logPrefix = `${topLogPrefix}fromUsername() -`;
 		const dbFields = [];
-		const sql = 'SELECT uuid FROM user_users WHERE username = ?';
+		const sql = 'SELECT uuid FROM user_users WHERE username = ? AND (inactive IS NULL OR inactive = 0)';
 
 		username = username.trim();
 		dbFields.push(username);
@@ -281,16 +282,18 @@ export class UserLib {
 	 * Instanciate user object from user id
 	 *
 	 * @param {number} userUuid -
+	 * @param {boolean} includeInactive - If true, will also load inactive users
 	 * @returns {Promise<UserBase>} userObj will be false if no user is found
 	 */
-	async fromUuid(userUuid: string): Promise<UserBase | false> {
+	async fromUuid(userUuid: string, includeInactive: boolean = false): Promise<UserBase | false> {
 		const { helpers, lUtils } = this;
 		const { db } = this.options;
 		const { log } = this;
 		const logPrefix = `${topLogPrefix} fromUuid() -`;
-		const sql = 'SELECT\n' +
+		let sql = 'SELECT\n' +
 				' u.uuid,\n' +
 				' u.username,\n' +
+				' u.inactive,\n' +
 				' u.password,\n' +
 				' uf.uuid AS fieldUuid,\n' +
 				' uf.name AS fieldName,\n' +
@@ -300,6 +303,10 @@ export class UserLib {
 				'  LEFT JOIN user_users_data ud ON ud.userUuid = u.uuid\n' +
 				'  LEFT JOIN user_data_fields uf ON uf.uuid = ud.fieldUuid\n' +
 				'WHERE u.uuid = ?';
+
+		if (!includeInactive) {
+			sql += '\nAND (inactive IS NULL OR inactive = 0)';
+		}
 
 		const userUuidBuf = helpers.valueOrThrow(lUtils.uuidToBuffer(userUuid), logPrefix, 'Invalid userUuid');
 
@@ -326,6 +333,7 @@ export class UserLib {
 			log,
 			uuid: userUuid,
 			username: rows[0].username,
+			inactive: !!rows[0].inactive,
 			passwordIsFalse: !rows[0].password,
 			fields,
 		};
@@ -449,6 +457,25 @@ export class UserLib {
 		}
 
 		await this.dataWriter.setUsername(userUuid, newUsername);
+	}
+
+	/**
+	 * Set inactive for a user
+	 *
+	 * @param {string} userUuid -
+	 * @param {string} newInactive -
+	 * @returns {Promise<void>} -
+	 */
+	async setInactive(userUuid: string, newInactive: boolean): Promise<void> {
+		const logPrefix = `${topLogPrefix} setInactive() -`;
+
+		if (newInactive === undefined) {
+			const err = new Error('No new inactive value supplied');
+			this.log.warn(logPrefix + err.message);
+			throw err;
+		}
+
+		await this.dataWriter.setInactive(userUuid, newInactive);
 	}
 
 	async getUsers(options: Omit<UsersOptions, 'log' | 'db'> = {}): ReturnType<Users['get']> {

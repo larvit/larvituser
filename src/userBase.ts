@@ -9,6 +9,7 @@ export type UserBaseOptions = {
 	log: LogInstance,
 	uuid: string,
 	username: string,
+	inactive?: boolean,
 	passwordIsFalse: boolean,
 	fields?: Record<string, string[]>,
 };
@@ -18,6 +19,7 @@ export class UserBase {
 	private log: LogInstance;
 	public uuid: string;
 	public username: string;
+	public inactive?: boolean;
 	public passwordIsFalse: boolean;
 	public fields: Record<string, string[]>;
 
@@ -156,5 +158,18 @@ export class UserBase {
 
 		await this.userInstance.setUsername(this.uuid, newUsername);
 		this.username = newUsername;
+	}
+
+	async setInactive(inactive: boolean): Promise<void> {
+		const logPrefix = `${topLogPrefix} UserBase.setInactive() -`;
+
+		if (!this.uuid) {
+			const err = new Error('Cannot set inactive; no user loaded');
+			this.log.verbose(`${logPrefix} ${err.message}`);
+			throw err;
+		}
+
+		await this.userInstance.setInactive(this.uuid, inactive);
+		this.inactive = inactive;
 	}
 }

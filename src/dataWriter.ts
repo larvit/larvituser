@@ -235,6 +235,18 @@ export class DataWriter {
 		await this.db.query(sql, dbFields);
 	}
 
+	async setInactive(userUuid: string, inactive: boolean): Promise<void> {
+		const { helpers, lUtils } = this;
+		const logPrefix = `${topLogPrefix} setInactive() -`;
+
+		const userUuidBuffer = helpers.valueOrThrow(lUtils.uuidToBuffer(userUuid), logPrefix, 'Invalid user uuid');
+
+		const dbFields = [inactive, userUuidBuffer];
+
+		const sql = 'UPDATE user_users SET inactive = ? WHERE uuid = ?;';
+		await this.db.query(sql, dbFields);
+	}
+
 	async setUsername(userUuid: string, username: string): Promise<void> {
 		const { helpers, lUtils } = this;
 		const logPrefix = `${topLogPrefix} setUsername() -`;

@@ -7,6 +7,8 @@ export type UsersOptions = {
 	db: any,
 	limit?: string,
 	log?: LogInstance,
+	showInactive?: boolean,
+	showInactiveOnly?: boolean,
 	matchAllFields?: Record<string, string | Array<string>>,
 	matchAllFieldsQ?: Record<string, string | Array<string>>,
 	matchExistingFields?: string[],
@@ -64,6 +66,15 @@ export class Users {
 
 		const dbFields: Array<string | string[] | Buffer> = [];
 		let sqlWhere = '';
+
+		// Check if we should show inactive users or not
+		if (options.showInactiveOnly === true) {
+			// Show inactive users only
+			sqlWhere += ' AND inactive = 1\n';
+		} else if (!options.showInactive) {
+			// Show active users
+			sqlWhere += ' AND (inactive IS NULL OR inactive = 0)\n';
+		}
 
 		// Build where-statement
 		if (options.matchExistingFields && options.matchExistingFields.length) {

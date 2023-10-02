@@ -676,6 +676,104 @@ describe('User', () => {
 			assert.ok(result.users.find(u => u.username === 'user5'));
 		});
 	});
+
+	describe('inactive users', async () => {
+		it('create a new user', async () => {
+			const user = await userLib.create('testInactiveUser', '');
+
+			assert.strictEqual(user.inactive, undefined);
+		});
+
+		it('inactivate the user', async () => {
+			const user = await userLib.create('testInactiveUser', '');
+
+			assert(typeof user !== 'boolean', 'testInactiveUser should not be a boolean');
+			assert.strictEqual(user.inactive, undefined);
+			await user.setInactive(true);
+			assert.strictEqual(user.inactive, true);
+		});
+
+		it('inactivate and activate the user', async () => {
+			const user = await userLib.create('testInactiveUser', '');
+
+			assert(typeof user !== 'boolean', 'testInactiveUser should not be a boolean');
+			assert.strictEqual(user.inactive, undefined);
+			await user.setInactive(true);
+			assert.strictEqual(user.inactive, true);
+			await user.setInactive(false);
+			assert.strictEqual(user.inactive, false);
+		});
+
+		it('inactive users should be found using fromUuid if "includeInactive" is provided', async () => {
+			const user = await userLib.create('testInactiveUser', '');
+
+			assert(typeof user !== 'boolean', 'testInactiveUser should not be a boolean');
+			await user.setInactive(true);
+			assert.strictEqual(user.inactive, true);
+
+			const isAvailable = await userLib.fromUuid(user.uuid);
+			assert.strictEqual(isAvailable, false);
+
+			const isAvailable2 = await userLib.fromUuid(user.uuid, true);
+			assert(typeof isAvailable2 !== 'boolean', 'should not be a boolean');
+			assert.strictEqual(isAvailable2.username, 'testInactiveUser');
+		});
+
+		it('inactive users should not be listed using get unless options showInactiveOnly and showInactive are used', async () => {
+			const testInactiveUser = await userLib.create('testInactiveUser', '');
+			const testActiveUser = await userLib.create('testActiveUser', '');
+
+			assert(typeof testInactiveUser !== 'boolean', 'testInactiveUser should not be a boolean');
+			assert(typeof testActiveUser !== 'boolean', 'testActiveUser should not be a boolean');
+			assert.strictEqual(testInactiveUser.inactive, undefined);
+			assert.strictEqual(testActiveUser.inactive, undefined);
+			await testInactiveUser.setInactive(true);
+			assert.strictEqual(testInactiveUser.inactive, true);
+
+			let users = new Users({ log, db });
+			let result = await users.get();
+			assert.strictEqual(result.totalElements, 1);
+			assert.strictEqual(result.users.length, 1);
+			assert.strictEqual(result.users[0].username, 'testActiveUser');
+
+			users = new Users({ log, db, showInactiveOnly: true });
+			result = await users.get();
+			assert.strictEqual(result.totalElements, 1);
+			assert.strictEqual(result.users.length, 1);
+			assert.strictEqual(result.users[0].username, 'testInactiveUser');
+
+			users = new Users({ log, db, showInactive: true });
+			result = await users.get();
+			assert.strictEqual(result.totalElements, 2);
+			assert.strictEqual(result.users.length, 2);
+			assert.strictEqual(result.users[0].username, 'testActiveUser');
+			assert.strictEqual(result.users[1].username, 'testInactiveUser');
+
+			await testInactiveUser.setInactive(false);
+
+			result = await users.get();
+			assert.strictEqual(result.totalElements, 2);
+			assert.strictEqual(result.users.length, 2);
+			assert.strictEqual(result.users[0].username, 'testActiveUser');
+			assert.strictEqual(result.users[1].username, 'testInactiveUser');
+		});
+
+		it('Verify that inactive users are not found using fromUsername, fromUserAndPass and fromFields', async () => {
+			const user = await userLib.create('testInactiveUser', '', { firstname: 'tolv', lastname: 'korvar' });
+
+			assert(typeof user !== 'boolean', 'testInactiveUser should not be a boolean');
+			assert.strictEqual(user.inactive, undefined);
+			await user.setInactive(true);
+			assert.strictEqual(user.inactive, true);
+
+			const fromUsername = await userLib.fromUsername('testInactiveUser');
+			const fromUserAndPass = await userLib.fromUserAndPass('testInactiveUser', '');
+			const fromFields = await userLib.fromFields({ firstname: 'tolv', lastname: 'korvar' });
+			assert.strictEqual(fromUsername, false);
+			assert.strictEqual(fromUserAndPass, false);
+			assert.strictEqual(fromFields, false);
+		});
+	});
 });
 
 describe('Helpers', async () => {
