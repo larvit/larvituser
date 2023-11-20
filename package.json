@@ -1,6 +1,6 @@
 {
   "name": "larvituser",
-  "version": "0.21.7",
+  "version": "0.21.8",
   "author": {
     "name": "Mikael 'Lilleman' Göransson",
     "email": "lilleman@larvit.se",
@@ -18,11 +18,11 @@
     "@istanbuljs/nyc-config-typescript": "1.0.2",
     "@types/bcryptjs": "2.4.6",
     "@types/mocha": "10.0.4",
-    "@types/node": "20.9.0",
+    "@types/node": "20.9.2",
     "@types/uuid": "9.0.7",
-    "@typescript-eslint/eslint-plugin": "6.10.0",
-    "@typescript-eslint/parser": "6.10.0",
-    "eslint": "8.53.0",
+    "@typescript-eslint/eslint-plugin": "6.11.0",
+    "@typescript-eslint/parser": "6.11.0",
+    "eslint": "8.54.0",
     "freeport": "1.0.5",
     "larvitdb": "3.2.64",
     "mocha": "10.2.0",
