@@ -9,9 +9,15 @@ export type UsersOptions = {
 	log?: LogInstance,
 	showInactive?: boolean,
 	showInactiveOnly?: boolean,
+	matchDateFields?: [{
+		field: string,
+		value: string | Array<string>,
+		operation?: 'gt' | 'lt' | 'eq',
+	}],
 	matchAllFields?: Record<string, string | Array<string>>,
 	matchAllFieldsQ?: Record<string, string | Array<string>>,
 	matchExistingFields?: string[],
+	matchFieldHasValue?: string[],
 	offset?: string,
 	order?: {
 		by?: string,
@@ -90,6 +96,20 @@ export class Users {
 			sqlWhere = sqlWhere.substring(0, sqlWhere.length - 4) + '))\n';
 		}
 
+		if (options.matchFieldHasValue && options.matchFieldHasValue.length) {
+			sqlWhere += 'AND uuid IN (\n';
+			sqlWhere += 'SELECT userUuid FROM user_users_data WHERE fieldUuid IN (\n';
+			sqlWhere += 'SELECT uuid FROM user_data_fields WHERE\n';
+
+			for (const matchFieldHasValue of options.matchFieldHasValue) {
+				sqlWhere += 'name = ? OR ';
+				dbFields.push(matchFieldHasValue);
+			}
+
+			sqlWhere = sqlWhere.substring(0, sqlWhere.length - 4) + ')\n';
+			sqlWhere += 'AND data IS NOT NULL AND data != "")\n';
+		}
+
 		if (options.matchAllFields && Object.keys(options.matchAllFields).length) {
 			for (const field in options.matchAllFields) {
 				sqlWhere += 'AND uuid IN (SELECT userUuid FROM user_users_data WHERE data = ?\n'
@@ -104,6 +124,27 @@ export class Users {
 				sqlWhere += 'AND uuid IN (SELECT userUuid FROM user_users_data WHERE data LIKE ?\n'
 					+ ' AND fieldUuid = (SELECT uuid FROM user_data_fields WHERE name = ?))';
 				dbFields.push('%' + options.matchAllFieldsQ[field] + '%');
+				dbFields.push(field);
+			}
+		}
+
+		if (options.matchDateFields && options.matchDateFields.length) {
+			for (const matchExistingDateField of options.matchDateFields) {
+				const operation = matchExistingDateField.operation || 'eq';
+				const value = matchExistingDateField.value;
+				const field = matchExistingDateField.field;
+
+				if (!value) continue;
+				if (!field) continue;
+
+				sqlWhere += 'AND uuid IN (SELECT userUuid FROM user_users_data WHERE data ';
+				if (operation === 'eq') sqlWhere += '= ?\n';
+				else if (operation === 'gt') sqlWhere += '> ?\n';
+				else if (operation === 'lt') sqlWhere += '< ?\n';
+
+				sqlWhere += ' AND fieldUuid = (SELECT uuid FROM user_data_fields WHERE name = ?))\n';
+
+				dbFields.push(value);
 				dbFields.push(field);
 			}
 		}
