@@ -97,17 +97,15 @@ export class Users {
 		}
 
 		if (options.matchFieldHasValue && options.matchFieldHasValue.length) {
-			sqlWhere += 'AND uuid IN (\n';
-			sqlWhere += 'SELECT userUuid FROM user_users_data WHERE fieldUuid IN (\n';
-			sqlWhere += 'SELECT uuid FROM user_data_fields WHERE\n';
-
 			for (const matchFieldHasValue of options.matchFieldHasValue) {
-				sqlWhere += 'name = ? OR ';
+				sqlWhere += 'AND uuid IN (\n';
+				sqlWhere += 'SELECT userUuid FROM user_users_data WHERE fieldUuid IN (\n';
+				sqlWhere += 'SELECT uuid FROM user_data_fields WHERE\n';
+				sqlWhere += 'name = ?) ';
+				sqlWhere += 'AND data IS NOT NULL AND data != "")\n';
+
 				dbFields.push(matchFieldHasValue);
 			}
-
-			sqlWhere = sqlWhere.substring(0, sqlWhere.length - 4) + ')\n';
-			sqlWhere += 'AND data IS NOT NULL AND data != "")\n';
 		}
 
 		if (options.matchAllFields && Object.keys(options.matchAllFields).length) {
