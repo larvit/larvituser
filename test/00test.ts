@@ -458,7 +458,17 @@ describe('User', () => {
 			assert.strictEqual(result.users[0].username, 'user2');
 		});
 
-		it('Get list of users with matching field is array', async () => {
+		it('Get list of users with matching field, when it is a string ', async () => {
+			await userLib.create('user1', '', { firstname: 'korv', lastname: 'tolv' });
+			await userLib.create('user2', '', { firstname: 'fjös', lastname: 'lös', role: 'customer' });
+
+			const users = new Users({ log, db, matchAllFields: { role: 'customer' } });
+			const result = await users.get();
+			assert.strictEqual(result.totalElements, 1);
+			assert.strictEqual(result.users[0].username, 'user2');
+		});
+
+		it('Get list of users with matching field, when it is an array', async () => {
 			await userLib.create('user1', '', { firstname: 'korv', lastname: 'tolv' });
 			await userLib.create('user2', '', { firstname: 'fjös', lastname: 'lös', role: 'chef' });
 			await userLib.create('user3', '', { firstname: 'brö', lastname: 'söl', role: 'gosse' });
