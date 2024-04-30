@@ -119,6 +119,7 @@ export class Users {
 					sqlWhere = sqlWhere.substring(0, sqlWhere.length - 1);
 					sqlWhere += ')';
 				} else {
+					sqlWhere += 'AND uuid IN (SELECT userUuid FROM user_users_data WHERE data = ?\n';
 					dbFields.push(options.matchAllFields[field]);
 				}
 
