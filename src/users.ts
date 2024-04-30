@@ -110,9 +110,19 @@ export class Users {
 
 		if (options.matchAllFields && Object.keys(options.matchAllFields).length) {
 			for (const field in options.matchAllFields) {
-				sqlWhere += 'AND uuid IN (SELECT userUuid FROM user_users_data WHERE data = ?\n'
-					+ ' AND fieldUuid = (SELECT uuid FROM user_data_fields WHERE name = ?))';
-				dbFields.push(options.matchAllFields[field]);
+				if (Array.isArray(options.matchAllFields[field])) {
+					sqlWhere += 'AND uuid IN (SELECT userUuid FROM user_users_data WHERE data IN (';
+					for (const fieldValue of options.matchAllFields[field]) {
+						dbFields.push(fieldValue);
+						sqlWhere += '?,';
+					}
+					sqlWhere = sqlWhere.substring(0, sqlWhere.length - 1);
+					sqlWhere += ')';
+				} else {
+					dbFields.push(options.matchAllFields[field]);
+				}
+
+				sqlWhere += ' AND fieldUuid = (SELECT uuid FROM user_data_fields WHERE name = ?))';
 				dbFields.push(field);
 			}
 		}
