@@ -1,6 +1,6 @@
 {
   "name": "larvituser",
-  "version": "0.23.7",
+  "version": "0.23.8",
   "author": {
     "name": "Mikael 'Lilleman' Göransson",
     "email": "lilleman@larvit.se",
@@ -11,7 +11,7 @@
     "bcryptjs": "2.4.3",
     "larvitdbmigration": "7.0.110",
     "larvitutils": "5.1.93",
-    "uuid": "9.0.1"
+    "uuid": "10.0.0"
   },
   "description": "User module for node.js",
   "devDependencies": {
