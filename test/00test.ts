@@ -542,6 +542,24 @@ describe('User', () => {
 
 		});
 
+		it('Get list of users where field data does not exists', async () => {
+
+			await userLib.create('user1', '', { firstname: 'korv', verified: 'yes' });
+			await userLib.create('user2', '', { firstname: 'fjös', verified: 'no' });
+			await userLib.create('user3', '', { firstname: 'brö' });
+
+			const result = await userLib.getUsers({ matchFieldHasValue: ['verified'] });
+			assert.strictEqual(result.users.length, 2);
+			assert.strictEqual(result.users[0].username, 'user1');
+			assert.strictEqual(result.users[1].username, 'user2');
+
+			const result2 = await userLib.getUsers({ matchFieldHasNoValue: ['verified'] });
+
+			assert.strictEqual(result2.users.length, 1);
+			assert.strictEqual(result2.users[0].username, 'user3');
+
+		});
+
 		it('Get list of users sorted on username with ascending order', async () => {
 			await userLib.create('user2', '', { firstname: 'korv' });
 			await userLib.create('user3', '', { firstname: 'fjös', lastname: 'lös' });

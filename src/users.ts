@@ -18,6 +18,7 @@ export type UsersOptions = {
 	matchAllFieldsQ?: Record<string, string | Array<string>>,
 	matchExistingFields?: string[],
 	matchFieldHasValue?: string[],
+	matchFieldHasNoValue?: string[],
 	offset?: string,
 	order?: {
 		by?: string,
@@ -106,6 +107,32 @@ export class Users {
 
 				dbFields.push(matchFieldHasValue);
 			}
+		}
+
+		if (options.matchFieldHasNoValue && options.matchFieldHasNoValue.length) {
+			sqlWhere += 'AND (\n';
+			sqlWhere += 'uuid IN (\n';
+			sqlWhere += 'SELECT userUuid FROM user_users_data WHERE fieldUuid IN (\n';
+			sqlWhere += 'SELECT uuid FROM user_data_fields WHERE\n';
+			for (const matchFieldHasNoValue of options.matchFieldHasNoValue) {
+				sqlWhere += 'name = ? OR ';
+				dbFields.push(matchFieldHasNoValue);
+			}
+			sqlWhere = sqlWhere.substring(0, sqlWhere.length - 4) + ')\n';
+			sqlWhere += 'AND (data IS NULL OR data = "")\n';
+			sqlWhere += ')\n';
+			sqlWhere += 'OR (\n';
+			sqlWhere += 'uuid NOT IN (\n';
+			sqlWhere += 'SELECT userUuid FROM user_users_data WHERE fieldUuid IN (\n';
+			sqlWhere += 'SELECT uuid FROM user_data_fields WHERE\n';
+			for (const matchFieldHasNoValue of options.matchFieldHasNoValue) {
+				sqlWhere += 'name = ? OR ';
+				dbFields.push(matchFieldHasNoValue);
+			}
+			sqlWhere = sqlWhere.substring(0, sqlWhere.length - 4) + ')\n';
+			sqlWhere += ')\n';
+			sqlWhere += ')\n';
+			sqlWhere += ')\n';
 		}
 
 		if (options.matchAllFields && Object.keys(options.matchAllFields).length) {
