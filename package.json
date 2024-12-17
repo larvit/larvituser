@@ -1,6 +1,6 @@
 {
   "name": "larvituser",
-  "version": "0.23.24",
+  "version": "0.24.0",
   "author": {
     "name": "Mikael 'Lilleman' Göransson",
     "email": "lilleman@larvit.se",
@@ -9,29 +9,29 @@
   "contributors": [],
   "dependencies": {
     "bcryptjs": "2.4.3",
-    "larvitdbmigration": "7.0.126",
-    "larvitutils": "5.1.109",
+    "larvitdbmigration": "7.0.142",
+    "larvitutils": "5.1.123",
     "luxon": "^3.1.1",
-    "uuid": "10.0.0"
+    "uuid": "11.0.3"
   },
   "description": "User module for node.js",
   "devDependencies": {
     "@istanbuljs/nyc-config-typescript": "1.0.2",
     "@types/bcryptjs": "2.4.6",
     "@types/luxon": "^3.1.0",
-    "@types/mocha": "10.0.8",
-    "@types/node": "20.16.5",
+    "@types/mocha": "10.0.10",
+    "@types/node": "22.10.2",
     "@types/uuid": "10.0.0",
     "@typescript-eslint/eslint-plugin": "7.18.0",
     "@typescript-eslint/parser": "7.18.0",
-    "eslint": "8.57.0",
+    "eslint": "8.57.1",
     "freeport": "1.0.5",
-    "larvitdb": "3.2.100",
-    "mocha": "10.7.3",
+    "larvitdb": "3.2.107",
+    "mocha": "11.0.1",
     "mocha-eslint": "7.0.0",
-    "nyc": "17.0.0",
+    "nyc": "17.1.0",
     "ts-node": "10.9.2",
-    "typescript": "5.6.2"
+    "typescript": "5.7.2"
   },
   "scripts": {
     "build": "rm -rf dist/* && tsc",
