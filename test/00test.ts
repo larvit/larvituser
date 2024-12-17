@@ -715,6 +715,57 @@ describe('User', () => {
 			assert.ok(result.users.find(u => u.username === 'user4'));
 			assert.ok(result.users.find(u => u.username === 'user5'));
 		});
+
+		it('should get users based on create date', async () => {
+			const user1 = await userLib.create('test1', '', { firstname: 'tolv', lastname: 'korvar' });
+			await new Promise(resolve => setTimeout(resolve, 1000));
+			const user2 = await userLib.create('test2', '', { firstname: 'tolv', lastname: 'korvarna' });
+			const result1 = await userLib.getUsers({
+				createdAfter: user1.created,
+				returnFields: ['lastname'],
+			});
+			const result2 = await userLib.getUsers({
+				createdAfter: user2.created,
+				returnFields: ['lastname'],
+			});
+
+			assert.strictEqual(result1.totalElements, 2);
+			assert.strictEqual(result2.totalElements, 1);
+
+			assert.strictEqual(result1.users[0].fields.lastname[0], 'korvar');
+			assert.strictEqual(result2.users[0].fields.lastname[0], 'korvarna');
+		});
+
+		it('should get users based on create and updated date', async () => {
+			const user1 = await userLib.create('testUpdate1', '', { firstname: 'tolv', lastname: 'korvar' });
+			const user2 = await userLib.create('testUpdate2', '', { firstname: 'tolv', lastname: 'ölkorvarna' });
+
+			await new Promise(resolve => setTimeout(resolve, 1000));
+			await user1.replaceFields({ lastname: ['korvarna', 'korvarnas'] });
+
+			const updatedUser1 = await userLib.fromUuid(user1.uuid);
+
+			assert(typeof updatedUser1 !== 'boolean', 'should not be a boolean');
+
+			const result1 = await userLib.getUsers({
+				updatedAfter: updatedUser1.updated,
+				returnFields: ['lastname'],
+			});
+			const result2 = await userLib.getUsers({
+				updatedAfter: user2.updated,
+				returnFields: ['lastname'],
+			});
+
+			assert.strictEqual(result1.totalElements, 1);
+			assert.strictEqual(result2.totalElements, 2);
+
+			assert.strictEqual(result1.users[0].fields.lastname[0], 'korvarna');
+			assert.strictEqual(result1.users[0].fields.lastname[1], 'korvarnas');
+
+			assert.strictEqual(result2.users[0].fields.lastname[0], 'korvarna');
+			assert.strictEqual(result2.users[0].fields.lastname[1], 'korvarnas');
+			assert.strictEqual(result2.users[1].fields.lastname[0], 'ölkorvarna');
+		});
 	});
 
 	describe('inactive users', async () => {

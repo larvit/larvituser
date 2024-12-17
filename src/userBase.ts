@@ -11,6 +11,8 @@ export type UserBaseOptions = {
 	username: string,
 	inactive?: boolean,
 	passwordIsFalse: boolean,
+	created?: string,
+	updated?: string,
 	fields?: Record<string, string[]>,
 };
 
@@ -21,6 +23,8 @@ export class UserBase {
 	public username: string;
 	public inactive?: boolean;
 	public passwordIsFalse: boolean;
+	public created?: string;
+	public updated?: string;
 	public fields: Record<string, string[]>;
 
 	constructor(options: UserBaseOptions) {
@@ -30,6 +34,8 @@ export class UserBase {
 		this.uuid = options.uuid;
 		this.username = options.username;
 		this.passwordIsFalse = options.passwordIsFalse;
+		this.created = options.created;
+		this.updated = options.updated;
 		this.fields = options.fields ?? {};
 	}
 

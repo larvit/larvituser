@@ -11,12 +11,14 @@
     "bcryptjs": "2.4.3",
     "larvitdbmigration": "7.0.126",
     "larvitutils": "5.1.109",
+    "luxon": "^3.1.1",
     "uuid": "10.0.0"
   },
   "description": "User module for node.js",
   "devDependencies": {
     "@istanbuljs/nyc-config-typescript": "1.0.2",
     "@types/bcryptjs": "2.4.6",
+    "@types/luxon": "^3.1.0",
     "@types/mocha": "10.0.8",
     "@types/node": "20.16.5",
     "@types/uuid": "10.0.0",

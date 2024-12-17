@@ -295,6 +295,8 @@ export class UserLib {
 				' u.username,\n' +
 				' u.inactive,\n' +
 				' u.password,\n' +
+				' u.created,\n' +
+				' u.updated,\n' +
 				' uf.uuid AS fieldUuid,\n' +
 				' uf.name AS fieldName,\n' +
 				' ud.data AS fieldData\n' +
@@ -335,6 +337,8 @@ export class UserLib {
 			username: rows[0].username,
 			inactive: !!rows[0].inactive,
 			passwordIsFalse: !rows[0].password,
+			created: rows[0].created,
+			updated: rows[0].updated,
 			fields,
 		};
 

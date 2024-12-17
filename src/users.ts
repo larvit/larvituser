@@ -1,5 +1,6 @@
 import { Log, LogInstance, Utils } from 'larvitutils';
 import { arrayify } from './helpers';
+import { DateTime } from 'luxon';
 
 const topLogPrefix = 'larvituser: users.ts';
 
@@ -27,6 +28,8 @@ export type UsersOptions = {
 	q?: string,
 	returnFields?: string[],
 	uuids?: string | string[],
+	createdAfter?: string,
+	updatedAfter?: string,
 };
 
 export type UserFields = {
@@ -36,6 +39,8 @@ export type UserFields = {
 export type UserModel = {
 	uuid: string,
 	username: string,
+	created?: string,
+	updated?: string,
 	fields: UserFields,
 };
 
@@ -81,6 +86,26 @@ export class Users {
 		} else if (!options.showInactive) {
 			// Show active users
 			sqlWhere += ' AND (inactive IS NULL OR inactive = 0)\n';
+		}
+
+		// Check createdAfter
+		if (options.createdAfter) {
+			if (isNaN(Date.parse(options.createdAfter))) {
+				sqlWhere += ' AND created IS NULL\n';
+			} else {
+				sqlWhere += ' AND created >= ?\n';
+				dbFields.push(options.createdAfter);
+			}
+		}
+
+		// Check updatedAfter
+		if (options.updatedAfter) {
+			if (isNaN(Date.parse(options.updatedAfter))) {
+				sqlWhere += ' AND created IS NULL\n';
+			} else {
+				sqlWhere += ' AND updated >= ?\n';
+				dbFields.push(options.updatedAfter);
+			}
 		}
 
 		// Build where-statement
@@ -279,6 +304,32 @@ export class Users {
 				username: row.username,
 				fields: {},
 			};
+
+			if (row.created instanceof Date) {
+				user.created = DateTime
+					.fromJSDate(row.created)
+					.toUTC()
+					.toISO() || undefined;
+			} else {
+				// We do this extra conversion since mariadb returns non-ISO format
+				// NOTE: THIS ASSUMES THAT MARIADB IS CONFIGURED FOR UTC TIMEZONE
+				//       for a proper solution we have to look at the timezone in DB conf and
+				//       handle it accordingly.
+				user.created = row.created ? `${row.created.replace(' ', 'T')}.000Z` : undefined;
+			}
+
+			if (row.updated instanceof Date) {
+				user.updated = DateTime
+					.fromJSDate(row.updated)
+					.toUTC()
+					.toISO() || undefined;
+			} else {
+				// We do this extra conversion since mariadb returns non-ISO format
+				// NOTE: THIS ASSUMES THAT MARIADB IS CONFIGURED FOR UTC TIMEZONE
+				//       for a proper solution we have to look at the timezone in DB conf and
+				//       handle it accordingly.
+				user.updated = row.updated ? `${row.updated.replace(' ', 'T')}.000Z` : user.created;
+			}
 
 			users.push(user);
 		}

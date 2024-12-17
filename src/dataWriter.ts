@@ -1,7 +1,7 @@
 import { Log, LogInstance, Utils } from 'larvitutils';
 import { Helpers, arrayify } from './helpers';
-
 import { DbMigration } from 'larvitdbmigration';
+import { DateTime } from 'luxon';
 import * as uuidLib from 'uuid';
 
 const topLogPrefix = 'larvituser: dataWriter.ts -';
@@ -56,6 +56,7 @@ export class DataWriter {
 		: Promise<void> {
 		const { helpers, lUtils } = this;
 		const logPrefix = `${topLogPrefix} addUserDataFields() -`;
+		const updatedUtc = DateTime.utc().toFormat('yyyy-MM-dd HH:mm:ss');
 
 		let sql = 'INSERT INTO user_users_data (userUuid, fieldUuid, data) VALUES';
 
@@ -81,6 +82,7 @@ export class DataWriter {
 
 		if (dbValues.length) {
 			await this.db.query(sql, dbValues);
+			await this.db.query('UPDATE user_users SET updated = ? WHERE uuid = ?', [updatedUtc, userUuidBuffer]);
 		}
 	}
 
@@ -130,6 +132,7 @@ export class DataWriter {
 
 		const userUuidBuf = helpers.valueOrThrow(lUtils.uuidToBuffer(userUuid), logPrefix, `Invalid user uuid supplied: "${userUuid}`);
 		const dbConn = await this.db.getConnection();
+		const updatedUtc = DateTime.utc().toFormat('yyyy-MM-dd HH:mm:ss');
 
 		async function commitAndRelease(dbConn: any): Promise<void> {
 			await dbConn.commit();
@@ -144,6 +147,8 @@ export class DataWriter {
 			await dbConn.release();
 			throw err;
 		}
+
+		await dbConn.query('UPDATE user_users SET updated = ? WHERE uuid = ?', [updatedUtc, userUuidBuf]);
 
 		// Begin transaction
 		await dbConn.beginTransaction();
