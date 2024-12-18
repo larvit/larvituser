@@ -253,7 +253,7 @@ export class Users {
 
 		const returnFields = options.returnFields ? arrayify(options.returnFields) : undefined;
 
-		let sql = 'SELECT user_users.uuid as uuid, user_users.username as username';
+		let sql = 'SELECT user_users.uuid as uuid, user_users.username as username, user_users.created as created, user_users.updated as updated';
 
 		// SORT ORDERING
 		if (options.order !== undefined && typeof options.order === 'object') {

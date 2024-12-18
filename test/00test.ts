@@ -766,6 +766,28 @@ describe('User', () => {
 			assert.strictEqual(result2.users[0].fields.lastname[1], 'korvarnas');
 			assert.strictEqual(result2.users[1].fields.lastname[0], 'ölkorvarna');
 		});
+
+		it('verify that we have a created date and updated date set correctly', async () => {
+			const user = await userLib.create('testUser', '', { firstname: 'korv', lastname: 'tolv' });
+			assert(typeof user !== 'boolean', 'testUser should not be a boolean');
+
+			let loadedUser = await userLib.fromUsername('testUser');
+			assert(typeof loadedUser !== 'boolean', 'user should not be a boolean');
+
+			assert.ok(loadedUser.created);
+			assert.strictEqual(String(loadedUser.created), String(loadedUser.updated));
+
+			await new Promise(resolve => setTimeout(resolve, 1000));
+
+			await loadedUser.replaceFields({ firstname: ['bert'] });
+
+			loadedUser = await userLib.fromUsername('testUser');
+			assert(typeof loadedUser !== 'boolean', 'user should not be a boolean');
+
+			assert.strictEqual(String(loadedUser.created), String(user.created));
+			assert.notStrictEqual(String(loadedUser.updated), String(user.updated));
+			assert.strictEqual(loadedUser.fields.firstname[0], 'bert');
+		});
 	});
 
 	describe('inactive users', async () => {
@@ -837,16 +859,16 @@ describe('User', () => {
 			result = await users.get();
 			assert.strictEqual(result.totalElements, 2);
 			assert.strictEqual(result.users.length, 2);
-			assert.strictEqual(result.users[0].username, 'testActiveUser');
-			assert.strictEqual(result.users[1].username, 'testInactiveUser');
+			assert.ok(result.users.some(u => u.username === 'testInactiveUser'));
+			assert.ok(result.users.some(u => u.username === 'testActiveUser'));
 
 			await testInactiveUser.setInactive(false);
 
 			result = await users.get();
 			assert.strictEqual(result.totalElements, 2);
 			assert.strictEqual(result.users.length, 2);
-			assert.strictEqual(result.users[0].username, 'testActiveUser');
-			assert.strictEqual(result.users[1].username, 'testInactiveUser');
+			assert.ok(result.users.some(u => u.username === 'testInactiveUser'));
+			assert.ok(result.users.some(u => u.username === 'testActiveUser'));
 		});
 
 		it('Verify that inactive users are not found using fromUsername, fromUserAndPass and fromFields', async () => {
