@@ -1,6 +1,6 @@
 {
   "name": "larvituser",
-  "version": "0.24.3",
+  "version": "0.24.4",
   "author": {
     "name": "Mikael 'Lilleman' Göransson",
     "email": "lilleman@larvit.se",
@@ -12,7 +12,7 @@
     "larvitdbmigration": "7.0.144",
     "larvitutils": "5.1.125",
     "luxon": "^3.1.1",
-    "uuid": "11.0.3"
+    "uuid": "11.0.4"
   },
   "description": "User module for node.js",
   "devDependencies": {
@@ -20,7 +20,7 @@
     "@types/bcryptjs": "2.4.6",
     "@types/luxon": "^3.1.0",
     "@types/mocha": "10.0.10",
-    "@types/node": "22.10.2",
+    "@types/node": "22.10.5",
     "@types/uuid": "10.0.0",
     "@typescript-eslint/eslint-plugin": "7.18.0",
     "@typescript-eslint/parser": "7.18.0",
