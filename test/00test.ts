@@ -788,6 +788,239 @@ describe('User', () => {
 			assert.notStrictEqual(String(loadedUser.updated), String(user.updated));
 			assert.strictEqual(loadedUser.fields.firstname[0], 'bert');
 		});
+
+		it('should get users based on dates', async () => {
+			async function setCreatedAndUpdated(user: UserBase, created: Date, updated: Date): Promise<void> {
+				await db.query('UPDATE user_users SET created = CAST(? AS DATETIME), updated = CAST(? AS DATETIME) WHERE uuid = ?', [
+					created.toISOString().replace('T', ' ').substring(0, 19),
+					updated.toISOString().replace('T', ' ').substring(0, 19),
+					lUtils.uuidToBuffer(user.uuid),
+				]);
+			}
+
+			const user1Dates = {
+				created: new Date('2025-02-11 12:15:01'),
+				updated: new Date('2025-02-12 12:15:01'),
+				testDate: new Date('2025-02-11 12:15:01'),
+			};
+			const user2Dates = {
+				created: new Date('2024-02-11 12:15:01'),
+				updated: new Date('2024-02-12 12:15:01'),
+				testDate: new Date('2024-02-11 12:15:01'),
+			};
+
+			const user1 = await userLib.create('testUpdate1', '', { firstname: 'tolv', lastname: 'korvar', testDate: user1Dates.testDate.toISOString() });
+			const user2 = await userLib.create('testUpdate2', '', { firstname: 'tolv', lastname: 'ölkorvarna', testDate: user2Dates.testDate.toISOString() });
+
+			// Update users created and updated dates..
+			await setCreatedAndUpdated(user1, user1Dates.created, user1Dates.updated);
+			await setCreatedAndUpdated(user2, user2Dates.created, user2Dates.updated);
+
+			const updated1_eq = new Date(user1Dates.updated.getTime());
+			const updated1_gt = new Date(user1Dates.updated.getTime());
+			updated1_gt.setSeconds(updated1_gt.getSeconds() - 10);
+			const updated1_lt = new Date(user1Dates.updated.getTime());
+			updated1_lt.setSeconds(updated1_lt.getSeconds() + 10);
+
+			const testDate1_eq = new Date(user1Dates.testDate.getTime());
+			const testDate1_gt = new Date(user1Dates.testDate.getTime());
+			testDate1_gt.setSeconds(testDate1_gt.getSeconds() - 10);
+			const testDate1_lt = new Date(user1Dates.testDate.getTime());
+			testDate1_lt.setSeconds(testDate1_lt.getSeconds() + 10);
+
+			const result1_1 = await userLib.getUsers({
+				matchDates: [
+					{
+						field: 'updated',
+						value: updated1_eq.toISOString(),
+						operation: 'eq',
+					},
+				],
+				returnFields: ['firstname', 'lastname', 'testDate'],
+			});
+
+			const result1_2 = await userLib.getUsers({
+				matchDates: [
+					{
+						field: 'updated',
+						value: updated1_gt.toISOString(),
+						operation: 'gt',
+					},
+					{
+						field: 'updated',
+						value: updated1_lt.toISOString(),
+						operation: 'lt',
+					},
+				],
+				returnFields: ['firstname', 'lastname', 'testDate'],
+			});
+
+			const result1_3 = await userLib.getUsers({
+				matchDates: [
+					{
+						field: 'updated',
+						value: updated1_eq.toISOString(),
+						operation: 'eq',
+					},
+					{
+						field: 'updated',
+						value: updated1_gt.toISOString(),
+						operation: 'gt',
+					},
+					{
+						field: 'updated',
+						value: updated1_lt.toISOString(),
+						operation: 'lt',
+					},
+				],
+				returnFields: ['firstname', 'lastname', 'testDate'],
+			});
+
+			const result1_4 = await userLib.getUsers({
+				matchDates: [
+					{
+						field: 'updated',
+						value: updated1_gt.toISOString(),
+						operation: 'eq',
+					},
+				],
+				returnFields: ['firstname', 'lastname', 'testDate'],
+			});
+
+			const result1_5 = await userLib.getUsers({
+				matchDateFields: [
+					{
+						field: 'testDate',
+						value: testDate1_eq.toISOString(),
+						operation: 'eq',
+					},
+				],
+				returnFields: ['firstname', 'lastname', 'testDate'],
+			});
+
+			const result1_6 = await userLib.getUsers({
+				matchDateFields: [
+					{
+						field: 'testDate',
+						value: testDate1_gt.toISOString(),
+						operation: 'gt',
+					},
+					{
+						field: 'testDate',
+						value: testDate1_lt.toISOString(),
+						operation: 'lt',
+					},
+				],
+				returnFields: ['firstname', 'lastname', 'testDate'],
+			});
+
+			const result1_7 = await userLib.getUsers({
+				matchDateFields: [
+					{
+						field: 'testDate',
+						value: testDate1_eq.toISOString(),
+						operation: 'eq',
+					},
+					{
+						field: 'testDate',
+						value: testDate1_gt.toISOString(),
+						operation: 'gt',
+					},
+					{
+						field: 'testDate',
+						value: testDate1_lt.toISOString(),
+						operation: 'lt',
+					},
+				],
+				returnFields: ['firstname', 'lastname', 'testDate'],
+			});
+
+			const result1_8 = await userLib.getUsers({
+				matchDateFields: [
+					{
+						field: 'testDate',
+						value: testDate1_gt.toISOString(),
+						operation: 'eq',
+					},
+				],
+				returnFields: ['firstname', 'lastname', 'testDate'],
+			});
+
+			const updated2_eq = new Date(user2Dates.updated.getTime());
+			const updated2_gt = new Date(user2Dates.updated.getTime());
+			updated2_gt.setSeconds(updated2_gt.getSeconds() - 10);
+			const updated2_lt = new Date(user2Dates.updated.getTime());
+			updated2_lt.setSeconds(updated2_lt.getSeconds() + 10);
+
+			const result2_1 = await userLib.getUsers({
+				matchDates: [
+					{
+						field: 'updated',
+						value: updated2_eq.toISOString(),
+						operation: 'eq',
+					},
+				],
+				returnFields: ['firstname', 'lastname', 'testDate'],
+			});
+
+			const result2_2 = await userLib.getUsers({
+				matchDates: [
+					{
+						field: 'updated',
+						value: updated2_gt.toISOString(),
+						operation: 'gt',
+					},
+					{
+						field: 'updated',
+						value: updated2_lt.toISOString(),
+						operation: 'lt',
+					},
+				],
+				returnFields: ['firstname', 'lastname', 'testDate'],
+			});
+
+			const result2_3 = await userLib.getUsers({
+				matchDates: [
+					{
+						field: 'updated',
+						value: updated2_gt.toISOString(),
+						operation: 'gt',
+					},
+				],
+				returnFields: ['firstname', 'lastname', 'testDate'],
+				order: {
+					by: 'updated',
+					direction: 'desc',
+				},
+			});
+
+			assert.strictEqual(result1_1.totalElements, 1);
+			assert.strictEqual(result1_2.totalElements, 1);
+			assert.strictEqual(result1_3.totalElements, 1);
+			assert.strictEqual(result1_4.totalElements, 0);
+			assert.strictEqual(result1_5.totalElements, 1);
+			assert.strictEqual(result1_6.totalElements, 1);
+			assert.strictEqual(result1_7.totalElements, 1);
+			assert.strictEqual(result1_8.totalElements, 0);
+
+			assert.strictEqual(result1_1.users[0].fields.lastname[0], 'korvar');
+			assert.strictEqual(result1_2.users[0].fields.lastname[0], 'korvar');
+			assert.strictEqual(result1_3.users[0].fields.lastname[0], 'korvar');
+			assert.strictEqual(result1_4.users.length, 0);
+			assert.strictEqual(result1_5.users[0].fields.lastname[0], 'korvar');
+			assert.strictEqual(result1_6.users[0].fields.lastname[0], 'korvar');
+			assert.strictEqual(result1_7.users[0].fields.lastname[0], 'korvar');
+			assert.strictEqual(result1_8.users.length, 0);
+
+			assert.strictEqual(result2_1.totalElements, 1);
+			assert.strictEqual(result2_2.totalElements, 1);
+			assert.strictEqual(result2_3.totalElements, 2);
+
+			assert.strictEqual(result2_1.users[0].fields.lastname[0], 'ölkorvarna');
+			assert.strictEqual(result2_2.users[0].fields.lastname[0], 'ölkorvarna');
+			assert.strictEqual(result2_3.users[0].fields.lastname[0], 'korvar');
+			assert.strictEqual(result2_3.users[1].fields.lastname[0], 'ölkorvarna');
+		});
 	});
 
 	describe('inactive users', async () => {

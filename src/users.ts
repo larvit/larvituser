@@ -4,17 +4,20 @@ import { DateTime } from 'luxon';
 
 const topLogPrefix = 'larvituser: users.ts';
 
+export type matchDate = {
+	field: string,
+	value: string,
+	operation?: 'gt' | 'lt' | 'eq',
+};
+
 export type UsersOptions = {
 	db: any,
 	limit?: string,
 	log?: LogInstance,
 	showInactive?: boolean,
 	showInactiveOnly?: boolean,
-	matchDateFields?: [{
-		field: string,
-		value: string | Array<string>,
-		operation?: 'gt' | 'lt' | 'eq',
-	}],
+	matchDateFields?: matchDate[],
+	matchDates?: matchDate[],
 	matchAllFields?: Record<string, string | Array<string>>,
 	matchAllFieldsQ?: Record<string, string | Array<string>>,
 	matchExistingFields?: string[],
@@ -28,8 +31,8 @@ export type UsersOptions = {
 	q?: string,
 	returnFields?: string[],
 	uuids?: string | string[],
-	createdAfter?: string,
-	updatedAfter?: string,
+	createdAfter?: Date,
+	updatedAfter?: Date,
 };
 
 export type UserFields = {
@@ -75,8 +78,9 @@ export class Users {
 		const { log, options, lUtils } = this;
 		const { db } = options;
 		const logPrefix = `${topLogPrefix} get() -`;
+		const dbCon = await db.getConnection();
 
-		const dbFields: Array<string | string[] | Buffer> = [];
+		const dbFields: Array<string | string[] | Buffer | Date> = [];
 		let sqlWhere = '';
 
 		// Check if we should show inactive users or not
@@ -90,21 +94,32 @@ export class Users {
 
 		// Check createdAfter
 		if (options.createdAfter) {
-			if (isNaN(Date.parse(options.createdAfter))) {
-				sqlWhere += ' AND created IS NULL\n';
-			} else {
-				sqlWhere += ' AND created >= ?\n';
-				dbFields.push(options.createdAfter);
-			}
+			sqlWhere += ' AND created >= ?\n';
+			dbFields.push(options.createdAfter);
 		}
 
 		// Check updatedAfter
 		if (options.updatedAfter) {
-			if (isNaN(Date.parse(options.updatedAfter))) {
-				sqlWhere += ' AND created IS NULL\n';
-			} else {
-				sqlWhere += ' AND updated >= ?\n';
-				dbFields.push(options.updatedAfter);
+			sqlWhere += ' AND updated >= ?\n';
+			dbFields.push(options.updatedAfter);
+		}
+
+		// Check headerDates
+		if (options.matchDates && options.matchDates.length) {
+			for (const matchExistingDate of options.matchDates) {
+				const operation = matchExistingDate.operation || 'eq';
+				const value = matchExistingDate.value;
+				const field = matchExistingDate.field;
+				if (!value) continue;
+				if (!field) continue;
+
+				sqlWhere += ' AND ' + dbCon.escapeId(field);
+
+				if (operation === 'eq') sqlWhere += ' = CAST(? AS DATETIME)\n';
+				else if (operation === 'gt') sqlWhere += ' > CAST(? AS DATETIME)\n';
+				else if (operation === 'lt') sqlWhere += ' < CAST(? AS DATETIME)\n';
+
+				dbFields.push(value);
 			}
 		}
 
@@ -248,7 +263,6 @@ export class Users {
 			}
 		}
 
-		const dbCon = await db.getConnection();
 		const mainDbFields = dbFields.slice(0);
 
 		const returnFields = options.returnFields ? arrayify(options.returnFields) : undefined;
@@ -257,10 +271,10 @@ export class Users {
 
 		// SORT ORDERING
 		if (options.order !== undefined && typeof options.order === 'object') {
-			const allowedSortables = ['uuid', 'username', ...returnFields ?? []];
+			const allowedSortables = ['uuid', 'username', 'created', 'updated', ...returnFields ?? []];
 
 			if (options.order.by !== undefined && allowedSortables.includes(options.order.by)) {
-				if (options.order.by !== 'uuid' && options.order.by !== 'username') {
+				if (!['uuid', 'username', 'created', 'updated'].includes(options.order.by)) {
 					sql += ', group_concat(user_users_data.data) as ' + dbCon.escapeId(options.order.by) + ' FROM user_users ';
 					sql += 'LEFT JOIN user_users_data on (user_users_data.fieldUuid = (SELECT uuid FROM user_data_fields WHERE name = ?) AND user_users_data.userUuid = user_users.uuid) ';
 					sql += 'WHERE 1 ';

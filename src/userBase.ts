@@ -11,8 +11,8 @@ export type UserBaseOptions = {
 	username: string,
 	inactive?: boolean,
 	passwordIsFalse: boolean,
-	created?: string,
-	updated?: string,
+	created?: Date,
+	updated?: Date,
 	fields?: Record<string, string[]>,
 };
 
@@ -23,8 +23,8 @@ export class UserBase {
 	public username: string;
 	public inactive?: boolean;
 	public passwordIsFalse: boolean;
-	public created?: string;
-	public updated?: string;
+	public created?: Date;
+	public updated?: Date;
 	public fields: Record<string, string[]>;
 
 	constructor(options: UserBaseOptions) {
