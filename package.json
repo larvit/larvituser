@@ -1,6 +1,6 @@
 {
   "name": "larvituser",
-  "version": "0.25.3",
+  "version": "0.25.4",
   "author": {
     "name": "Mikael 'Lilleman' Göransson",
     "email": "lilleman@larvit.se",
@@ -24,7 +24,7 @@
     "@types/uuid": "10.0.0",
     "@typescript-eslint/eslint-plugin": "7.18.0",
     "@typescript-eslint/parser": "7.18.0",
-    "eslint": "8.57.1",
+    "eslint": "9.21.0",
     "freeport": "1.0.5",
     "larvitdb": "3.2.113",
     "mocha": "11.1.0",
