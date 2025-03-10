@@ -1021,6 +1021,21 @@ describe('User', () => {
 			assert.strictEqual(result2_3.users[0].fields.lastname[0], 'korvar');
 			assert.strictEqual(result2_3.users[1].fields.lastname[0], 'ölkorvarna');
 		});
+
+		it('should get user based in notEqualFields', async () => {
+			await userLib.create('user1', '', { firstname: 'korv' });
+			await userLib.create('user2', '', { firstname: 'fjös' });
+			await userLib.create('user3', '', { firstname: 'brö' });
+
+			const result1 = await userLib.getUsers({ notEqualFields: [{ field: 'firstname', value: 'fjös' }, { field: 'firstname', value: 'brö' }] });
+			assert.strictEqual(result1.totalElements, 1);
+			assert.ok(result1.users.find(u => u.username === 'user1'));
+
+			const result2 = await userLib.getUsers({ notEqualFields: [{ field: 'firstname', value: 'korv' }, { field: 'firstname', value: 'körv' }] });
+			assert.strictEqual(result2.totalElements, 2);
+			assert.ok(result2.users.find(u => u.username === 'user2'));
+			assert.ok(result2.users.find(u => u.username === 'user3'));
+		});
 	});
 
 	describe('inactive users', async () => {

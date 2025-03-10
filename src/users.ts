@@ -10,6 +10,11 @@ export type matchDate = {
 	operation?: 'gt' | 'lt' | 'eq',
 };
 
+export type notEqual = {
+	field: string,
+	value: string,
+};
+
 export type UsersOptions = {
 	db: any,
 	limit?: string,
@@ -23,6 +28,7 @@ export type UsersOptions = {
 	matchExistingFields?: string[],
 	matchFieldHasValue?: string[],
 	matchFieldHasNoValue?: string[],
+	notEqualFields?: notEqual[],
 	offset?: string,
 	order?: {
 		by?: string,
@@ -135,6 +141,22 @@ export class Users {
 			}
 
 			sqlWhere = sqlWhere.substring(0, sqlWhere.length - 4) + '))\n';
+		}
+
+		if (options.notEqualFields && options.notEqualFields.length) {
+			for (const notEqual of options.notEqualFields) {
+				const value = notEqual.value;
+				const field = notEqual.field;
+
+				if (!value) continue;
+				if (!field) continue;
+
+				sqlWhere += 'AND uuid NOT IN (SELECT userUuid FROM user_users_data WHERE data = ?\n';
+				sqlWhere += ' AND fieldUuid = (SELECT uuid FROM user_data_fields WHERE name = ?))';
+
+				dbFields.push(value);
+				dbFields.push(field);
+			}
 		}
 
 		if (options.matchFieldHasValue && options.matchFieldHasValue.length) {
