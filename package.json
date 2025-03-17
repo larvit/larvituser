@@ -1,6 +1,6 @@
 {
   "name": "larvituser",
-  "version": "0.25.7",
+  "version": "0.25.8",
   "author": {
     "name": "Mikael 'Lilleman' Göransson",
     "email": "lilleman@larvit.se",
@@ -17,7 +17,7 @@
   "description": "User module for node.js",
   "devDependencies": {
     "@istanbuljs/nyc-config-typescript": "1.0.2",
-    "@types/bcryptjs": "2.4.6",
+    "@types/bcryptjs": "3.0.0",
     "@types/luxon": "^3.1.0",
     "@types/mocha": "10.0.10",
     "@types/node": "22.13.10",
