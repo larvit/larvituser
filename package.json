@@ -1,6 +1,6 @@
 {
   "name": "larvituser",
-  "version": "0.25.13",
+  "version": "0.25.14",
   "author": {
     "name": "Mikael 'Lilleman' Göransson",
     "email": "lilleman@larvit.se",
@@ -9,8 +9,8 @@
   "contributors": [],
   "dependencies": {
     "bcryptjs": "3.0.2",
-    "larvitdbmigration": "7.0.158",
-    "larvitutils": "5.1.140",
+    "larvitdbmigration": "7.0.160",
+    "larvitutils": "5.1.141",
     "luxon": "^3.1.1",
     "uuid": "11.1.0"
   },
