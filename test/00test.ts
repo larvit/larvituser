@@ -78,6 +78,17 @@ describe('User', () => {
 		assert.strictEqual(isAvailable, false, 'user should not be available');
 	});
 
+	it('should return true if verifying if user exists with a valid uuid', async () => {
+		const user = await userLib.create('testuser123', '');
+		const isAvailable = await userLib.userExists(user.uuid);
+		assert.strictEqual(isAvailable, true, 'user should be available');
+	});
+
+	it('should return false if verifying if user exists with a non-existing uuid', async () => {
+		const isAvailable = await userLib.userExists(v4());
+		assert.strictEqual(isAvailable, false, 'user should not be available');
+	});
+
 	it('should throw error if trying to use an UserBase with empty uuid', async () => {
 		const userBase = new UserBase({
 			log, userInstance: userLib, username: 'user1', passwordIsFalse: false, uuid: '',

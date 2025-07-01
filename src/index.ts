@@ -279,6 +279,34 @@ export class UserLib {
 	}
 
 	/**
+	 * Verify that a user exists in the database
+	 *
+	 * @param {string} userUuid - User UUID to check
+	 * @returns {Promise<boolean>} - True if user exists, false if not
+	 */
+	async userExists(userUuid: string): Promise<boolean> {
+		const { helpers, lUtils } = this;
+		const { db } = this.options;
+		const { log } = this;
+		const logPrefix = `${topLogPrefix} userExists() -`;
+		const userUuidBuf = helpers.valueOrThrow(lUtils.uuidToBuffer(userUuid), logPrefix, 'Invalid userUuid');
+		const dbFields = [userUuidBuf];
+		const sql = 'SELECT uuid FROM user_users WHERE uuid = ? AND (inactive IS NULL OR inactive = 0)';
+
+		const { rows } = await db.query(sql, dbFields);
+
+		if (rows.length === 0) {
+			log.debug(`${logPrefix} No user found for userUuid: "${userUuid}"`);
+
+			return false;
+		}
+
+		log.debug(`${logPrefix} User exists: "${userUuid}"`);
+
+		return true;
+	}
+
+	/**
 	 * Instanciate user object from user id
 	 *
 	 * @param {number} userUuid -
