@@ -1,6 +1,6 @@
 {
   "name": "larvituser",
-  "version": "0.25.27",
+  "version": "0.25.28",
   "author": {
     "name": "Mikael 'Lilleman' Göransson",
     "email": "lilleman@larvit.se",
@@ -9,8 +9,8 @@
   "contributors": [],
   "dependencies": {
     "bcryptjs": "3.0.2",
-    "larvitdbmigration": "7.0.172",
-    "larvitutils": "5.1.153",
+    "larvitdbmigration": "7.0.174",
+    "larvitutils": "5.1.155",
     "luxon": "^3.1.1",
     "uuid": "11.1.0"
   },
@@ -20,18 +20,18 @@
     "@types/bcryptjs": "3.0.0",
     "@types/luxon": "^3.1.0",
     "@types/mocha": "10.0.10",
-    "@types/node": "22.16.5",
+    "@types/node": "22.17.1",
     "@types/uuid": "10.0.0",
     "@typescript-eslint/eslint-plugin": "7.18.0",
     "@typescript-eslint/parser": "7.18.0",
     "eslint": "8.57.1",
     "freeport": "1.0.5",
-    "larvitdb": "3.2.127",
+    "larvitdb": "3.2.128",
     "mocha": "11.7.1",
     "mocha-eslint": "7.0.0",
     "nyc": "17.1.0",
     "ts-node": "10.9.2",
-    "typescript": "5.8.3"
+    "typescript": "5.9.2"
   },
   "scripts": {
     "build": "rm -rf dist/* && tsc",
