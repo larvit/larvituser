@@ -1,6 +1,6 @@
 {
   "name": "larvituser",
-  "version": "0.25.31",
+  "version": "0.25.32",
   "author": {
     "name": "Mikael 'Lilleman' Göransson",
     "email": "lilleman@larvit.se",
@@ -12,7 +12,7 @@
     "larvitdbmigration": "7.0.177",
     "larvitutils": "5.1.159",
     "luxon": "^3.1.1",
-    "uuid": "11.1.0"
+    "uuid": "12.0.0"
   },
   "description": "User module for node.js",
   "devDependencies": {
