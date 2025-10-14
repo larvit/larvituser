@@ -1201,6 +1201,23 @@ describe('User', () => {
 			assert.strictEqual(historicFieldDataWithStartAndEnd.lastname.length, 2);
 			assert.strictEqual(historicFieldDataWithStartAndEnd.lastname[0].fieldData, 'Pettersson');
 			assert.strictEqual(historicFieldDataWithStartAndEnd.lastname[1].fieldData, 'Andersson');
+
+			await userLib.rmHistoricFieldData(DateTime.now().minus({ year: 2 }).plus({ day: 1 }).toFormat('yyyy-MM-dd'));
+			const historicFieldDataAfterRm = await userLib.getHistoricFieldDataFromUuid(user.uuid);
+			assert(typeof historicFieldDataAfterRm !== 'boolean', 'field data should not be a boolean');
+			assert.strictEqual(Object.keys(historicFieldDataAfterRm).length, 2);
+			assert.strictEqual(historicFieldDataAfterRm.lastname.length, 3);
+			assert.strictEqual(historicFieldDataAfterRm.lastname[0].fieldData, 'Jag');
+			assert.strictEqual(historicFieldDataAfterRm.lastname[1].fieldData, 'Lundström');
+			assert.strictEqual(historicFieldDataAfterRm.lastname[2].fieldData, 'Pettersson');
+
+			await userLib.rmHistoricFieldData();
+			const historicFieldDataAfterRmAll = await userLib.getHistoricFieldDataFromUuid(user.uuid);
+			assert(typeof historicFieldDataAfterRmAll !== 'boolean', 'field data should not be a boolean');
+			assert.strictEqual(Object.keys(historicFieldDataAfterRmAll).length, 1);
+			assert.strictEqual(historicFieldDataAfterRmAll.lastname.length, 1);
+			assert.strictEqual(historicFieldDataAfterRmAll.lastname[0].fieldData, 'Jag');
+
 		});
 
 		it('should fail if provided with incorrect user uuid', async () => {

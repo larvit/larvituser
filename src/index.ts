@@ -391,14 +391,14 @@ export class UserLib {
 		const { helpers, lUtils } = this;
 		const { db } = this.options;
 		const { log } = this;
-		const logPrefix = `${topLogPrefix} fromUuid() -`;
+		const logPrefix = `${topLogPrefix} getHistoricFieldDataFromUuid() -`;
 		let sqlSystemTime = 'ALL'; // Default to show all historic data
 
 		if (start) {
 			const startIso = DateTime.fromISO(start);
 			if (!startIso.isValid) {
 				const err = new Error(`"${start}" is not a valid value for "start", must be a date`);
-				this.log.warn(logPrefix + err.message);
+				log.warn(logPrefix + err.message);
 				throw err;
 			}
 
@@ -408,7 +408,7 @@ export class UserLib {
 				const endIso = DateTime.fromISO(end);
 				if (!endIso.isValid) {
 					const err = new Error(`"${end}" is not a valid value for "end", must be a date`);
-					this.log.warn(logPrefix + err.message);
+					log.warn(logPrefix + err.message);
 					throw err;
 				}
 
@@ -452,6 +452,32 @@ export class UserLib {
 		}
 
 		return fields;
+	}
+
+	/**
+	 * Remove historic field data
+	 *
+	 * @param {string} timestamp - Timestamp - Removes history up until this point in time. If omitted, all historic field data will be removed.
+	 * @returns {Promise<void>} -
+	 */
+	async rmHistoricFieldData(timestamp?: string): Promise<void> {
+		const { db } = this.options;
+		const logPrefix = `${topLogPrefix} rmHistoricFieldData() -`;
+
+		if (timestamp) {
+			const timestampIso = DateTime.fromISO(timestamp);
+			if (!timestampIso.isValid) {
+				const err = new Error(`"${timestamp}" is not a valid value for "timestamp", must be a date`);
+				this.log.warn(logPrefix + err.message);
+				throw err;
+			}
+
+			await db.query('DELETE HISTORY FROM user_users_data BEFORE SYSTEM_TIME \'' + timestampIso.toFormat('yyyy-MM-dd HH:mm:ss') + '\'');
+
+			return;
+		}
+
+		await db.query('DELETE HISTORY FROM user_users_data');
 	}
 
 	/**
