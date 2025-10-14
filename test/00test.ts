@@ -5,6 +5,7 @@ import { v4 } from 'uuid';
 import assert, { AssertionError } from 'assert';
 import Db from 'larvitdb';
 import { DataWriter } from '../src/dataWriter';
+import { DateTime } from 'luxon';
 
 let userLib: UserLib;
 let db: any;
@@ -43,6 +44,17 @@ async function createDb(): Promise<unknown> {
 	await db.connect();
 
 	return db;
+}
+
+async function replaceFieldsWithTimestamp(userUuid: string, fieldName: string, fieldValue: string, timestamp: string): Promise<void> {
+	const { helpers } = userLib;
+	const userUuidBuf = lUtils.uuidToBuffer(userUuid);
+	const fieldUuid = helpers.valueOrThrow(await helpers.getFieldUuid(fieldName, db), 'replaceFieldsWithTimestamp() -', `Invalid field uuid for field: ${fieldName}`);
+	const fieldUuidBuf = lUtils.uuidToBuffer(fieldUuid);
+
+	await db.query('SET statement timestamp=unix_timestamp(\'' + timestamp + '\') FOR DELETE FROM user_users_data WHERE userUuid = ? AND fieldUuid = ?', [userUuidBuf, fieldUuidBuf]);
+
+	await db.query('SET statement timestamp=unix_timestamp(\'' + timestamp + '\') FOR INSERT INTO user_users_data (userUuid, fieldUuid, data) VALUES(?,?,?)', [userUuidBuf, fieldUuidBuf, [fieldValue]]);
 }
 
 before(async () => {
@@ -1144,6 +1156,62 @@ describe('User', () => {
 			assert.strictEqual(fromUsername, false);
 			assert.strictEqual(fromUserAndPass, false);
 			assert.strictEqual(fromFields, false);
+		});
+	});
+
+	describe('historical field data', async () => {
+		it('should handle historical field data', async () => {
+			const user = await userLib.create('nisse', '', { firstname: 'korv', lastname: 'initialLastname' });
+			assert(typeof user !== 'boolean', 'user should not be a boolean');
+			assert.strictEqual(user.fields.lastname[0], 'initialLastname');
+
+			const firstChangeDate = DateTime.now().minus({ year: 3 }).toFormat('yyyy-MM-dd');
+			await replaceFieldsWithTimestamp(user.uuid, 'lastname', 'Andersson', firstChangeDate);
+
+			const secondChangeDate = DateTime.now().minus({ year: 2 }).toFormat('yyyy-MM-dd');
+			await replaceFieldsWithTimestamp(user.uuid, 'lastname', 'Pettersson', secondChangeDate);
+
+			const thirdChangeDate = DateTime.now().minus({ year: 1 }).toFormat('yyyy-MM-dd');
+			await replaceFieldsWithTimestamp(user.uuid, 'lastname', 'Lundström', thirdChangeDate);
+
+			// Run a regular replaceFields() to force the db to remove all fields, just to add a row_end to the last change above
+			await user.replaceFields({ lastname: 'Jag' });
+
+			const historicFieldData = await userLib.getHistoricFieldDataFromUuid(user.uuid);
+			assert(typeof historicFieldData !== 'boolean', 'field data should not be a boolean');
+			assert.strictEqual(Object.keys(historicFieldData).length, 2);
+			assert.strictEqual(historicFieldData.lastname[0].fieldData, 'Jag');
+			assert.strictEqual(historicFieldData.lastname[1].fieldData, 'initialLastname');
+			assert.strictEqual(historicFieldData.lastname[2].fieldData, 'Lundström');
+			assert.strictEqual(historicFieldData.lastname[3].fieldData, 'Pettersson');
+			assert.strictEqual(historicFieldData.lastname[4].fieldData, 'Andersson');
+
+			const historicFieldDataWithStart = await userLib.getHistoricFieldDataFromUuid(user.uuid, secondChangeDate);
+			assert(typeof historicFieldDataWithStart !== 'boolean', 'field data should not be a boolean');
+			assert.strictEqual(Object.keys(historicFieldDataWithStart).length, 2);
+			assert.strictEqual(historicFieldData.firstname[0].fieldData, 'korv');
+			assert.strictEqual(historicFieldDataWithStart.lastname.length, 3);
+			assert.strictEqual(historicFieldDataWithStart.lastname[0].fieldData, 'Jag');
+			assert.strictEqual(historicFieldDataWithStart.lastname[1].fieldData, 'Lundström');
+			assert.strictEqual(historicFieldDataWithStart.lastname[2].fieldData, 'Pettersson');
+
+			const historicFieldDataWithStartAndEnd = await userLib.getHistoricFieldDataFromUuid(user.uuid, firstChangeDate, secondChangeDate);
+			assert(typeof historicFieldDataWithStartAndEnd !== 'boolean', 'field data should not be a boolean');
+			assert.strictEqual(Object.keys(historicFieldDataWithStartAndEnd).length, 1);
+			assert.strictEqual(historicFieldDataWithStartAndEnd.lastname.length, 2);
+			assert.strictEqual(historicFieldDataWithStartAndEnd.lastname[0].fieldData, 'Pettersson');
+			assert.strictEqual(historicFieldDataWithStartAndEnd.lastname[1].fieldData, 'Andersson');
+		});
+
+		it('should fail if provided with incorrect user uuid', async () => {
+			const isAvailable = await userLib.getHistoricFieldDataFromUuid(v4());
+			assert.strictEqual(isAvailable, false, 'user should not be available');
+			assert.rejects(() => userLib.getHistoricFieldDataFromUuid('123'));
+		});
+
+		it('should fail if provided with incorrect dates', async () => {
+			assert.rejects(() => userLib.getHistoricFieldDataFromUuid('123', 'bosse'));
+			assert.rejects(() => userLib.getHistoricFieldDataFromUuid('123', DateTime.now().toFormat('yyyy-MM-dd'), 'kalle'));
 		});
 	});
 });

@@ -205,6 +205,12 @@ await userLib.setPassword('f9684592-b245-42fa-88c6-9f16b9236ac3', false);
 await userLib.setUsername('f9684592-b245-42fa-88c6-9f16b9236ac3', 'theNewUsername');
 ```
 
+#### Get historical field data from user
+
+```javascript
+await userLib.getHistoricFieldDataFromUuid('f9684592-b245-42fa-88c6-9f16b9236ac3', '2003-12-24', '2004-12-24');
+```
+
 ### Errors
 All functions in the API will throw an exception upon error.
 

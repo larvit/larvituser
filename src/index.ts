@@ -5,6 +5,7 @@ import { UserBase, UserBaseOptions } from './userBase';
 import { Users, UsersOptions } from './users';
 import * as uuidLib from 'uuid';
 import bcrypt from 'bcryptjs';
+import { DateTime } from 'luxon';
 
 const topLogPrefix = 'larvituser: index.ts:';
 
@@ -14,6 +15,11 @@ export { UserBase } from './userBase';
 export type UserLibOptions = {
 	db: any,
 	log?: LogInstance,
+}
+
+export type HistoricFieldData = {
+	fieldData: string,
+	timestamp: string,
 }
 
 export class UserLib {
@@ -371,6 +377,81 @@ export class UserLib {
 		};
 
 		return new UserBase(userBaseOptions);
+	}
+
+	/**
+	 * Get historic field data from user id
+	 *
+	 * @param {number} userUuid -
+	 * @param {string} [start] - Timestamp - Will show all historic changes if omitted. Will show all historic changes from start until now if used without end
+	 * @param {string} [end] - Timestamp - Must be used together with start
+	 * @returns {Promise<HistoricFieldData>} Historic field changes, will be false if no user is found
+	 */
+	async getHistoricFieldDataFromUuid(userUuid: string, start?: string, end?: string): Promise<Record<string, HistoricFieldData[]> | false> {
+		const { helpers, lUtils } = this;
+		const { db } = this.options;
+		const { log } = this;
+		const logPrefix = `${topLogPrefix} fromUuid() -`;
+		let sqlSystemTime = 'ALL'; // Default to show all historic data
+
+		if (start) {
+			const startIso = DateTime.fromISO(start);
+			if (!startIso.isValid) {
+				const err = new Error(`"${start}" is not a valid value for "start", must be a date`);
+				this.log.warn(logPrefix + err.message);
+				throw err;
+			}
+
+			sqlSystemTime = 'BETWEEN \'' + startIso.toFormat('yyyy-MM-dd HH:mm:ss') + '\' AND NOW()';
+
+			if (end) {
+				const endIso = DateTime.fromISO(end);
+				if (!endIso.isValid) {
+					const err = new Error(`"${end}" is not a valid value for "end", must be a date`);
+					this.log.warn(logPrefix + err.message);
+					throw err;
+				}
+
+				sqlSystemTime = 'BETWEEN \'' + start + '\' AND \'' + end + '\'';
+			}
+		}
+
+		const sql = 'SELECT\n' +
+				' u.uuid,\n' +
+				' uf.uuid AS fieldUuid,\n' +
+				' uf.name AS fieldName,\n' +
+				' ud.row_start AS fieldDataRowStart,\n' +
+				' ud.row_end AS fieldDataRowEnd,\n' +
+				' ud.data AS fieldData\n' +
+				'FROM\n' +
+				' user_users u\n' +
+				'  LEFT JOIN user_users_data FOR SYSTEM_TIME ' + sqlSystemTime + ' ud ON ud.userUuid = u.uuid\n' +
+				'  LEFT JOIN user_data_fields uf ON uf.uuid = ud.fieldUuid\n' +
+				'WHERE u.uuid = ?\n' +
+				' ORDER BY ud.row_start DESC';
+
+		const userUuidBuf = helpers.valueOrThrow(lUtils.uuidToBuffer(userUuid), logPrefix, 'Invalid userUuid');
+
+		const { rows } = await db.query(sql, [userUuidBuf]);
+		if (rows.length === 0) {
+			const err = new Error(`No user found for userUuid: "${userUuid}"`);
+			log.debug(logPrefix + err.message);
+
+			return false;
+		}
+
+		const fields: Record<string, HistoricFieldData[]> = {};
+		for (const row of rows) {
+			if (row.fieldUuid) {
+				if (Array.isArray(fields[row.fieldName])) {
+					fields[row.fieldName].push({ fieldData: row.fieldData, timestamp: row.fieldDataRowStart.toISOString() });
+				} else {
+					fields[row.fieldName] = [{ fieldData: row.fieldData, timestamp: row.fieldDataRowStart.toISOString() }];
+				}
+			}
+		}
+
+		return fields;
 	}
 
 	/**
