@@ -5,6 +5,7 @@ import { UserBase, UserBaseOptions } from './userBase';
 import { Users, UsersOptions } from './users';
 import * as uuidLib from 'uuid';
 import bcrypt from 'bcryptjs';
+import { DateTime } from 'luxon';
 
 const topLogPrefix = 'larvituser: index.ts:';
 
@@ -14,6 +15,11 @@ export { UserBase } from './userBase';
 export type UserLibOptions = {
 	db: any,
 	log?: LogInstance,
+}
+
+export type HistoricFieldData = {
+	fieldData: string,
+	timestamp: string,
 }
 
 export class UserLib {
@@ -371,6 +377,110 @@ export class UserLib {
 		};
 
 		return new UserBase(userBaseOptions);
+	}
+
+	/**
+	 * Get historic field data from user id
+	 *
+	 * @param {number} userUuid -
+	 * @param {date} [start] - Date object - Will show all historic changes if omitted. Will show all historic changes from start until now if used without end
+	 * @param {date} [end] - Date object - Must be used together with start
+	 * @returns {Promise<HistoricFieldData>} Historic field changes, will be false if no user is found
+	 */
+	async getHistoricFieldDataFromUuid(userUuid: string, start?: Date, end?: Date): Promise<Record<string, HistoricFieldData[]> | false> {
+		const { helpers, lUtils } = this;
+		const { db } = this.options;
+		const { log } = this;
+		const logPrefix = `${topLogPrefix} getHistoricFieldDataFromUuid() -`;
+		let sqlSystemTime = 'ALL'; // Default to show all historic data
+
+		if (start) {
+			const startDate = DateTime.fromJSDate(start);
+			if (!startDate.isValid) {
+				const err = new Error(`"${start}" is not a valid value for "start", must be a date object`);
+				log.warn(logPrefix + err.message);
+				throw err;
+			}
+
+			sqlSystemTime = 'BETWEEN \'' + startDate.toFormat('yyyy-MM-dd HH:mm:ss') + '\' AND NOW()';
+
+			if (end) {
+				const endDate = DateTime.fromJSDate(end);
+				if (!endDate.isValid) {
+					const err = new Error(`"${end}" is not a valid value for "end", must be a date object`);
+					log.warn(logPrefix + err.message);
+					throw err;
+				}
+
+				sqlSystemTime = 'BETWEEN \'' + startDate.toFormat('yyyy-MM-dd HH:mm:ss') + '\' AND \'' + endDate.toFormat('yyyy-MM-dd HH:mm:ss') + '\'';
+			}
+		}
+
+		const sql = 'SELECT\n' +
+				' u.uuid,\n' +
+				' uf.uuid AS fieldUuid,\n' +
+				' uf.name AS fieldName,\n' +
+				' ud.row_start AS fieldDataRowStart,\n' +
+				' ud.row_end AS fieldDataRowEnd,\n' +
+				' ud.data AS fieldData\n' +
+				'FROM\n' +
+				' user_users u\n' +
+				'  LEFT JOIN user_users_data FOR SYSTEM_TIME ' + sqlSystemTime + ' ud ON ud.userUuid = u.uuid\n' +
+				'  LEFT JOIN user_data_fields uf ON uf.uuid = ud.fieldUuid\n' +
+				'WHERE u.uuid = ?\n' +
+				' ORDER BY ud.row_start DESC';
+
+		const userUuidBuf = helpers.valueOrThrow(lUtils.uuidToBuffer(userUuid), logPrefix, 'Invalid userUuid');
+
+		const { rows } = await db.query(sql, [userUuidBuf]);
+		if (rows.length === 0) {
+			const err = new Error(`No user found for userUuid: "${userUuid}"`);
+			log.debug(logPrefix + err.message);
+
+			return false;
+		}
+
+		const fields: Record<string, HistoricFieldData[]> = {};
+		for (const row of rows) {
+			if (row.fieldUuid) {
+				let fieldDataRowStart = row.fieldDataRowStart;
+				if (typeof row.fieldDataRowStart === 'object') fieldDataRowStart = row.fieldDataRowStart.toISOString();
+
+				if (Array.isArray(fields[row.fieldName])) {
+					fields[row.fieldName].push({ fieldData: row.fieldData, timestamp: fieldDataRowStart });
+				} else {
+					fields[row.fieldName] = [{ fieldData: row.fieldData, timestamp: fieldDataRowStart }];
+				}
+			}
+		}
+
+		return fields;
+	}
+
+	/**
+	 * Remove historic field data
+	 *
+	 * @param {string} timestamp - Timestamp - Removes history up until this point in time. If omitted, all historic field data will be removed.
+	 * @returns {Promise<void>} -
+	 */
+	async rmHistoricFieldData(timestamp?: string): Promise<void> {
+		const { db } = this.options;
+		const logPrefix = `${topLogPrefix} rmHistoricFieldData() -`;
+
+		if (timestamp) {
+			const timestampIso = DateTime.fromISO(timestamp);
+			if (!timestampIso.isValid) {
+				const err = new Error(`"${timestamp}" is not a valid value for "timestamp", must be a date`);
+				this.log.warn(logPrefix + err.message);
+				throw err;
+			}
+
+			await db.query('DELETE HISTORY FROM user_users_data BEFORE SYSTEM_TIME \'' + timestampIso.toFormat('yyyy-MM-dd HH:mm:ss') + '\'');
+
+			return;
+		}
+
+		await db.query('DELETE HISTORY FROM user_users_data');
 	}
 
 	/**
