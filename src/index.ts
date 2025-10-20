@@ -383,11 +383,11 @@ export class UserLib {
 	 * Get historic field data from user id
 	 *
 	 * @param {number} userUuid -
-	 * @param {string} [start] - Timestamp - Will show all historic changes if omitted. Will show all historic changes from start until now if used without end
-	 * @param {string} [end] - Timestamp - Must be used together with start
+	 * @param {date} [start] - Date object - Will show all historic changes if omitted. Will show all historic changes from start until now if used without end
+	 * @param {date} [end] - Date object - Must be used together with start
 	 * @returns {Promise<HistoricFieldData>} Historic field changes, will be false if no user is found
 	 */
-	async getHistoricFieldDataFromUuid(userUuid: string, start?: string, end?: string): Promise<Record<string, HistoricFieldData[]> | false> {
+	async getHistoricFieldDataFromUuid(userUuid: string, start?: Date, end?: Date): Promise<Record<string, HistoricFieldData[]> | false> {
 		const { helpers, lUtils } = this;
 		const { db } = this.options;
 		const { log } = this;
@@ -395,24 +395,24 @@ export class UserLib {
 		let sqlSystemTime = 'ALL'; // Default to show all historic data
 
 		if (start) {
-			const startIso = DateTime.fromISO(start);
-			if (!startIso.isValid) {
-				const err = new Error(`"${start}" is not a valid value for "start", must be a date`);
+			const startDate = DateTime.fromJSDate(start);
+			if (!startDate.isValid) {
+				const err = new Error(`"${start}" is not a valid value for "start", must be a date object`);
 				log.warn(logPrefix + err.message);
 				throw err;
 			}
 
-			sqlSystemTime = 'BETWEEN \'' + startIso.toFormat('yyyy-MM-dd HH:mm:ss') + '\' AND NOW()';
+			sqlSystemTime = 'BETWEEN \'' + startDate.toFormat('yyyy-MM-dd HH:mm:ss') + '\' AND NOW()';
 
 			if (end) {
-				const endIso = DateTime.fromISO(end);
-				if (!endIso.isValid) {
-					const err = new Error(`"${end}" is not a valid value for "end", must be a date`);
+				const endDate = DateTime.fromJSDate(end);
+				if (!endDate.isValid) {
+					const err = new Error(`"${end}" is not a valid value for "end", must be a date object`);
 					log.warn(logPrefix + err.message);
 					throw err;
 				}
 
-				sqlSystemTime = 'BETWEEN \'' + start + '\' AND \'' + end + '\'';
+				sqlSystemTime = 'BETWEEN \'' + startDate.toFormat('yyyy-MM-dd HH:mm:ss') + '\' AND \'' + endDate.toFormat('yyyy-MM-dd HH:mm:ss') + '\'';
 			}
 		}
 
@@ -443,10 +443,13 @@ export class UserLib {
 		const fields: Record<string, HistoricFieldData[]> = {};
 		for (const row of rows) {
 			if (row.fieldUuid) {
+				let fieldDataRowStart = row.fieldDataRowStart;
+				if (typeof row.fieldDataRowStart === 'object') fieldDataRowStart = row.fieldDataRowStart.toISOString();
+
 				if (Array.isArray(fields[row.fieldName])) {
-					fields[row.fieldName].push({ fieldData: row.fieldData, timestamp: row.fieldDataRowStart.toISOString() });
+					fields[row.fieldName].push({ fieldData: row.fieldData, timestamp: fieldDataRowStart });
 				} else {
-					fields[row.fieldName] = [{ fieldData: row.fieldData, timestamp: row.fieldDataRowStart.toISOString() }];
+					fields[row.fieldName] = [{ fieldData: row.fieldData, timestamp: fieldDataRowStart }];
 				}
 			}
 		}

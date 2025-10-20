@@ -1186,7 +1186,7 @@ describe('User', () => {
 			assert.strictEqual(historicFieldData.lastname[3].fieldData, 'Pettersson');
 			assert.strictEqual(historicFieldData.lastname[4].fieldData, 'Andersson');
 
-			const historicFieldDataWithStart = await userLib.getHistoricFieldDataFromUuid(user.uuid, secondChangeDate);
+			const historicFieldDataWithStart = await userLib.getHistoricFieldDataFromUuid(user.uuid, DateTime.fromISO(secondChangeDate).toJSDate());
 			assert(typeof historicFieldDataWithStart !== 'boolean', 'field data should not be a boolean');
 			assert.strictEqual(Object.keys(historicFieldDataWithStart).length, 2);
 			assert.strictEqual(historicFieldData.firstname[0].fieldData, 'korv');
@@ -1195,7 +1195,7 @@ describe('User', () => {
 			assert.strictEqual(historicFieldDataWithStart.lastname[1].fieldData, 'Lundström');
 			assert.strictEqual(historicFieldDataWithStart.lastname[2].fieldData, 'Pettersson');
 
-			const historicFieldDataWithStartAndEnd = await userLib.getHistoricFieldDataFromUuid(user.uuid, firstChangeDate, secondChangeDate);
+			const historicFieldDataWithStartAndEnd = await userLib.getHistoricFieldDataFromUuid(user.uuid, DateTime.fromISO(firstChangeDate).toJSDate(), DateTime.fromISO(secondChangeDate).toJSDate());
 			assert(typeof historicFieldDataWithStartAndEnd !== 'boolean', 'field data should not be a boolean');
 			assert.strictEqual(Object.keys(historicFieldDataWithStartAndEnd).length, 1);
 			assert.strictEqual(historicFieldDataWithStartAndEnd.lastname.length, 2);
@@ -1227,8 +1227,8 @@ describe('User', () => {
 		});
 
 		it('should fail if provided with incorrect dates', async () => {
-			assert.rejects(() => userLib.getHistoricFieldDataFromUuid('123', 'bosse'));
-			assert.rejects(() => userLib.getHistoricFieldDataFromUuid('123', DateTime.now().toFormat('yyyy-MM-dd'), 'kalle'));
+			assert.rejects(() => userLib.getHistoricFieldDataFromUuid('123', new Date('bosse')));
+			assert.rejects(() => userLib.getHistoricFieldDataFromUuid('123', DateTime.now().toJSDate(), new Date('kalle')));
 		});
 	});
 });
