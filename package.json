@@ -1,6 +1,6 @@
 {
   "name": "larvituser",
-  "version": "1.0.25",
+  "version": "1.0.26",
   "author": {
     "name": "Mikael 'Lilleman' Göransson",
     "email": "lilleman@larvit.se",
@@ -31,7 +31,7 @@
     "mocha-eslint": "7.0.0",
     "nyc": "18.0.0",
     "ts-node": "10.9.2",
-    "typescript": "5.9.3"
+    "typescript": "7.0.2"
   },
   "scripts": {
     "build": "rm -rf dist/* && tsc",
