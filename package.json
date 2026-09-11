@@ -1,6 +1,6 @@
 {
   "name": "larvituser",
-  "version": "1.0.28",
+  "version": "1.0.29",
   "author": {
     "name": "Mikael 'Lilleman' Göransson",
     "email": "lilleman@larvit.se",
@@ -27,7 +27,7 @@
     "eslint": "8.57.1",
     "freeport": "1.0.5",
     "larvitdb": "3.2.156",
-    "mocha": "11.8.0",
+    "mocha": "12.0.1",
     "mocha-eslint": "7.0.0",
     "nyc": "18.0.0",
     "ts-node": "10.9.2",
